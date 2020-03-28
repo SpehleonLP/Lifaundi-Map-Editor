@@ -1,0 +1,62 @@
+#include "paddedtilerange.h"
+#include <QProgressDialog>
+
+PaddedTileRange::PaddedTileRange(QImage && image) :
+	tiles_x((image.width() + 255) >> 8),
+	tiles_y((image.height() + 255) >> 8),
+	image(std::move(image))
+{
+}
+
+PaddedTileRange::~PaddedTileRange()
+{
+}
+
+void PaddedTileRange::GetTile(std::unique_ptr<float[]> & tile, int id)
+{
+	const int tile_x = id / tiles_y;
+	const int tile_y = id % tiles_y;
+
+	const int width = std::min(256, image.width() - tile_x * 256);
+	const int height = std::min(256, image.height() - tile_y* 256);
+
+	PadTile(tile, tile_x, tile_y, width, height);
+	CopyTile(tile, tile_x, tile_y, width, height);
+}
+
+void PaddedTileRange::PadTile(std::unique_ptr<float[]> & tile, int x, int y, int width, int height)
+{
+	if(y == 0)
+		memset(&tile[0], 0, 264 * 4 * sizeof(float));
+
+	if(y+1 == tiles_y)
+		memset(&tile[264 * (4 + height)], 0, 264 * (264 - height) * sizeof(float));
+
+	if(x == 0)
+		for(int i = 0; i < 264; ++i)
+			memset(&tile[264 * i], 0, 4 * sizeof(float));
+
+	if(x+1 == tiles_x)
+		for(int i = 0; i < 264; ++i)
+			memset(&tile[264 * i + (4 + width)], 0, (264 - width) * sizeof(float));
+}
+
+void PaddedTileRange::CopyTile(std::unique_ptr<float[]> & tile, int tile_x, int tile_y, int width, int height)
+{
+	const int y0 = 4 * (tile_y != 0);
+	const int y1 = height + 4 * (tile_y+1 != tiles_y);
+
+	const int x0 = 4 * (tile_x != 0);
+	const int x1 = width + 4 * (tile_x+1 != tiles_x);
+
+	const int ys = 4 * (tile_y != 0);
+
+	for(int y = -y0; y < y1; ++y)
+	{
+		for(int x = -x0; x < x1; ++x)
+		{
+			auto color = image.pixel(tile_x * 256 + x, tile_y * 256 + y);
+			tile[(4+y)*264 + 4+x] = qRed(color) / 256.f;
+		}
+	}
+}
