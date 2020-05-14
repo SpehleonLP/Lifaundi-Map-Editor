@@ -307,9 +307,11 @@ void GLViewWidget::paintGL()
 		(float)-1,
 		(float)+1);
 
+	auto window_pos = mapToGlobal(QPoint());
+
     mat.u_camera = glm::scale(glm::mat4(1), glm::vec3(w->GetZoom()));
     mat.u_camera = glm::translate(mat.u_camera, glm::vec3(-w->document->GetScreenCenter(), 0));
-	mat.u_screenSize = glm::ivec4(width, height, 0, 0);
+	mat.u_screenSize = glm::ivec4(width, height, window_pos.x(), window_pos.y());
 
 	long long time =
 		std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -322,13 +324,13 @@ void GLViewWidget::paintGL()
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrices), &mat);
 	glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_ubo);
 
-//	glDefaultVAOs::BindVAO(this);
-//	TransparencyShader::Shader.bind(this);
-//	glDefaultVAOs::RenderSquare(this);
+	TransparencyShader::Shader.bind(this);
+	glDefaultVAOs::BindVAO(this);
+	glDefaultVAOs::RenderSquare(this);
 
 
     w->document->RenderBackground(this);
-    w->document->m_metaroom.Render(this, w->ui->door_type->currentIndex());
+    w->document->m_metaroom.Render(this, -1);
 
     w->toolbox.Render(this);
     glAssert();

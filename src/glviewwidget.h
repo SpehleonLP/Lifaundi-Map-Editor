@@ -1,6 +1,6 @@
 #ifndef GLVIEWWIDGET_H
 #define GLVIEWWIDGET_H
-#include "metaroomselection.h"
+#include "enums.hpp"
 #include <glm/vec2.hpp>
 #include <QOpenGLFunctions_3_2_Core>
 #include <QOpenGLWidget>

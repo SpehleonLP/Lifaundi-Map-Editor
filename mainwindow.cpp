@@ -4,11 +4,11 @@
 #include "ui_mainwindow.h"
 #include "src/document.h"
 #include "src/walltype_db.h"
-#include "src/fmodmanager.h"
 #include <QScreen>
 #include <QMessageBox>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QLineEdit>
 #include <QApplication>
 #include <QCloseEvent>
 #include <QFileDialog>
@@ -91,7 +91,7 @@ enter(Qt::Key_Z, this)
     connect(ui->fileSaveAs,      &QAction::triggered, this, &MainWindow::fileSaveAs);
 //    connect(ui->linkAdd,         &QAction::triggered, [this]() { document->SetTool(Tool::AddLink); });
     connect(ui->linkRemove,      &QAction::triggered, [this]() { document->RemoveLinks(); });
-    connect(ui->musicLoad,       &QAction::triggered, this, &MainWindow::musicLoad);
+   // connect(ui->musicLoad,       &QAction::triggered, this, &MainWindow::musicLoad);
   //  connect(ui->musicMute,       &QAction::toggled, this, &MainWindow::musicMute);
 
 	connect(ui->toolNew,         &QAction::triggered,[this]() { toolbox.SetTool(Tool::Create); } );
@@ -99,7 +99,7 @@ enter(Qt::Key_Z, this)
     connect(ui->toolTranslate,   &QAction::triggered,[this]() { toolbox.SetTool(Tool::Translate); } );
     connect(ui->toolRotate,      &QAction::triggered,[this]() { toolbox.SetTool(Tool::Rotate); } );
 	connect(ui->toolScale,       &QAction::triggered,[this]() { toolbox.SetTool(Tool::Scale); } );
-	connect(ui->toolExtrude,     &QAction::triggered,[this]() { toolbox.SetTool(Tool::Extrude); } );
+//	connect(ui->toolExtrude,     &QAction::triggered,[this]() { toolbox.SetTool(Tool::Extrude); } );
 	connect(ui->toolSlice,       &QAction::triggered,[this]() { toolbox.SetTool(Tool::Slice); } );
 	connect(ui->toolReseat,      &QAction::triggered,[this]() { toolbox.SetTool(Tool::Order); } );
 
@@ -111,8 +111,8 @@ enter(Qt::Key_Z, this)
 	connect(&scale,              &QShortcut::activated, [this]() { toolbox.SetTool(Tool::Scale); } );
 	connect(&extrude,            &QShortcut::activated, [this]() { toolbox.SetTool(Tool::Extrude); } );
 	connect(&slice,              &QShortcut::activated, [this]() { toolbox.SetTool(Tool::Slice); } );
-	connect(&lockX,              &QShortcut::activated, [this]() { toolbox.lock(0, 1); } );
-	connect(&lockY,              &QShortcut::activated, [this]() { toolbox.lock(1, 0); } );
+	connect(&lockX,              &QShortcut::activated, [this]() { toolbox.lock(1, 0); } );
+	connect(&lockY,              &QShortcut::activated, [this]() { toolbox.lock(0, 1); } );
 	connect(&enter,              &QShortcut::activated, [this]() {
 		toolbox.SetTool(Tool::Finish);
 	} );
@@ -134,17 +134,23 @@ enter(Qt::Key_Z, this)
 		SetZoom(m_zoom * 7.f/8);
 	});
 
-#define QDoubleSpinBoxChanged()  (void (QDoubleSpinBox::*)(double)) &QDoubleSpinBox::valueChanged
-#define QSpinBoxChanged()  (void (QSpinBox::*)(int)) &QSpinBox::valueChanged
+#define QDoubleSpinBoxChanged()  (void (QDoubleSpinBox::*)(double)) &QDoubleSpinBox::editingFinished
+#define QSpinBoxChanged()  (void (QSpinBox::*)(int)) &QSpinBox::editingFinished
 #define QComboBoxChanged()  (void (QComboBox::*)(int)) &QComboBox::currentIndexChanged
 
 	connect(ui->room_music,         QComboBoxChanged(),      [this](int   value) { if(!updating_fields && value >= 0) document->SetRoomMusic(value); });
+//	connect(ui->room_music->lineEdit(), &QLineEdit::editingFinished, this, &MainWindow::musicSet);
+
+	ui->room_music->lineEdit()->setMaxLength(24);
+
+#if HAVE_WALL_TYPE
 	connect(ui->door_type,          QComboBoxChanged(),      [this](int   value) { if(!updating_fields && value >= 0) document->SetDoorType(value); });
+#endif
 	connect(ui->room_type,          QComboBoxChanged(),      [this](int   value) { if(!updating_fields && value >= 0) document->SetRoomType(value); });
 
-    connect(ui->room_grav_x,        QDoubleSpinBoxChanged(), [this](float value) { if(!updating_fields) document->SetRoomGravity(value, ui->room_grav_y->value()); } );
-    connect(ui->room_grav_y,        QDoubleSpinBoxChanged(), [this](float value) { if(!updating_fields) document->SetRoomGravity(ui->room_grav_x->value(), value); } );
-	connect(ui->permeability,       QSpinBoxChanged(),       [this](int   value) { if(!updating_fields) document->SetPermeability(value); } );
+    connect(ui->room_grav_x,        QDoubleSpinBoxChanged(), [this]() { if(!updating_fields) document->SetRoomGravity(ui->room_grav_x->value(), ui->room_grav_y->value()); } );
+    connect(ui->room_grav_y,        QDoubleSpinBoxChanged(), [this]() { if(!updating_fields) document->SetRoomGravity(ui->room_grav_x->value(), ui->room_grav_y->value()); } );
+	connect(ui->permeability,       QSpinBoxChanged(),       [this]() { if(!updating_fields) document->SetPermeability(ui->permeability->value()); } );
 
 
 	/*
@@ -244,18 +250,78 @@ void MainWindow::OnSelectionChanged()
 	UpdateTrackField();
 	ui->room_grav_x->setValue(gravity.x);
 	ui->room_grav_y->setValue(gravity.y);
-	ui->door_type->setCurrentIndex(document->wall_type);
-
-	ui->room_music->setEnabled(selected);
-	ui->door_type->setEnabled(document->noEdgesSelected() != 0);
 	ui->room_grav_x->setEnabled(selected);
 	ui->room_grav_y->setEnabled(selected);
 
+	ui->room_type->setCurrentIndex(document->room_type);
+	ui->room_type->setEnabled(selected);
+
 	ui->permeability->setValue(document->permeability);
+	ui->permeability->setEnabled(document->noEdgesSelected() != 0);
+
+	ui->room_music->setEnabled(selected);
+
+#if HAVE_WALL_TYPE
+	ui->door_type->setCurrentIndex(document->wall_type);
+	ui->door_type->setEnabled(document->noEdgesSelected() != 0);
+#endif
 
 	//ui->editCut->setEnabled(selected);
 	//ui->editCopy->setEnabled(selected);
 
+	updating_fields = false;
+}
+
+std::vector<std::string> MainWindow::GetTrackList(int8_t * music, uint32_t length)
+{
+	std::vector<std::string> r;
+
+	if(ui->room_music->count() == 0)
+		return r;
+
+	std::vector<uint32_t> refCount(ui->room_music->count(), 0);
+
+	for(uint32_t i = 0; i < length; ++i)
+		if(music[i] >= 0) refCount[music[i]] += 1;
+
+	std::vector<std::pair<QString, uint32_t>> sort_vector;
+
+	for(uint32_t i = 0; i < refCount.size(); ++i)
+	{
+		sort_vector.push_back({ui->room_music->itemText(i), i});
+	}
+
+	std::sort(sort_vector.begin(), sort_vector.end(), [](auto const& a, auto const& b)
+	{
+		return a.first < b.first;
+	});
+
+	r.reserve(ui->room_music->count());
+	for(uint32_t i = 0; i < refCount.size(); ++i)
+	{
+		if(refCount[sort_vector[i].second])
+		{
+			refCount[sort_vector[i].second] = r.size();
+			r.push_back(sort_vector[i].first.toStdString());
+		}
+	}
+
+	for(uint32_t i = 0; i < length; ++i)
+		if(music[i] >= 0) music[i] = refCount[music[i]];
+
+	SetTrackList(r);
+	return r;
+}
+
+void MainWindow::SetTrackList(std::vector<std::string> const& tracks)
+{
+	QStringList list;
+	for(auto & str : tracks)
+		list << QString::fromStdString(str);
+
+	updating_fields = true;
+	ui->room_music->clear();
+	ui->room_music->addItems(list);
 	updating_fields = false;
 }
 
@@ -354,7 +420,9 @@ void MainWindow::fileCAOS()
 
 		try
 		{
-			options.save(&document->m_metaroom, dialog.selectedFiles().first().toStdString());
+			auto music = GetTrackList(&document->m_metaroom.m_music[0], document->m_metaroom.size());
+			options.save(&document->m_metaroom, dialog.selectedFiles().first().toStdString(), std::move(music));
+			break;
 		}
 		catch(std::exception &e)
 		{
@@ -411,7 +479,7 @@ bool MainWindow::fileOpen(bool load_rooms, bool load_background)
 
 	ui->viewWidget->need_repaint();
 
-	ui->fileCAOS->setEnabled(document->isLifaundiBackground());
+	ui->fileCAOS->setEnabled(document->isCreaturesBackground());
 	return true;
 }
 
@@ -511,6 +579,7 @@ void MainWindow::loadDefaultWalls()
 	ui->viewWidget->upload_permeabilitys(&table[0], 16);
 }
 
+#if HAVE_FMOD
 bool MainWindow::musicLoad()
 {
 	QFileDialog dialog(this, tr("Load Music Bank"));
@@ -545,15 +614,17 @@ bool MainWindow::musicLoad()
 
 	return true;
 }
+#endif
 
 
 void MainWindow::UpdateTrackField()
 {
 	int track = 	document->m_metaroom.GetMusicTrack();
-
+#if HAVE_FMOD
 	if(track > 0)
 	{
-		FMOD_GUID id = document->m_metaroom.m_musicDB[track];
+		FMOD_GUID id;
+		memcpy(&id, &document->m_metaroom.m_musicDB[track].guid, sizeof(FMOD_GUID));
 		auto const& tracks = FMODManager::Get()->GetTrackGUIDs();
 
 		if((uint)track >= tracks.size() || memcmp(&id, &tracks[track], sizeof(FMOD_GUID)))
@@ -570,6 +641,7 @@ void MainWindow::UpdateTrackField()
 			}
 		}
 	}
+#endif
 
 	ui->room_music->setCurrentIndex(track);
 }

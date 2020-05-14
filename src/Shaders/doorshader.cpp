@@ -15,7 +15,7 @@ void DoorShader::construct(GLViewWidget * gl)
     compile(gl, kFrag(), GL_FRAGMENT_SHADER);
     attribute(gl, 0, "a_position");
     attribute(gl, 1, "a_type");
-	attribute(gl, 1, "a_permeability");
+	attribute(gl, 2, "a_permeability");
     link(gl);
 
 #define UNIFORM(x) uniform(gl, x, #x)
@@ -59,18 +59,16 @@ static const char * kVert()
 		in int   a_permeability;
 
 		out vec4 v_color;
-		out vec2 v_stipple_position;
-		out float v_time;
-
 		void main()
 		{
 			gl_Position = u_projection * (u_modelview * vec4(a_position, 0, 1.0));
 
 			float perm = a_permeability / 100.f;
 
-			v_color = vec4(pow(vec2(1.f - perm, perm), vec2(1 / 2.2)), 0, 1);
-			v_stipple_position = mix(vec2(0, 0), gl_Position.xy * u_screenSize + u_ctime, float(u_activeType == a_type));
-			v_time = mod(u_ctime, 60);
+			vec2 color = vec2(1.f - perm, perm);
+			color = pow(color, vec2(1 / 2.8));
+
+			v_color = vec4(color, 0, 1);
 		});
 }
 
@@ -78,17 +76,11 @@ static const char * kFrag()
 {
 	return SHADER(
 		in vec4 v_color;
-		in vec2 v_stipple_position;
-		in vec4 gl_FragCoord;
-		in float v_time;
 
 		out vec4 frag_color;
 
 		void main()
 		{
-			ivec2 coords = ivec2(gl_FragCoord.xy);
-			int tile = (int(coords.x / 10) & 0x01) ^ (int(coords.y / 10) & 0x01);
-
 			frag_color = v_color;
 		});
 }

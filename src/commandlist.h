@@ -101,11 +101,19 @@ public:
 	virtual ~PermeabilityCommand() = default;
 
 	void RollForward();
-	void RollBack() { RollForward(); }
+	void RollBack();
+
+	bool IsSelection(std::vector<std::pair<int, int>> const& list) const;
+	void SetValue(int);
 
 private:
+	void InsertOriginalValues();
+	void InsertNewValues();
+	void RemoveDoubles();
+
 	Metaroom *                                 metaroom;
 	uint32_t                                   length;
+	uint8_t                                    permeability;
 	std::unique_ptr<uint8_t[]>                 heap;
 	uint64_t                                 * keys;
 	uint8_t                                  * values;
@@ -137,6 +145,7 @@ public:
 	}
 
 private:
+
 	Metaroom                  * metaroom;
 	std::unique_ptr<uint32_t[]> prev_values;
 	std::vector<int>            indices;

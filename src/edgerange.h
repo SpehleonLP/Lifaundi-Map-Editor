@@ -5,7 +5,7 @@
 class EdgeRange
 {
 public:
-	EdgeRange(const QuadTree * tree, int edge, bool minimum = -1);
+	EdgeRange(const QuadTree * tree, int edge, bool minimum = false);
 	EdgeRange(const QuadTree * tree, glm::ivec2 v0, glm::ivec2 v1, int minimum = -1);
 
 	int  face() const { return child; }

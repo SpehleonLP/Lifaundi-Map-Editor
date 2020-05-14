@@ -5,7 +5,6 @@
 #include "clipboard.h"
 #include "lf_math.h"
 #include "src/walltype_db.h"
-#include "fmodmanager.h"
 #include "Shaders/blitshader.h"
 #include <fstream>
 #include <glm/mat4x4.hpp>
@@ -117,9 +116,9 @@ glm::vec2 Document::GetDimensions() const
 	return glm::vec2(m_background->dimensions());
 }
 
-bool  Document::isLifaundiBackground() const
+bool  Document::isCreaturesBackground() const
 {
-	return m_background != nullptr && m_background->GetType() == BackgroundImage::Type::Lifaundi;
+	return m_background != nullptr && m_background->GetType() != BackgroundImage::Type::Lifaundi;
 }
 
 int Document::width() const
@@ -169,8 +168,9 @@ void Document::SetRoomMusic(int value)
 {
 	if(value == track)
 		return;
-
+#if HAVE_FMOD
 	value          = m_metaroom.GetMusicId(FMODManager::Get()->GetTrackGUIDs()[value]);
+#endif
 	PushSettingCommand(value, SettingCommand::Type::Track);
 }
 
@@ -201,10 +201,30 @@ void Document::SetRoomGravity(float x, float y)
 
 void Document::SetPermeability(int value)
 {
-	if(value == permeability)
+	if(value == permeability || value < 0)
 		return;
 
-	PushCommand(new PermeabilityCommand(this, m_metaroom.GetSelectedDoors(), value));
+	auto doors = m_metaroom.GetSelectedDoors();
+
+	if(doors.empty())
+		return;
+
+	if(!m_window->SetAsterisk(true))
+	{
+		if(m_command == m_history.size() && m_history.size())
+		{
+			auto command = dynamic_cast<PermeabilityCommand*>(m_history.back().get());
+
+			if(command != nullptr
+			&& command->IsSelection(doors))
+			{
+				command->SetValue(value);
+				return;
+			}
+		}
+	}
+
+	PushCommand(new PermeabilityCommand(this, std::move(doors), value));
 }
 
 
@@ -271,13 +291,16 @@ bool Document::SaveFile(QFileInfo const& Path)
 	m_window->SetAsterisk(false);
 
 	std::string str = Path.filePath().toStdString();
-	FILE * fp = fopen(str.c_str(), "wb");
+	std::ofstream file(str.c_str(), std::ios_base::binary);
 
-	if(fp == nullptr)
-		return false;
+	if(!file.is_open())
+		throw std::system_error(errno, std::system_category(), str);
 
-	m_metaroom.Write(fp);
-	fclose(fp);
+	file.exceptions ( std::ifstream::failbit | std::ifstream::badbit );
+
+	m_metaroom.Write(m_window, file);
+
+	file.close();
 	return true;
 #if 0
 
@@ -332,8 +355,8 @@ bool Document::LoadFile(GLViewWidget * gl, QFileInfo const& Path, bool load_room
 		file.exceptions ( std::ifstream::failbit | std::ifstream::badbit );
 
 		m_metaroom.faces = 0;
-		m_metaroom.Read(file, 0);
-		m_metaroom.CommitMove();
+		m_metaroom.Read(m_window, file, 0);
+		m_metaroom.CommitMove(false);
 
 		file.close();
 

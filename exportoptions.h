@@ -20,7 +20,7 @@ public:
 	explicit ExportOptions(QWidget *parent = nullptr);
 	~ExportOptions();
 
-	void save(Metaroom*, std::string const& path);
+	void save(Metaroom*, std::string const& path, const std::vector<std::string> & music);
 	void configure(BackgroundImage*);
 
 	std::string filename() const;

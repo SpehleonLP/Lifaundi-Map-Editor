@@ -239,7 +239,7 @@ void SettingCommand::RollForward()
 	case Type::DoorType:
 		for(auto i : indices)
 			metaroom->m_doorType[i] = value;
-		metaroom->m_tree.SetDirty();
+		metaroom->m_tree.SetVBODirty();
 		break;
 	default:
 		break;
@@ -265,7 +265,7 @@ void SettingCommand::RollBack()
 	case Type::DoorType:
 		for(size_t i = 0; i < indices.size(); ++i)
 			metaroom->m_doorType[indices[i]] = prev_values[i];
-		metaroom->m_tree.SetDirty();
+		metaroom->m_tree.SetVBODirty();
 		break;
 	default:
 		break;
@@ -276,18 +276,17 @@ void SettingCommand::RollBack()
 PermeabilityCommand::PermeabilityCommand(Document * document, std::vector<std::pair<int, int>> && doors, int perm_value) :
 	metaroom(&document->m_metaroom),
 	length(doors.size()),
+	permeability(perm_value),
 	heap(new uint8_t[(sizeof(uint64_t)+1) * doors.size()]),
-	keys((uint64_t*)&heap[doors.size()]),
-	values(&heap[0])
+	keys((uint64_t*)&heap[0]),
+	values(&heap[sizeof(uint64_t)*doors.size()])
 {
-	memcpy(&keys[0], &doors[0], sizeof(uint64_t)*doors.size());
-	memset(values, perm_value, length);
+	for(uint i = 0; i < length; ++i)
+		keys[i] = metaroom->GetDoorKey(doors[i].first, doors[i].second);
 
-	RollForward();
-}
+//fill array with previous values
+	memset(&values[0], 100, length);
 
-void PermeabilityCommand::RollForward()
-{
 	uint32_t i{}, j{};
 
 	while(i < length && j < metaroom->m_permeabilities.size())
@@ -295,29 +294,99 @@ void PermeabilityCommand::RollForward()
 		if(metaroom->m_permeabilities[j].first < keys[i])
 			++j;
 		else if(metaroom->m_permeabilities[j].first > keys[i])
+			++j;
+		else
 		{
-			metaroom->m_permeabilities.insert(metaroom->m_permeabilities.begin()+j, {keys[i], values[i]});
-			values[i++] = 100;
-		}
-		else if(metaroom->m_permeabilities[j].first == keys[i])
-		{
-			auto tmp = values[i];
 			values[i] = metaroom->m_permeabilities[j].second;
-			metaroom->m_permeabilities[j].second = tmp;
-
 			++i, ++j;
 		}
 	}
 
-	for(;i < length; ++i)
-		metaroom->m_permeabilities.push_back({keys[i], values[i]});
+	RollForward();
+}
 
-	for(uint32_t i = 0; i < metaroom->m_permeabilities.size(); ++i)
+void PermeabilityCommand::SetValue(int v)
+{
+	if(permeability == v)
+		return;
+
+	permeability = v;
+	RollForward();
+}
+
+void  PermeabilityCommand::RollForward()
+{
+	InsertNewValues();
+	RemoveDoubles();
+	metaroom->m_tree.SetVBODirty();
+}
+
+void  PermeabilityCommand::RollBack()
+{
+	InsertOriginalValues();
+	RemoveDoubles();
+	metaroom->m_tree.SetVBODirty();
+}
+
+void PermeabilityCommand::InsertOriginalValues()
+{
+	auto & array = metaroom->m_permeabilities;
+
+	array.reserve(array.size() + length);
+
+	for(uint32_t i = 0; i < length; ++i)
+		array.push_back({keys[i], values[i] + 101});
+
+	std::sort(array.begin(), array.end(), [](auto const& a, auto const& b) { return a.first < b.first; });
+}
+
+void PermeabilityCommand::InsertNewValues()
+{
+	auto & array = metaroom->m_permeabilities;
+
+	array.reserve(array.size() + length);
+
+	for(uint32_t i = 0; i < length; ++i)
+		array.push_back({keys[i], permeability+101});
+
+	std::sort(array.begin(), array.end(), [](auto const& a, auto const& b) { return a.first < b.first; });
+}
+
+void PermeabilityCommand::RemoveDoubles()
+{
+	auto & array = metaroom->m_permeabilities;
+
+	uint32_t write{0};
+	for(uint32_t read=0; read < array.size(); ++read)
 	{
-		if(metaroom->m_permeabilities[i].second == 100)
+		if(read+1 < array.size())
 		{
-			metaroom->m_permeabilities.erase(metaroom->m_permeabilities.begin()+i);
-			--i;
+			if(array[read].first == array[read+1].first)
+			{
+				array[read+1].second    = std::max(array[read].second,  array[read+1].second) - 101;
+				array[read].second  = 255;
+			}
 		}
+
+		array[read].second -= 101 * (array[read].second > 100);
+
+		if(array[read].second < 100)
+			array[write++] = array[read];
 	}
+
+	array.resize(write);
+}
+
+bool PermeabilityCommand::IsSelection(std::vector<std::pair<int, int>> const& list) const
+{
+	if(length != list.size())
+		return false;
+
+	for(uint32_t i = 0; i < length; ++i)
+	{
+		if(keys[i] != metaroom->GetDoorKey(list[i].first, list[i].second))
+			return false;
+	}
+
+	return true;
 }

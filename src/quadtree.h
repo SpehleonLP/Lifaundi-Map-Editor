@@ -19,12 +19,19 @@ public:
 
     void Release(GLViewWidget *gl);
 
-
 	struct Node
 	{
 		unsigned leaf  : 1;
 		unsigned child : 31;
 
+		glm::i16vec2 min;
+		glm::i16vec2 max;
+	};
+
+	struct Leaf
+	{
+		uint32_t    z_order;
+		int         face_id;
 		glm::i16vec2 min;
 		glm::i16vec2 max;
 	};
@@ -44,15 +51,16 @@ public:
 
 	struct DoorList
 	{
-		unsigned solid     : 1;
-		unsigned in_other  : 1;
-		unsigned length    : 6;
-		unsigned index     : 24;
+		uint32_t index;
+		uint8_t  length;
+		 int8_t  min_perm;
+		 int8_t  max_perm;
+		 uint8_t  padding{};
 	};
 
 	struct Door
 	{
-		int   type : 8;
+		int   perm : 8;
 		int   face : 24;
 		float end_point;
 	};
@@ -65,6 +73,11 @@ public:
 		int   face : 24;
 	};
 
+	static std::vector<Node> CreateNodes(glm::i16vec4 bounds, glm::i16vec4 const* boxes, uint32_t size);
+
+	void ReadTree(std::ifstream & fp);
+	void WriteTree(std::ofstream & fp);
+
     void Prepare(GLViewWidget *gl);
     void Render(GLViewWidget *gl, int selected_door_type);
 
@@ -74,7 +87,8 @@ public:
 	int GetFace(glm::ivec2 position);
 
 	bool IsDirty() const { return m_dirty; }
-	void SetDirty() { m_dirty = true; }
+	void SetDirty(bool clear_mvsf = true) { m_dirty = true; m_mvsf.clear(); }
+	void SetVBODirty() { m_vbo_dirty = true; }
 	bool empty() const;
 
 	bool DoesOverlap(glm::ivec2 min, glm::ivec2 max);
@@ -82,6 +96,7 @@ public:
 	void GetOverlappingRooms(glm::ivec2 min, glm::ivec2 max, std::vector<int> & vec);
 	std::vector<uint32_t> GetOverlappingEdges(glm::ivec2 v0, glm::ivec2 v1);
 	bool                  HasOverlappingEdges(int v);
+	bool                  HasFullOverlap(int v);
 
 	bool GetSliceFace(const glm::ivec2 v0, const glm::ivec2 v1, const glm::ivec2 v2, int & edge_id, float & mid);
 
@@ -95,16 +110,8 @@ friend class EdgeRange;
 	void GetHallDoors(int edge, std::vector<int> & doors);
 	void GetRenderWalls(int edge, std::vector<EdgeVertex> & edges) const;
 
-	struct Leaf
-	{
-		uint32_t    z_order;
-		int         face_id;
-		glm::i16vec2 min;
-		glm::i16vec2 max;
-	};
-
 	void     Rebuild();
-	uint32_t BuildTree(std::unique_ptr<Leaf[]> const& leaves, uint32_t min, uint32_t max, uint32_t mask, uint32_t node, uint32_t base, uint32_t alloc, uint32_t depth = 0);
+	static uint32_t BuildTree(Node * nodes, Leaf const* leaves, uint32_t min, uint32_t max, uint32_t mask, uint32_t node, uint32_t base, uint32_t alloc, uint32_t depth = 0);
 
 
 	Metaroom              * m_metaroom{nullptr};
@@ -118,6 +125,8 @@ friend class EdgeRange;
 	uint32_t gl_alloced{};
 	uint32_t gl_size{};
     uint32_t alloced{};
+
+	std::vector<Node> m_mvsf;
 };
 
 #endif // QUADTREE_H

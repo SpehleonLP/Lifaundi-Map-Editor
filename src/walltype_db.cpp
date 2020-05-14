@@ -32,7 +32,7 @@ void from_json(const nlohmann::json & json, WallTypeDB & db)
 {
 	detail::ReadRequiredField("header",  json, db.header);
 	detail::ReadRequiredField("room types",   json, db.room_types);
-	detail::ReadRequiredField("door types",   json, db.door_types);
+	detail::ReadOptionalField("door types",   json, db.door_types);
 }
 
 QStringList WallTypeDB::GetRoomTypes() const
@@ -102,10 +102,12 @@ void WallTypeDB::UpdateTypeLists(Ui::MainWindow * ui)
 	ui->room_type->addItems(GetRoomTypes());
 	ui->room_type->setCurrentIndex(current_row);
 
+#if HAVE_WALL_TYPE
 	current_row = ui->door_type->currentIndex();
 	ui->door_type->clear();
 	ui->door_type->addItems(GetDoorTypes());
 	ui->door_type->setCurrentIndex(current_row);
+#endif
 }
 
 }

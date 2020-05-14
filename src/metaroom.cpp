@@ -12,12 +12,6 @@
 #include <fstream>
 #include <cstring>
 
-#ifndef _WIN32
-#include <fmod/fmod.h>
-#else
-#include "fmod.hpp"
-#endif
-
 template<typename T>
 static std::unique_ptr<T[]> Realloc(std::unique_ptr<T[]> const& array, uint32_t size, uint32_t new_size, int mul)
 {
@@ -89,10 +83,6 @@ Metaroom::Metaroom(Document * document) :
 	RoomOutlineShader::Shader.AddRef();
 	SelectedRoomShader::Shader.AddRef();
 	ArrowShader::Shader.AddRef();
-
-	FMOD_GUID it;
-	memset(&it, 0, sizeof(it));
-	m_musicDB.push_back(it);
 }
 
 Metaroom::~Metaroom()
@@ -111,7 +101,7 @@ void Metaroom::Release(GLViewWidget *gl)
     gl->glDeleteVertexArrays(3, m_vao);
     gl->glDeleteBuffers(3, m_buffers);
 }
-void Metaroom::Read(std::ifstream & fp, size_t offset)
+void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 {
 	char buffer[4];
 	short version;
@@ -132,7 +122,7 @@ void Metaroom::Read(std::ifstream & fp, size_t offset)
 		fp.read((char*)&width, 2);
 		fp.read((char*)&height, 2);
 	}
-	if(version == 3)
+	if(version >= 3)
 	{
 		fp.seekg(8, std::ios::cur);
 	}
@@ -141,6 +131,10 @@ void Metaroom::Read(std::ifstream & fp, size_t offset)
 		throw std::runtime_error("Bad File");
 
 	AddFaces(no_faces);
+
+	if(size() == 0)
+		return;
+
 	assert(faces == no_faces);
 
 	std::vector<glm::i16vec2> vec(size()*4);
@@ -155,6 +149,7 @@ void Metaroom::Read(std::ifstream & fp, size_t offset)
 		}
 	}
 
+
 	fp.read((char*)&m_gravity[0],  4* size());
 	fp.read((char*)&m_roomType[0], 1* size());
 	fp.read((char*)&m_doorType[0], 4* size());
@@ -166,38 +161,92 @@ void Metaroom::Read(std::ifstream & fp, size_t offset)
 	m_uuid_counter += size();
 #endif
 
-	m_musicDB.resize(no_tracks);
-	fp.read((char*)&m_musicDB[0], sizeof(FMOD_GUID) * no_tracks);
+	if(version <= 3)
+	{
+		fp.seekg(8 * no_tracks, std::ios::cur);
+	}
+	else
+	{
+		std::vector<std::string> tracks;
+		tracks.resize(no_tracks);
+
+		for(uint32_t i = 0; i < tracks.size(); ++i)
+		{
+			uint8_t length;
+			fp.read((char*)&length, 1);
+			tracks[i].resize(length);
+			fp.read(&tracks[i][0], length);
+		}
+
+		window->SetTrackList(tracks);
+	}
 
 	RestoreVerts(vec);
 	m_selection.clear();
+
+	std::vector<QuadTree::DoorList> door_indices;
+	std::vector<QuadTree::Door>     door_list;
+//read permeability info
+	door_indices.resize(size()*4);
+	fp.read((char*)&door_indices[0], sizeof(QuadTree::DoorList) * door_indices.size());
+
+	door_list.resize(door_indices.back().index + door_indices.back().length);
+	fp.read((char*)&door_list[0], sizeof(door_list[0]) * door_list.size());
+
+	for(auto & list : door_indices)
+	{
+		int  index = (&list - &door_indices[0]) / 4;
+		auto begin = &door_list[list.index];
+		auto end   = begin + list.length;
+
+		for(auto i = begin; i < end; ++i)
+		{
+			if(0 <= i->perm && i->perm < 100 && index < i->face)
+			{
+				m_permeabilities.push_back(std::make_pair<uint64_t, uint8_t>
+					(GetDoorKey(index, i->face), i->perm));
+			}
+		}
+	}
+
+	if(version > 4)
+		m_tree.ReadTree(fp);
 }
 
-void Metaroom::Write(FILE * fp)
+uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 {
+	uint32_t offset = fp.tellp();
+
+	auto tracks = window->GetTrackList(&m_music[0], size());
+
 	const char * title = "lfmp";
 
-	short version = 3;
-	short no_tracks = m_musicDB.size();
+	short version = 4;
+	short no_tracks = tracks.size();
 
-	fwrite(title, 1, 4, fp);
-	fwrite(&version, 2, 1, fp);
-	fwrite(&no_tracks, 2, 1, fp);
-	fwrite(&faces, 4, 1, fp);
+	fp.write(title, 4);
+	fp.write((char*)&version, 2);
+	fp.write((char*)&no_tracks, 2);
+	fp.write((char*)&faces, 4);
 
 	auto bounds = GetBoundingBox();
 
-	fwrite(&bounds, 2, 4, fp);
+	fp.write((char*)&bounds, 2 * 4);
 
 	auto verts = SaveVerts();
 
-	fwrite(&verts[0], sizeof(verts[0]), verts.size(), fp);
-	fwrite(&m_gravity[0],  4, size(), fp);
-	fwrite(&m_roomType[0], 1, size(), fp);
-	fwrite(&m_doorType[0], 4, size(), fp);
-	fwrite(&m_music[0],    1, size(), fp);
+	fp.write((char*)&verts[0], sizeof(verts[0]) * verts.size());
+	fp.write((char*)&m_gravity[0],  4 * size());
+	fp.write((char*)&m_roomType[0], 1 * size());
+	fp.write((char*)&m_doorType[0], 4 * size());
+	fp.write((char*)&m_music[0],    1 * size());
 
-	fwrite(&m_musicDB[0], sizeof(FMOD_GUID), no_tracks, fp);
+	for(uint32_t i = 0; i < tracks.size();++i)
+	{
+		uint8_t length = tracks[i].size();
+		fp.write((char*)&length, 1);
+		fp.write((char*)&tracks[i][0], length);
+	}
 
 	std::vector<QuadTree::DoorList> door_indices;
 	std::vector<QuadTree::Door>     door_list;
@@ -206,8 +255,12 @@ void Metaroom::Write(FILE * fp)
 
 	assert(door_indices.size() == size()*4);
 
-	fwrite(&door_indices[0], sizeof(QuadTree::DoorList), door_indices.size(), fp);
-	fwrite(&door_list[0], sizeof(QuadTree::Door), door_list.size(), fp);
+	fp.write((char*)&door_indices[0], sizeof(QuadTree::DoorList) * door_indices.size());
+	fp.write((char*)&door_list[0], sizeof(QuadTree::Door) * door_list.size());
+
+	m_tree.WriteTree(fp);
+
+	return offset;
 }
 
 int Metaroom::Insert(std::vector<Room> const& list)
@@ -378,18 +431,6 @@ glm::vec2 Metaroom::GetCenter(int room) const
 			m_verts[room*4 + 3]) / 4.f;
 }
 
-int Metaroom::GetMusicId(FMOD_GUID const& track)
-{
-	for(size_t i = 0; i < m_musicDB.size(); ++i)
-	{
-		if(memcmp(&track, &m_musicDB[i], sizeof(FMOD_GUID)) == 0)
-			return i;
-	}
-
-	m_musicDB.push_back(track);
-	return m_musicDB.size()-1;
-}
-
 int Metaroom::GetMusicTrack() const
 {
 	bool     match = false;
@@ -471,9 +512,20 @@ int Metaroom::GetDoorType()
 	return w_type;
 }
 
+uint64_t Metaroom::GetDoorKey(uint32_t a, uint32_t b) const
+{
+	a = m_uuid[a];
+	b = m_uuid[b];
+
+	return a < b? ((uint64_t)a << 32) | b : ((uint64_t)b << 32) | a;
+}
+
 int Metaroom::GetPermeability(int a, int b) const
 {
-	uint64_t key = a < b? ((uint64_t)a << 32) | b : ((uint64_t)b << 32) | a;
+	if(a < 0 || b < 0)
+		return -1;
+
+	uint64_t key = GetDoorKey(a, b);
 
 	for(uint32_t i = 0; i < m_permeabilities.size(); ++i)
 	{
@@ -491,40 +543,35 @@ int Metaroom::GetPermeability() const
 {
 	auto doors = GetSelectedDoors();
 
-	bool   match = false;
-	int   w_perm = 0;
+	if(doors.empty())
+		return -1;
 
-	uint64_t * door = (uint64_t*) &doors[0];
+	bool   match = false;
+	int   w_perm = 100;
+
+	uint64_t door = GetDoorKey(doors[0].first, doors[0].second);
 
 	uint32_t i{}, j{};
 	while(i < doors.size() && j < m_permeabilities.size())
 	{
-		if(m_permeabilities[j].first > door[i])
-			++j;
-		if(m_permeabilities[j].first > door[i])
+		if(m_permeabilities[j].first > door)
 		{
-			if(match == true && w_perm != 100)
-				return -1;
-
-			w_perm = 100;
-			match  = true;
+			if(++i < doors.size())
+				door = GetDoorKey(doors[i].first, doors[i].second);
 		}
-		if(door[i] == m_permeabilities[j].first)
+		else if(m_permeabilities[j].first < door)
+		{
+			++j;
+		}
+		else
 		{
 			if(match == true && w_perm != m_permeabilities[j].second)
 				return -1;
 
 			w_perm = m_permeabilities[j].second;
 			match  = true;
+			++i, ++j;
 		}
-	}
-
-	if(i < doors.size())
-	{
-		if(match && w_perm != 100)
-			return -1;
-		else if(!match)
-			w_perm = 100;
 	}
 
 	return w_perm;
@@ -534,6 +581,7 @@ int Metaroom::GetPermeability() const
 std::vector<std::pair<int, int>> Metaroom::GetSelectedDoors() const
 {
 	std::vector<std::pair<int, int>> r;
+
 	for(uint32_t i = 0; i < faces*4; ++i)
 	{
 		if(!m_selection.IsEdgeSelected(i))
@@ -546,7 +594,7 @@ std::vector<std::pair<int, int>> Metaroom::GetSelectedDoors() const
 		for(auto j : edges)
 		{
 			if(m_selection.IsEdgeSelected(j) &&	i < j)
-				r.push_back({i, j});
+				r.push_back({i/4, j/4});
 		}
 	}
 
@@ -585,6 +633,7 @@ int Metaroom::Duplicate(std::vector<int> const& faces)
 
 	for(size_t i = 0; i < faces.size(); ++i)
 		memcpy(&m_doorType[(first+i)*4],   &m_doorType[faces[i]*4],    sizeof(m_doorType[0])*4);
+
 
 	return first;
 }
@@ -940,10 +989,10 @@ void Metaroom::CancelMove()
 	m_dirty = true;
 }
 
-void Metaroom::CommitMove()
+void Metaroom::CommitMove(bool update_mvsf)
 {
 	memcpy(&m_prev_verts[0], &m_verts[0], sizeof(glm::ivec2) * faces*4);
-    m_tree.SetDirty();
+    m_tree.SetDirty(update_mvsf);
 	m_dirty = true;
 }
 

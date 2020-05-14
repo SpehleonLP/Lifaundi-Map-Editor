@@ -53,8 +53,12 @@ public:
 
 	void lock(int x, int y)
 	{
-		xy_filter.x = x;
-		xy_filter.y = y;
+		glm::i16vec2 value(x, y);
+
+		if(value == xy_filter && m_state == State::ScaleBegin)
+			xy_filter += value;
+		else
+			xy_filter = value;
 	}
 
 private:

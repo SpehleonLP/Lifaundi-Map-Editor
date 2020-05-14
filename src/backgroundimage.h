@@ -47,8 +47,8 @@ public:
 
 	glm::ivec2 dimensions() const { return pixels.x == 0? glm::ivec2(SHRT_MAX, SHRT_MAX) : glm::ivec2(pixels); }
 	int        size() const { return (int)tiles.x * tiles.y; }
-	int        width() const { return pixels.x * 256; }
-	int        height() const { return pixels.y * 256; }
+	int        width() const { return pixels.x; }
+	int        height() const { return pixels.y; }
 
     void CreateVBO(GLViewWidget* gl);
 

@@ -73,7 +73,7 @@ public:
 		toggleVisibility(lf_NoBackgroundLayers + i * lf_NoMipMaps + j, state);
 	}
 
-	bool isLifaundiBackground() const;
+	bool isCreaturesBackground() const;
 	bool hasImage() const { return m_background != nullptr; }
 	int width() const;
 	int height() const;

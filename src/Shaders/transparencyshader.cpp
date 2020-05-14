@@ -51,7 +51,8 @@ static const char * kVert()
 		{
 			mat4  u_projection;
 			mat4  u_modelview;
-			ivec2 u_screenSize;
+			ivec4 u_screenSize;
+			float u_ctime;
 		};
 
 		in vec3 a_vertex;

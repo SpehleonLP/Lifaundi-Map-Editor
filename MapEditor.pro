@@ -22,7 +22,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-LIBS += -lGLEW -lGL -lGLU -ldrm -lfmodstudio -lfmod
+LIBS += -lGLEW -lGL -lGLU -ldrm
 
 CONFIG += c++14
 
@@ -38,8 +38,6 @@ SOURCES += \
 	src/edgerange.cpp \
 	src/fluidlinks.cpp \
     src/glviewwidget.cpp \
-    src/fmodmanager.cpp \
-    src/fmoderror.cpp \
     src/backgroundimage.cpp \
     src/glprogram.cpp \
     src/Shaders/transparencyshader.cpp \
@@ -49,6 +47,7 @@ SOURCES += \
     src/metaroom.cpp \
     src/lf_math.cpp \
     src/metaroomselection.cpp \
+	src/mvsf_sampler.cpp \
     src/quadtree.cpp \
     src/metaroomdoors.cpp \
     src/controllerfsm.cpp \
@@ -72,7 +71,6 @@ HEADERS += \
 	src/enums.hpp \
 	src/fluidlinks.h \
     src/glviewwidget.h \
-    src/fmodmanager.h \
     src/fmoderror.h \
     src/backgroundlayer.h \
     src/backgroundimage.h \
@@ -85,6 +83,7 @@ HEADERS += \
     src/metaroom.h \
     src/lf_math.h \
     src/metaroomselection.h \
+	src/mvsf_sampler.h \
     src/quadtree.h \
     src/metaroomdoors.h \
     src/controllerfsm.h \

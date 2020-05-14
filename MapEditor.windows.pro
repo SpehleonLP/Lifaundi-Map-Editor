@@ -22,16 +22,11 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-LIBS += \
-     -L"C:/Program Files (x86)/FMOD SoundSystem/FMOD Studio API Windows/api/core/lib/x64" \
-     -L"C:/Program Files (x86)/FMOD SoundSystem/FMOD Studio API Windows/api/studio/lib/x64" \
-    -lglu32 -lfmodstudio_vc -lfmod_vc
+LIBS += -lglu32
 
 INCLUDEPATH += \
         ../../Libraries/glm \
-        ../../Libraries/glew/include \
-       "C:/Program Files (x86)/FMOD SoundSystem/FMOD Studio API Windows/api/core/inc" \
-       "C:/Program Files (x86)/FMOD SoundSystem/FMOD Studio API Windows/api/studio/inc"
+        ../../Libraries/glew/include
 
 CONFIG += c++14
 QMAKE_CXXFLAGS += -d2FH4-
@@ -40,15 +35,15 @@ QMAKE_LFLAGS +=  -d2:-FH4-
 DEFINES += GLM_EXT_INCLUDED
 
 SOURCES += \
+    exportoptions.cpp \
         main.cpp \
         mainwindow.cpp \
 	src/Shaders/arrowshader.cpp \
     src/document.cpp \
     src/commandlist.cpp \
+    src/edgerange.cpp \
 	src/fluidlinks.cpp \
     src/glviewwidget.cpp \
-    src/fmodmanager.cpp \
-    src/fmoderror.cpp \
     src/backgroundimage.cpp \
     src/glprogram.cpp \
     src/Shaders/transparencyshader.cpp \
@@ -71,16 +66,16 @@ SOURCES += \
 	src/walltype_db.cpp
 
 HEADERS += \
+    exportoptions.h \
         mainwindow.h \
 	nlohmann/json_detail.hpp \
 	src/Shaders/arrowshader.h \
     src/document.h \
     src/commandlist.h \
+    src/edgerange.h \
 	src/enums.hpp \
 	src/fluidlinks.h \
     src/glviewwidget.h \
-    src/fmodmanager.h \
-    src/fmoderror.h \
     src/backgroundlayer.h \
     src/backgroundimage.h \
     src/byte_swap.h \
@@ -105,6 +100,7 @@ HEADERS += \
 	src/walltype_db.h
 
 FORMS += \
+        exportoptions.ui \
         mainwindow.ui
 
 # Default rules for deployment.
@@ -112,19 +108,3 @@ FORMS += \
 #else: unix:!android: target.path = /opt/$${TARGET}/bin
 #!isEmpty(target.path): INSTALLS += target
 
-DISTFILES += \
-    C:/Program Files (x86)/FMOD SoundSystem/FMOD Studio API Windows/api/core/inc/fmod.cs \
-    C:/Program Files (x86)/FMOD SoundSystem/FMOD Studio API Windows/api/core/inc/fmod_dsp.cs \
-    C:/Program Files (x86)/FMOD SoundSystem/FMOD Studio API Windows/api/core/inc/fmod_errors.cs \
-    C:/Program Files (x86)/FMOD SoundSystem/FMOD Studio API Windows/api/core/lib/x64/fmod.dll \
-    C:/Program Files (x86)/FMOD SoundSystem/FMOD Studio API Windows/api/core/lib/x64/fmodL.dll \
-    C:/Program Files (x86)/FMOD SoundSystem/FMOD Studio API Windows/api/core/lib/x64/fmodL_vc.lib \
-    C:/Program Files (x86)/FMOD SoundSystem/FMOD Studio API Windows/api/core/lib/x64/fmod_vc.lib \
-    C:/Program Files (x86)/FMOD SoundSystem/FMOD Studio API Windows/api/fsbank/lib/x64/fsbank.dll \
-    C:/Program Files (x86)/FMOD SoundSystem/FMOD Studio API Windows/api/fsbank/lib/x64/fsbank_vc.lib \
-    C:/Program Files (x86)/FMOD SoundSystem/FMOD Studio API Windows/api/fsbank/lib/x64/libfsbvorbis64.dll \
-    C:/Program Files (x86)/FMOD SoundSystem/FMOD Studio API Windows/api/studio/inc/fmod_studio.cs \
-    C:/Program Files (x86)/FMOD SoundSystem/FMOD Studio API Windows/api/studio/lib/x64/fmodstudio.dll \
-    C:/Program Files (x86)/FMOD SoundSystem/FMOD Studio API Windows/api/studio/lib/x64/fmodstudioL.dll \
-    C:/Program Files (x86)/FMOD SoundSystem/FMOD Studio API Windows/api/studio/lib/x64/fmodstudioL_vc.lib \
-    C:/Program Files (x86)/FMOD SoundSystem/FMOD Studio API Windows/api/studio/lib/x64/fmodstudio_vc.lib

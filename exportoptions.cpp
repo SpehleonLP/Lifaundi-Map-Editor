@@ -3,6 +3,7 @@
 #include "src/backgroundimage.h"
 #include "src/metaroom.h"
 #include <fstream>
+#include <QFileInfo>
 
 ExportOptions::ExportOptions(QWidget *parent) :
 QDialog(parent),
@@ -16,7 +17,7 @@ ExportOptions::~ExportOptions()
 	delete ui;
 }
 
-void  ExportOptions::save(Metaroom* mta, std::string const& path)
+void  ExportOptions::save(Metaroom* mta, std::string const& path, const std::vector<std::string> & track_list)
 {
 	const auto offset = room_offset();
 	const auto mmsc   = music();
@@ -30,7 +31,6 @@ void  ExportOptions::save(Metaroom* mta, std::string const& path)
 
 	fprintf(file, "setv va01 addm %i %i %i %i \"%s\"\n", coord.x, coord.y, coord.z, coord.w, blk.c_str());
 	fprintf(file, "mmsc %i %i \"\"\n", coord.x + coord.z / 2, coord.y + coord.w / 2);
-
 
 	std::unique_ptr<uint8_t[]> saved(new uint8_t[(mta->size() + 7)/8]);
 	memset(&saved[0], 0, (mta->size() + 7)/8);
@@ -60,7 +60,6 @@ void  ExportOptions::save(Metaroom* mta, std::string const& path)
 					std::swap(tl, tr);
 					std::swap(bl, br);
 				}
-
 				break;
 			}
 		}
@@ -70,18 +69,64 @@ void  ExportOptions::save(Metaroom* mta, std::string const& path)
 			saved[i/8] |= 1 << (i % 8);
 			fprintf(file, "  setv va00 addr va01 %i %i %i %i %i %i\n", l, r, tl, tr, bl, br);
 			fprintf(file, "    rtyp va00 %i\n", mta->m_roomType[i]);
-			fprintf(file, "    rmsc %i %i \"\"\n", (l + r) / 2, (tl+tr+bl+br)/4);
+
+			if(mta->m_music[i] >= 0)
+			{
+				fprintf(file, "    rmsc %i %i \"%s\\\\%s\"\n", (l + r) / 2, (tl+tr+bl+br)/4, mmsc.c_str(), track_list[mta->m_music[i]].c_str() );
+			}
+			else
+			{
+				fprintf(file, "    rmsc %i %i \"\"\n", (l + r) / 2, (tl+tr+bl+br)/4);
+			}
+
 			fprintf(file, "    setv game \"map_tmp_%u\" va00\n", i);
 		}
 	}
 
+	fprintf(file, "\n");
+
+	std::vector<QuadTree::Door>     doors;
+	std::vector<QuadTree::DoorList> indices;
+
+	mta->m_tree.GetWriteDoors(doors, indices);
+
+	int write_count{0};
+
+	for(uint32_t i = 0; i < indices.size(); ++i)
+	{
+		if(!(saved[i/8] & (1 << i)))
+			continue;
+
+		auto j   = &doors[indices[i].index];
+		auto end = j + indices[i].length;
+
+		for(; j < end; ++j)
+		{
+			if(j->face > (int32_t)i
+			&& (saved[j->face/8] & (1 << j->face)))
+			{
+				if(++write_count % 10 == 0)
+					fprintf(file, "\n");
+
+				fprintf(file, "perm game \"map_tmp_%u\" game \"map_tmp_%u\" %i\n", i, j->face, j->perm);
+			}
+		}
+	}
+
+
+	fprintf(file, "\n");
+
+	write_count = 0;
 //clear game variables
 	for(uint32_t i = 0; i < mta->size(); ++i)
 	{
-		fprintf(file, "delg \"map_tmp_%u\"\n", i);
+		if(!(saved[i/8] & (1 << (i%8))))
+			continue;
 
-		if(i > 0 && i % 10 == 0)
+		if(++write_count % 10 == 0)
 			fprintf(file, "\n");
+
+		fprintf(file, "delg \"map_tmp_%u\"\n", i);
 	}
 
 	fclose(file);
@@ -89,7 +134,9 @@ void  ExportOptions::save(Metaroom* mta, std::string const& path)
 
 void ExportOptions::configure(BackgroundImage* img)
 {
-	ui->background->setText(img->GetFilename().c_str());
+	QFileInfo path(img->GetFilename().c_str());
+
+	ui->background->setText(path.fileName());
 
 	ui->width->setMinimum(img->width() - 128);
 	ui->width->setMaximum(img->width());

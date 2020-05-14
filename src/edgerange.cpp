@@ -3,7 +3,7 @@
 #include "lf_math.h"
 
 EdgeRange::EdgeRange(const QuadTree * tree, int edge, bool minimum) :
-	EdgeRange(tree, tree->m_metaroom->GetVertex(edge), tree->m_metaroom->GetNextVertex(edge), minimum? edge : -1)
+	EdgeRange(tree, tree->m_metaroom->GetVertex(edge), tree->m_metaroom->GetNextVertex(edge), minimum? edge/4 : -1)
 {
 }
 
@@ -28,12 +28,12 @@ top:
 	{
 		while(++i < 4)
 		{
-			a0 = m_metaroom->GetVertex(child*4 + i);
-			a1 = m_metaroom->GetVertex(child*4 + (i+1) % 4);
+			a0 = m_metaroom->GetVertex(edge());
+			a1 = m_metaroom->GetNextVertex(edge());
 
 			if(a0 != a1
-			&& math::IsOpposite(a1- a0, v1- v0) == false
-			&& math::IsColinear(v0, v1, a0, a1) == false)
+			&& math::IsOpposite(a1- a0, v1- v0)
+			&& math::IsColinear(v0, v1, a0, a1))
 				return true;
 		}
 
@@ -55,7 +55,7 @@ top:
 			continue;
 		}
 
-		if(minimum > 0 && (uint32_t)minimum < node.child)
+		if(minimum < 0 || (uint32_t)minimum < node.child)
 		{
 			child = node.child;
 			i     = -1;

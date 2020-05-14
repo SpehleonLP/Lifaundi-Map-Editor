@@ -30,6 +30,9 @@ namespace FMOD
 class Channel;
 }
 
+#define HAVE_WALL_TYPE 0
+#define HAVE_FMOD 0
+
 class Document;
 class QPushButton;
 class QComboBox;
@@ -39,6 +42,9 @@ class MainWindow : public QMainWindow
 public:
 	explicit MainWindow(QWidget *parent = nullptr);
 	~MainWindow();
+
+	std::vector<std::string> GetTrackList(int8_t * music, uint32_t length);
+	void SetTrackList(std::vector<std::string> const&);
 
 	void CreateDoorType();
 
@@ -57,6 +63,7 @@ public:
 
 	bool SetAsterisk(bool);
 
+	bool musicSet();
 	void need_repaint();
 
 	glm::vec2 GetScroll();

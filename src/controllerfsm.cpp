@@ -42,6 +42,7 @@ bool ControllerFSM::OnDoubleClick(glm::ivec2, Bitwise)
 void ControllerFSM::SetTool(Tool tool)
 {
 	selection_center = m_parent->document->m_metaroom.GetSelectionCenter();
+	mouse_down_pos   = m_parent->ui->viewWidget->GetWorldPosition();
 
 	if(m_state == State::Reorder && tool == Tool::Order)
 	{
@@ -420,9 +421,14 @@ bool ControllerFSM::OnMouseMove(glm::vec2 p, Bitwise flags)
 	}
 	case State::ScaleBegin:
 	{
-		float length1 = glm::length(mouse_current_pos - selection_center);
-		float length2 = std::max(1.f, glm::length(mouse_down_pos - selection_center));
-		float scale   = length1 / length2;
+		auto  dirn    = mouse_down_pos - selection_center;
+		float length2 = glm::length(dirn);
+		float dot1    = glm::dot(mouse_current_pos - selection_center, dirn) / (length2 * length2);
+
+		float scale   = dot1;
+
+		//get direction
+
 
 		if(flags == Bitwise::XOR)
 		{
@@ -432,7 +438,20 @@ bool ControllerFSM::OnMouseMove(glm::vec2 p, Bitwise flags)
 			scale = s / 100.f;
 		}
 
-		m_parent->document->m_metaroom.Scale(selection_center, glm::vec2(scale * xy_filter.x, scale * xy_filter.y));
+		glm::vec2 scaling = glm::vec2(scale);
+
+		if(xy_filter.x == 0)
+		{
+			if(xy_filter.y == 1) scaling.x = 1;
+			else if(xy_filter.y == 2) scaling.x = 0;
+		}
+		else if(xy_filter.y == 0)
+		{
+			if(xy_filter.x == 1) scaling.y = 1;
+			else if(xy_filter.x == 2) scaling.y = 0;
+		}
+
+		m_parent->document->m_metaroom.Scale(selection_center, scaling);
 	} return true;
 
 

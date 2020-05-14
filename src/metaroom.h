@@ -50,12 +50,11 @@ public:
 	void SetRoom(int index, Room const&);
 	void Insert(std::vector<Room> const&, std::vector<int> const&);
 	void CopyRoom(int dst, int src);
+	uint64_t GetDoorKey(uint32_t a, uint32_t b) const;
 
 
 	glm::vec2 GetGravity(int room) const;
 	glm::vec2 GetCenter(int room) const;
-
-	int GetMusicId(FMOD_GUID const& track);
 
 	uint32_t GetGravity() const;
 	int GetMusicTrack() const;
@@ -70,8 +69,8 @@ public:
 
 	size_t size() const { return faces; }
 
-	void Read(std::ifstream &, size_t offset);
-	void Write(FILE*);
+	void Read(MainWindow * window, std::ifstream &, size_t offset);
+	uint32_t Write(MainWindow * window, std::ofstream &);
 
     void Prepare(GLViewWidget *gl);
     void Render(GLViewWidget* gl, int selected_door_type);
@@ -101,7 +100,7 @@ public:
 	void BoxSelect(glm::ivec2 tl, glm::ivec2 br, Bitwise flags);
 
 	void CancelMove();
-	void CommitMove();
+	void CommitMove(bool update_mvsf = true);
 	void BeginMove();
 
 	glm::ivec2 GetSelectionCenter() const;
@@ -143,9 +142,6 @@ public:
 
 
 	void solve_constraints() {};
-
-
-	std::vector<FMOD_GUID>        m_musicDB;
 
 	std::vector<std::pair<uint64_t, uint8_t> > m_permeabilities;
 
