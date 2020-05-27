@@ -7,7 +7,21 @@
 #include <glm/vec2.hpp>
 #include <glm/gtc/type_precision.hpp>
 #include <cassert>
+#include <zlib.h>
 #include <fstream>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+
+std::string ToHex(const uint8_t * s, int length, bool upper_case  = true)
+{
+    std::ostringstream ret;
+
+    for (int i = 0; i < length; ++i)
+        ret << std::hex << std::setfill('0') << std::setw(2) << (upper_case ? std::uppercase : std::nouppercase) << (int)s[i];
+
+    return ret.str();
+}
 
 static uint8_t * _interleave_DXT1(uint8_t * dst, uint8_t * src, int blocks);
 static uint8_t * interleave_DXT5(uint8_t * dst, uint8_t * src, int blocks);
@@ -306,8 +320,15 @@ static uint8_t * interleave_BC5(uint8_t * dst, uint8_t * src, int blocks)
 	return src;
 }
 
+
 void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file)
 {
+#define BUFFER_SIZE 350000
+
+	z_stream zlib;
+	memset(&zlib, 0, sizeof(zlib));
+	inflateInit(&zlib);
+
 	char title[4];
 
 	file.read(&title[0], sizeof(title));
@@ -320,6 +341,7 @@ void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file)
 	{
 		file.read((char*)&pixels, sizeof(pixels));
 	}
+
 
 	if(memcmp(title, "lbck", 4))
 		throw std::runtime_error("Bad File");
@@ -376,16 +398,47 @@ void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file)
 			file.seekg(mip[j], std::ios_base::beg);
 			file.read((char*) &buffer[0], bytes);
 
+			if(version == 3)
+			{
+				if(i == 0 && j == 1)
+				{
+					std::cerr << "offset " << std::hex << std::setfill('0') << mip[j] << std::endl;
+					std::cerr << ToHex(&buffer[0], 32) << std::endl;
+				}
+
+
+				zlib.next_in  = &buffer[0];
+				zlib.avail_in = bytes;
+				zlib.total_in = 0;
+
+				zlib.next_out  = &buffer2[0];
+				zlib.avail_out = TILE_BYTES;
+				zlib.total_out = 0;
+
+				int code = inflate(&zlib, Z_FINISH);
+
+				if(zlib.msg != nullptr)
+					throw std::runtime_error(zlib.msg);
+
+				if(zlib.total_in != bytes)
+					throw std::runtime_error("failed to decompress all data");
+
+				std::swap(buffer, buffer2);
+				bytes = zlib.total_out;
+
+				inflateReset(&zlib);
+			}
+
 			const int d0 = 1 << j;
 			const int d1 = d0*d0;
+
 			auto format = (bytes / (blocks_x * blocks_y));
-			format = format == 8? GL_COMPRESSED_RGBA_S3TC_DXT1_EXT : GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+			format = format < 64? GL_COMPRESSED_RGBA_S3TC_DXT1_EXT : GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
 
 			if(format == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT)
 				_interleave_DXT1(&buffer2[0], &buffer[0], blocks_x * blocks_y);
 			else
 				interleave_DXT5(&buffer2[0], &buffer[0], blocks_x * blocks_y);
-
 
             gl->glCompressedTexImage2D(GL_TEXTURE_2D,
 				j-1,
@@ -393,13 +446,15 @@ void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file)
 				width    / d0,
 				height   / d0,
 				0,
-				area     / d1,
+				area     / d1 / (1 + (format == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT)),
 				&buffer2[0]);
 
             gl->glAssert();
 		}
 	}
 
+
+	inflateEnd(&zlib);
 	file.close();
 }
 
