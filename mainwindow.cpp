@@ -355,7 +355,7 @@ bool MainWindow::SetAsterisk(bool value)
 		return false;
 
 	m_asterisk = value;
-	setWindowTitle(tr("%1%2 - Map Editor").arg(value? "*" : "").arg(document->Name()));
+	setWindowTitle(tr("%1%2 - Map Editor").arg(value? "*" : "", document->Name()));
 	return true;
 }
 

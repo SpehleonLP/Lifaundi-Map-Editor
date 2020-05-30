@@ -216,7 +216,7 @@ SettingCommand::SettingCommand(Document * document, std::vector<int> && list, ui
 		break;
 	}
 
-	RollForward();
+	SettingCommand::RollForward();
 
 }
 
@@ -302,7 +302,7 @@ PermeabilityCommand::PermeabilityCommand(Document * document, std::vector<std::p
 		}
 	}
 
-	RollForward();
+	PermeabilityCommand::RollForward();
 }
 
 void PermeabilityCommand::SetValue(int v)

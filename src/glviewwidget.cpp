@@ -355,7 +355,7 @@ void GLViewWidget::displayOpenGlError(const char * file, const char * function, 
     {
         QMessageBox::information(this, QGuiApplication::applicationDisplayName(),
                                  tr("FILE: %1\nFUNC: %2\nLINE: %3\nERROR: %4")
-                                 .arg(file).arg(function).arg(line).arg((const char *) gluErrorString(error)));
+                                 .arg(file, function, QString::number(line), (const char *) gluErrorString(error)));
 
     } while((error = glGetError()) != GL_NO_ERROR);
 
