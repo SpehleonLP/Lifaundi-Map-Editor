@@ -20,6 +20,7 @@ std::vector<Room>   Clipboard::Extract(Metaroom* metaroom, std::vector<int> cons
 		room.type        = metaroom->m_roomType[i];
 		room.music_track = metaroom->m_music[i];
 		room.gravity    = metaroom->m_gravity[i];
+		room.drawDistance = metaroom->m_drawDistance[i];
 
 		for(int j = 0; j < 4; ++j)
 		{

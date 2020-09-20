@@ -9,6 +9,7 @@ struct Room
 	 int16_t   music_track;
 	uint8_t    wall_types[4];
 	uint32_t   gravity;
+	uint16_t   drawDistance;
 	glm::ivec2 verts[4];
 	int        uuid{-1};
 };

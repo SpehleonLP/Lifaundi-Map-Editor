@@ -127,7 +127,8 @@ public:
 		Gravity,
 		Track,
 		RoomType,
-		DoorType
+		DrawDistance,
+		DoorType,
 	};
 
 	SettingCommand(Document * document, std::vector<int> && list, uint32_t value, Type type);

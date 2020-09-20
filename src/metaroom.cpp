@@ -153,7 +153,10 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 	fp.read((char*)&m_gravity[0],  4* size());
 	fp.read((char*)&m_roomType[0], 1* size());
 	fp.read((char*)&m_doorType[0], 4* size());
-	fp.read((char*)&m_music[0],    1* size());
+	fp.read((char*)&m_doorType[0], 4* size());
+
+	if(version > 4)
+		fp.read((char*)&m_drawDistance[0], 4* size());
 
 #if HAVE_UUID
 	for(uint i = 0; i < size(); ++i)
@@ -221,7 +224,7 @@ uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 
 	const char * title = "lfmp";
 
-	short version = 4;
+	short version = 5;
 	short no_tracks = tracks.size();
 
 	fp.write(title, 4);
@@ -240,6 +243,7 @@ uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 	fp.write((char*)&m_roomType[0], 1 * size());
 	fp.write((char*)&m_doorType[0], 4 * size());
 	fp.write((char*)&m_music[0],    1 * size());
+	fp.write((char*)&m_drawDistance[0], 1 * size());
 
 	for(uint32_t i = 0; i < tracks.size();++i)
 	{
@@ -286,9 +290,10 @@ int Metaroom::Insert(std::vector<Room> const& list)
 
 void Metaroom::SetRoom(int index, Room const& room)
 {
-	m_roomType[index] = room.type;
-	m_gravity[index]  = room.gravity;
-	m_music[index]    = room.music_track;
+	m_roomType[index]		= room.type;
+	m_gravity[index]		= room.gravity;
+	m_music[index]			= room.music_track;
+	m_drawDistance[index]   = room.drawDistance;
 
 	for(int j = 0; j < 4; ++j)
 		m_doorType[index*4+j] = room.wall_types[j];
@@ -302,9 +307,10 @@ void  Metaroom::CopyRoom(int dst, int src)
 {
 	if(dst == src) return;
 
-	m_roomType[dst] = m_roomType[src];
-	m_gravity[dst]  = m_gravity[src];
-	m_music[dst]    = m_music[src];
+	m_roomType[dst]		= m_roomType[src];
+	m_gravity[dst]		= m_gravity[src];
+	m_music[dst]		= m_music[src];
+	m_drawDistance[dst] = m_drawDistance[src];
 
 	for(int j = 0; j < 4; ++j)
 		m_doorType[dst*4 + j] = m_doorType[src*4 + j];
@@ -512,6 +518,26 @@ int Metaroom::GetDoorType()
 	return w_type;
 }
 
+int Metaroom::GetDrawDistance() const
+{
+	bool match = false;
+	int   r_type = -1;
+
+	for(uint32_t i = 0; i < size(); ++i)
+	{
+		if(m_selection.IsFaceSelected(i))
+		{
+			if(match == true && r_type != m_drawDistance[i])
+				return -1;
+
+			r_type = m_drawDistance[i];
+			match = true;
+		}
+	}
+
+	return r_type;
+}
+
 uint64_t Metaroom::GetDoorKey(uint32_t a, uint32_t b) const
 {
 	a = m_uuid[a];
@@ -629,6 +655,9 @@ int Metaroom::Duplicate(std::vector<int> const& faces)
 		memcpy(&m_music[(first+i)],        &m_music[faces[i]],         sizeof(m_music[0]));
 
 	for(size_t i = 0; i < faces.size(); ++i)
+		memcpy(&m_drawDistance[(first+i)], &m_drawDistance[faces[i]],  sizeof(m_drawDistance[0]));
+
+	for(size_t i = 0; i < faces.size(); ++i)
 		memcpy(&m_roomType[(first+i)],     &m_roomType[faces[i]],      sizeof(m_roomType[0]));
 
 	for(size_t i = 0; i < faces.size(); ++i)
@@ -647,6 +676,7 @@ void Metaroom::Expand(std::vector<int> const& indices)
 	ExpandStuff(m_music,    faces, indices, 1);
 	ExpandStuff(m_roomType, faces, indices, 1);
 	ExpandStuff(m_doorType, faces, indices, 4);
+	ExpandStuff(m_drawDistance, faces, indices, 1);
 #if HAVE_UUID
 	ExpandStuff(m_uuid    , faces, indices, 1);
 #endif
@@ -888,6 +918,7 @@ void Metaroom::AddFace(glm::ivec2 min, glm::ivec2 max)
 	m_gravity[face]   = glm::packHalf2x16(glm::vec2(0, 9.81));
 	m_music[face]     = -1;
 	m_roomType[face]  = 0;
+	m_drawDistance[face]  = 0;
 #if HAVE_UUID
 	m_uuid[face]      = m_uuid_counter++;
 #endif
@@ -916,6 +947,7 @@ int Metaroom::AddFaces(int no_faces)
 
 		m_gravity        = Realloc(m_gravity,        allocated, new_size, 1);
 		m_music          = Realloc(m_music,          allocated, new_size, 1);
+		m_drawDistance   = Realloc(m_drawDistance,   allocated, new_size, 1);
 		m_roomType       = Realloc(m_roomType,       allocated, new_size, 1);
 		m_doorType       = Realloc(m_doorType,       allocated, new_size, 4);
 #if HAVE_UUID
@@ -941,6 +973,7 @@ void Metaroom::RemoveFace(int id)
 	MemMove(m_gravity,        id, allocated, 1);
 	MemMove(m_roomType,       id, allocated, 1);
 	MemMove(m_doorType,       id, allocated, 4);
+	MemMove(m_drawDistance,   id, allocated, 1);
 
 #if HAVE_UUID
 	MemMove(m_uuid    ,       id, allocated, 1);
@@ -972,6 +1005,7 @@ void Metaroom::RemoveFaces(std::vector<int> const& vec)
 	RemoveStuff(m_gravity,        allocated, vec, 1);
 	RemoveStuff(m_roomType,       allocated, vec, 1);
 	RemoveStuff(m_doorType,       allocated, vec, 4);
+	RemoveStuff(m_drawDistance,   allocated, vec, 1);
 #if HAVE_UUID
 	RemoveStuff(m_uuid    ,       allocated, vec, 1);
 #endif

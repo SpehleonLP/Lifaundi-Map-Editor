@@ -56,6 +56,7 @@ public:
 	void SetRoomType(int);
 	void SetDoorType(int);
 	void SetRoomGravity(float, float);
+	void SetDrawDistance(float);
 	void PushSettingCommand(uint32_t value, SettingCommand::Type type);
 	void SetPermeability(int);
 
@@ -78,7 +79,7 @@ public:
 	int width() const;
 	int height() const;
 
-	MainWindow * m_window;
+	MainWindow * m_window{};
 
 	QFileInfo  m_path;
 	QString    m_title{"<untitled>"};
@@ -91,11 +92,12 @@ public:
 	std::vector<std::unique_ptr<CommandInterface>> m_history;
 	size_t                                         m_command{};
 
-	int       track;
-	uint32_t  gravity;
-	int       room_type;
-	int       wall_type;
-	int       permeability;
+	int       track{};
+	uint32_t  gravity{};
+	uint16_t  drawDistance{};
+	int       room_type{};
+	int       wall_type{};
+	int       permeability{};
 };
 
 #endif // DOCUMENT_H

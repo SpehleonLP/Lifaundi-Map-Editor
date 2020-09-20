@@ -208,6 +208,10 @@ SettingCommand::SettingCommand(Document * document, std::vector<int> && list, ui
 		for(size_t i = 0; i < indices.size(); ++i)
 			prev_values[i] = metaroom->m_roomType[indices[i]];
 		break;
+	case Type::DrawDistance:
+		for(size_t i = 0; i < indices.size(); ++i)
+			prev_values[i] = metaroom->m_drawDistance[indices[i]];
+		break;
 	case Type::DoorType:
 		for(size_t i = 0; i < indices.size(); ++i)
 			prev_values[i] = metaroom->m_doorType[indices[i]];
@@ -236,6 +240,10 @@ void SettingCommand::RollForward()
 		for(auto i : indices)
 			metaroom->m_roomType[i] = value;
 		break;
+	case Type::DrawDistance:
+		for(auto i : indices)
+			metaroom->m_drawDistance[i] = value;
+		break;
 	case Type::DoorType:
 		for(auto i : indices)
 			metaroom->m_doorType[i] = value;
@@ -261,6 +269,10 @@ void SettingCommand::RollBack()
 	case Type::RoomType:
 		for(size_t i = 0; i < indices.size(); ++i)
 			metaroom->m_roomType[indices[i]] = prev_values[i];
+		break;
+	case Type::DrawDistance:
+		for(size_t i = 0; i < indices.size(); ++i)
+			metaroom->m_drawDistance[indices[i]]  = prev_values[i];
 		break;
 	case Type::DoorType:
 		for(size_t i = 0; i < indices.size(); ++i)

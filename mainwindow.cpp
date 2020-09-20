@@ -134,11 +134,12 @@ enter(Qt::Key_Z, this)
 		SetZoom(m_zoom * 7.f/8);
 	});
 
-#define QDoubleSpinBoxChanged()  (void (QDoubleSpinBox::*)(double)) &QDoubleSpinBox::editingFinished
-#define QSpinBoxChanged()  (void (QSpinBox::*)(int)) &QSpinBox::editingFinished
+#define QDoubleSpinBoxChanged()  (void (QDoubleSpinBox::*)(double)) &QDoubleSpinBox::valueChanged
+#define QSpinBoxChanged()  (void (QSpinBox::*)(int)) &QSpinBox::valueChanged
 #define QComboBoxChanged()  (void (QComboBox::*)(int)) &QComboBox::currentIndexChanged
 
 	connect(ui->room_music,         QComboBoxChanged(),      [this](int   value) { if(!updating_fields && value >= 0) document->SetRoomMusic(value); });
+	connect(ui->distance,           QDoubleSpinBoxChanged(), [this](double   value) { if(!updating_fields && value >= 0) document->SetDrawDistance(value); });
 //	connect(ui->room_music->lineEdit(), &QLineEdit::editingFinished, this, &MainWindow::musicSet);
 
 	ui->room_music->lineEdit()->setMaxLength(24);
@@ -260,6 +261,7 @@ void MainWindow::OnSelectionChanged()
 	ui->permeability->setEnabled(document->noEdgesSelected() != 0);
 
 	ui->room_music->setEnabled(selected);
+	ui->distance->setEnabled(document->drawDistance);
 
 #if HAVE_WALL_TYPE
 	ui->door_type->setCurrentIndex(document->wall_type);
@@ -532,7 +534,7 @@ void MainWindow::fileLoadWalls()
 
 		try
 		{
-			std::ifstream file(path);
+			std::ifstream file(path,  std::ios_base::in|std::ios_base::binary);
 
 			if (!file.is_open())
 			{

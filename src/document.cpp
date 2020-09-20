@@ -76,6 +76,7 @@ void Document::OnSelectionChanged(GLViewWidget *gl)
 	room_type    = m_metaroom.GetRoomType();
 	wall_type    = m_metaroom.GetWallType();
 	permeability = m_metaroom.GetPermeability();
+	drawDistance = m_metaroom.GetDrawDistance();
 
     m_metaroom.m_selection.Prepare(gl);
 }
@@ -199,6 +200,16 @@ void Document::SetRoomGravity(float x, float y)
 	PushSettingCommand(value, SettingCommand::Type::Gravity);
 }
 
+void Document::SetDrawDistance(float distance)
+{
+	uint16_t value = distance * 257;
+	if(value == drawDistance)
+		return;
+
+	PushSettingCommand(value, SettingCommand::Type::DrawDistance);
+}
+
+
 void Document::SetPermeability(int value)
 {
 	if(value == permeability || value < 0)
@@ -237,6 +248,7 @@ void Document::PushSettingCommand(uint32_t value, SettingCommand::Type type)
 	case SettingCommand::Type::Gravity:
 	case SettingCommand::Type::Track:
 	case SettingCommand::Type::RoomType:
+	case SettingCommand::Type::DrawDistance:
 		selection = m_metaroom.m_selection.GetFaceSelection();
 		break;
 	case SettingCommand::Type::DoorType:
