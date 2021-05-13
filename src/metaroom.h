@@ -156,6 +156,7 @@ public:
 	std::unique_ptr<uint8_t[]>   m_roomType;
 	std::unique_ptr<uint8_t[]>   m_doorType;
 	std::unique_ptr<uint16_t[]>  m_drawDistance;
+	std::unique_ptr<int[]>	     m_color;
 	std::unique_ptr<std::pair<int, int>[]> m_hall;
 #if HAVE_UUID
 	std::unique_ptr<uint32_t[]>  m_uuid;

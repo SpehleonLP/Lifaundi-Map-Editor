@@ -454,6 +454,37 @@ void QuadTree::GetHallDoors(int edge, std::vector<int> & doors)
 	}
 }
 
+std::vector<uint8_t> QuadTree::GetEdgeFlags()
+{
+	if(IsDirty()) Rebuild();
+
+	if(m_nodes == nullptr)
+		return {};
+
+	std::vector<uint8_t> r(m_metaroom->size(), 0);
+
+	auto min = m_nodes[0].min;
+	auto max = m_nodes[0].max;
+
+	glm::ivec2 coords[4][2]
+	{
+		{{min.x, min.y}, {max.x, min.y}},
+		{{min.x, max.y}, {max.x, max.y}},
+		{{min.x, min.y}, {min.x, max.y}},
+		{{max.x, min.y}, {max.x, max.y}}
+	};
+
+	std::vector<int> vec;
+	for(int i = 0; i < 4; ++i)
+	{
+		vec.clear();
+		GetOverlappingRooms(coords[i][0], coords[i][1], vec);
+		for(int i : vec) { r[i] |= 0x01; }
+	}
+
+	return r;
+}
+
 void QuadTree::GetWriteDoors(int edge, std::stack<int> & stack, std::vector<DoorInfo> & edges, int typeId)
 {
 	if(IsDirty()) Rebuild();

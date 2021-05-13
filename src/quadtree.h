@@ -83,11 +83,12 @@ public:
 
 	void GetWriteDoors(std::vector<Door> & doors, std::vector<DoorList> & indices, bool make_halls = false, int typeId = -1);
 	void GetHallDoors(std::vector<int> & doors, std::vector<std::pair<int, int>> & indices);
+	std::vector<uint8_t> GetEdgeFlags();
 
 	int GetFace(glm::ivec2 position);
 
 	bool IsDirty() const { return m_dirty; }
-	void SetDirty(bool clear_mvsf = true) { m_dirty = true; m_mvsf.clear(); }
+	void SetDirty(bool = true) { m_dirty = true; m_mvsf.clear(); }
 	void SetVBODirty() { m_vbo_dirty = true; }
 	bool empty() const;
 

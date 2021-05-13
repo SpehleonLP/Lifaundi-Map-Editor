@@ -26,13 +26,14 @@ LIBS += -lGLEW -lGL -lGLU -ldrm -lz
 
 CONFIG += c++14
 
-DEFINES += GLM_EXT_INCLUDED
+DEFINES += GLM_EXT_INCLUDED GLM_FORCE_INLINE GLM_ENABLE_EXPERIMENTAL
 
 SOURCES += \
 	exportoptions.cpp \
         main.cpp \
         mainwindow.cpp \
 	src/Shaders/arrowshader.cpp \
+	src/color_rooms.cpp \
     src/document.cpp \
     src/commandlist.cpp \
 	src/edgerange.cpp \
@@ -65,6 +66,7 @@ HEADERS += \
         mainwindow.h \
 	nlohmann/json_detail.hpp \
 	src/Shaders/arrowshader.h \
+	src/color_rooms.h \
     src/document.h \
     src/commandlist.h \
 	src/edgerange.h \
