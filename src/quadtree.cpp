@@ -479,7 +479,7 @@ std::vector<uint8_t> QuadTree::GetEdgeFlags()
 	{
 		vec.clear();
 		GetOverlappingRooms(coords[i][0], coords[i][1], vec);
-		for(int i : vec) { r[i] |= 0x01; }
+		for(int j : vec) { r[j] |= 1 << i; }
 	}
 
 	return r;

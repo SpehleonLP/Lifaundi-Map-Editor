@@ -55,16 +55,21 @@ uint32_t ColorRooms::GetColorFlags(Range range, int room_id, std::vector<int8_t>
 
 	for(range.setRoom(room_id); !range.empty(); range.popFront())
 	{
-		bits |= 1 << color[range.front()];
+		auto front = range.front();
+		assert((uint32_t)front < color.size());
+
+		if(color[front] >= 0)
+			bits |= 1 << color[front];
 	}
 
 	return 0x0F ^ bits;
 }
 
-bool ColorRooms::DoColoring(std::vector<int8_t> & r, std::vector<Door> const& doors, std::vector<DoorList> const& indices, std::vector<uint8_t> const& edge_flags)
+std::vector<int8_t> ColorRooms::DoColoring(std::vector<Door> const& doors, std::vector<DoorList> const& indices, std::vector<uint8_t> const& edge_flags)
 {
+	std::vector<int8_t> r;
 	if(!DoColoring(r, doors, indices))
-		return false;
+		throw std::runtime_error("Coloring failed");
 
 	CheckColoring(r, doors, indices);
 
@@ -77,13 +82,40 @@ bool ColorRooms::DoColoring(std::vector<int8_t> & r, std::vector<Door> const& do
 			r[i] += 4;
 
 //give a special color to things that span
-		if((edge_flags[i] & 0x03) || (edge_flags[i] & 0x0C))
+		if((edge_flags[i] & 0x03) == 3 || (edge_flags[i] & 0x0C) == 0xC)
 			r[i] = 9;
 	}
 
-	return true;
+	return r;
 }
 
+bool ColorRooms::DoColoring(std::vector<int8_t> & r, std::vector<uint32_t> & face_queue, StackFrame & frame, Range range)
+{
+	auto flags = GetColorFlags(range, frame.face_id, r);
+
+//no available colors
+	if(flags == 0)
+		return false;
+
+	for(; frame.color < 4; ++frame.color)
+	{
+		auto c = 1 << frame.color;
+		auto f = flags & c;
+		if(0 == f)
+			continue;
+
+		r[frame.face_id] = frame.color;
+		for(range.setRoom(frame.face_id); !range.empty(); range.popFront())
+		{
+			if(r[range.front()] < 0)
+				face_queue.push_back(range.front());
+		}
+
+		return true;
+	}
+
+	return false;
+}
 
 bool ColorRooms::DoColoring(std::vector<int8_t> & r, std::vector<Door> const& doors, std::vector<DoorList> const& indices)
 {
@@ -92,52 +124,25 @@ bool ColorRooms::DoColoring(std::vector<int8_t> & r, std::vector<Door> const& do
 
 	Range range(doors, indices);
 
-	struct StackFrame
-	{
-		uint32_t face_id;
-		uint32_t color;
-	};
-
 	std::vector<StackFrame> stack;
 	std::vector<uint32_t>   face_queue;
 	stack.push_back({0, 0});
 
-	uint32_t queue_pos = 0;
-
 	while(stack.size())
 	{
-		StackFrame & frame = stack.back();
-
-		auto flags = GetColorFlags(range, frame.face_id, r);
-		flags &= ~((1 << frame.color) - 1);
-
 //no available colors
-		if(flags == 0)
+		if(!DoColoring(r, face_queue, stack.back(), range))
 		{
 			stack.pop_back();
 			continue;
-		}
-
-		for(; frame.color < 4; ++frame.color)
-		{
-			if(!(flags&(1 << frame.color)))
-				continue;
-
-			r[frame.face_id] = frame.color;
-			for(range.setRoom(frame.face_id); !range.empty(); range.popFront())
-			{
-				if(r[range.front()] < 0)
-					face_queue.push_back(range.front());
-			}
-
-			break;
 		}
 
 		for(;face_queue.size(); face_queue.pop_back())
 		{
 			if(r[face_queue.back()] < 0)
 			{
-				stack.push_back({face_queue[queue_pos], 0});
+				stack.push_back({face_queue.back(), 0});
+				face_queue.pop_back();
 				goto end_loop;
 			}
 		}

@@ -6,6 +6,7 @@
 #include "Shaders/roomoutlineshader.h"
 #include "Shaders/selectedroomshader.h"
 #include "Shaders/arrowshader.h"
+#include "color_rooms.h"
 #include "clipboard.h"
 #include <glm/glm.hpp>
 #include <iostream>
@@ -153,7 +154,7 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 	fp.read((char*)&m_gravity[0],  4* size());
 	fp.read((char*)&m_roomType[0], 1* size());
 	fp.read((char*)&m_doorType[0], 4* size());
-	fp.read((char*)&m_doorType[0], 4* size());
+	fp.read((char*)&m_music[0], 1* size());
 
 	if(version > 4)
 		fp.read((char*)&m_drawDistance[0], 4* size());
@@ -212,7 +213,7 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 		}
 	}
 
-	if(version > 4)
+	if(version >= 4)
 		m_tree.ReadTree(fp);
 }
 
@@ -224,7 +225,7 @@ uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 
 	const char * title = "lfmp";
 
-	short version = 5;
+	short version = 4;
 	short no_tracks = tracks.size();
 
 	fp.write(title, 4);
@@ -232,9 +233,9 @@ uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 	fp.write((char*)&no_tracks, 2);
 	fp.write((char*)&faces, 4);
 
-	auto bounds = GetBoundingBox();
+	glm::i16vec4 bounds = GetBoundingBox();
 
-	fp.write((char*)&bounds, 2 * 4);
+	fp.write((char*)&bounds, sizeof(bounds));
 
 	auto verts = SaveVerts();
 
@@ -243,7 +244,7 @@ uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 	fp.write((char*)&m_roomType[0], 1 * size());
 	fp.write((char*)&m_doorType[0], 4 * size());
 	fp.write((char*)&m_music[0],    1 * size());
-	fp.write((char*)&m_drawDistance[0], 1 * size());
+//	fp.write((char*)&m_drawDistance[0], 1 * size());
 
 	for(uint32_t i = 0; i < tracks.size();++i)
 	{
@@ -256,13 +257,15 @@ uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 	std::vector<QuadTree::Door>     door_list;
 
     m_tree.GetWriteDoors(door_list, door_indices);
-
 	assert(door_indices.size() == size()*4);
 
 	fp.write((char*)&door_indices[0], sizeof(QuadTree::DoorList) * door_indices.size());
 	fp.write((char*)&door_list[0], sizeof(QuadTree::Door) * door_list.size());
 
+	auto coloring = ColorRooms::DoColoring(door_list, door_indices, m_tree.GetEdgeFlags());
 	m_tree.WriteTree(fp);
+
+	fp.write((char*)&coloring[0], sizeof(coloring[0]) * coloring.size());
 
 	return offset;
 }
