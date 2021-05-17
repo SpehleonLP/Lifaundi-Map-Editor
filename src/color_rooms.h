@@ -12,11 +12,11 @@ typedef QuadTree::DoorList DoorList;
 	std::vector<std::vector<int>> GetEdgeList(std::vector<Door> const& doors, std::vector<DoorList> const& indices);
 
 	std::vector<int8_t> DoColoring(std::vector<Door> const& doors, std::vector<DoorList> const& indicies, std::vector<uint8_t> const& edge_flags);
-	bool DoColoring(std::vector<int8_t> & r, std::vector<Door> const& doors, std::vector<DoorList> const& indicies);
+	bool DoColoring(std::vector<int8_t> & r, std::vector<Door> const& doors, std::vector<DoorList> const& indicies, std::vector<uint8_t> const& edge_flags);
 	void CheckColoring(std::vector<int8_t> const& r, std::vector<Door> const& doors, std::vector<DoorList> const& indicies);
 	int GetMaxDegree( std::vector<DoorList> const& indicies, int * room);
-	uint32_t GetColorFlags(Range range, int room_id, const std::vector<int8_t> & color);
-	bool DoColoring(std::vector<int8_t> & r, std::vector<uint32_t> & face_queue, StackFrame & frame, Range range);
+	uint32_t GetColorFlags(Range range, int room_id, const std::vector<int8_t> & color, std::vector<uint8_t> const& edge_flags);
+	bool DoColoring(std::vector<int8_t> & r, std::vector<uint32_t> & face_queue, StackFrame & frame, Range range, const std::vector<uint8_t> & edge_flags);
 };
 
 struct ColorRooms::StackFrame

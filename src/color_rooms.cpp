@@ -49,10 +49,14 @@ std::vector<std::vector<int>> ColorRooms::GetEdgeList(std::vector<Door> const& d
 	return r;
 }
 
-uint32_t ColorRooms::GetColorFlags(Range range, int room_id, std::vector<int8_t> const& color)
+uint32_t ColorRooms::GetColorFlags(Range range, int room_id, std::vector<int8_t> const& color, std::vector<uint8_t> const& edge_flags)
 {
+	if((edge_flags[room_id] & 0x03) == 3 || (edge_flags[room_id] & 0x0C) == 0xC)
+		return 1;
+
 	uint32_t bits = 0x00;
 
+	Range r2 = range;
 	for(range.setRoom(room_id); !range.empty(); range.popFront())
 	{
 		auto front = range.front();
@@ -60,19 +64,31 @@ uint32_t ColorRooms::GetColorFlags(Range range, int room_id, std::vector<int8_t>
 
 		if(color[front] >= 0)
 			bits |= 1 << color[front];
+
+		for(r2.setRoom(front); !r2.empty(); r2.popFront())
+		{
+			auto front = r2.front();
+			assert((uint32_t)front < color.size());
+
+			if(color[front] >= 0)
+				bits |= 1 << color[front];
+		}
 	}
 
-	return 0x0F ^ bits;
+	if(edge_flags[room_id] & 0x06)
+		return 0x07 ^ bits;
+
+	return 0x03F8 ^ bits;
 }
 
 std::vector<int8_t> ColorRooms::DoColoring(std::vector<Door> const& doors, std::vector<DoorList> const& indices, std::vector<uint8_t> const& edge_flags)
 {
 	std::vector<int8_t> r;
-	if(!DoColoring(r, doors, indices))
+	if(!DoColoring(r, doors, indices, edge_flags))
 		throw std::runtime_error("Coloring failed");
 
 	CheckColoring(r, doors, indices);
-
+/*
 	assert(r.size() == edge_flags.size());
 
 	for(uint32_t i = 0; i < edge_flags.size(); ++i)
@@ -84,14 +100,14 @@ std::vector<int8_t> ColorRooms::DoColoring(std::vector<Door> const& doors, std::
 //give a special color to things that span
 		if((edge_flags[i] & 0x03) == 3 || (edge_flags[i] & 0x0C) == 0xC)
 			r[i] = 9;
-	}
+	}*/
 
 	return r;
 }
 
-bool ColorRooms::DoColoring(std::vector<int8_t> & r, std::vector<uint32_t> & face_queue, StackFrame & frame, Range range)
+bool ColorRooms::DoColoring(std::vector<int8_t> & r, std::vector<uint32_t> & face_queue, StackFrame & frame, Range range, std::vector<uint8_t> const& edge_flags)
 {
-	auto flags = GetColorFlags(range, frame.face_id, r);
+	auto flags = GetColorFlags(range, frame.face_id, r, edge_flags);
 
 //no available colors
 	if(flags == 0)
@@ -117,7 +133,7 @@ bool ColorRooms::DoColoring(std::vector<int8_t> & r, std::vector<uint32_t> & fac
 	return false;
 }
 
-bool ColorRooms::DoColoring(std::vector<int8_t> & r, std::vector<Door> const& doors, std::vector<DoorList> const& indices)
+bool ColorRooms::DoColoring(std::vector<int8_t> & r, std::vector<Door> const& doors, std::vector<DoorList> const& indices, std::vector<uint8_t> const& edge_flags)
 {
 	r.clear();
 	r.resize(indices.size()/4, -1);
@@ -131,7 +147,7 @@ bool ColorRooms::DoColoring(std::vector<int8_t> & r, std::vector<Door> const& do
 	while(stack.size())
 	{
 //no available colors
-		if(!DoColoring(r, face_queue, stack.back(), range))
+		if(!DoColoring(r, face_queue, stack.back(), range, edge_flags))
 		{
 			stack.pop_back();
 			continue;
