@@ -1,19 +1,19 @@
 #include "color_rooms.h"
 
 
-int ColorRooms::GetMaxDegree(std::vector<DoorList> const& indicies, int * room)
+int ColorRooms::GetMaxDegree(int * room) const
 {
 	int best_room{-1};
 	int best_degree{};
 
 	//find the one with the highest degree
-	for(uint32_t i = 0; i < indicies.size(); i += 4)
+	for(uint32_t i = 0; i < indices.size(); i += 4)
 	{
 		int degree =
-				indicies[i+0].length +
-				indicies[i+1].length +
-				indicies[i+2].length +
-				indicies[i+3].length ;
+				indices[i+0].length +
+				indices[i+1].length +
+				indices[i+2].length +
+				indices[i+3].length ;
 
 		if(degree > best_degree)
 		{
@@ -31,63 +31,82 @@ std::vector<std::vector<int>> ColorRooms::GetEdgeList(std::vector<Door> const& d
 	std::vector<std::vector<int>>  r;
 	r.resize(indices.size()/4);
 
+	Range range(doors, indices);
+	Range r2(doors, indices);
+
 	for(uint32_t i = 0; i < r.size(); ++i)
 	{
-		for(uint32_t j = 0; j < 4; ++j)
-		{
-			Door const* begin = doors.data() + indices[j].index;
-			Door const* end   = begin + indices[j].length;
+		std::vector<int> v;
 
-			for(;begin < end; ++begin)
+		for(range.setRoom(i); !range.empty(); range.popFront())
+		{
+			v.push_back(range.front());
+
+			for(r2.setRoom(range.front()); !r2.empty(); r2.popFront())
 			{
-				if(begin->face >= 0)
-					r[i].push_back(begin->face);
+				if((uint32_t)r2.front() != i)
+					v.push_back(r2.front());
 			}
 		}
+
+		std::sort(v.begin(), v.end());
+
+		uint32_t write = 0, read = 0, j;
+		for(;read < v.size(); read = j)
+		{
+			for(j = read; j < v.size(); ++j)
+			{
+				if(v[j] != v[read])
+					break;
+			}
+
+			v[write++] = v[read];
+		}
+
+		v.resize(write);
+		r[i] = std::move(v);
 	}
 
 	return r;
 }
 
-uint32_t ColorRooms::GetColorFlags(Range range, int room_id, std::vector<int8_t> const& color, std::vector<uint8_t> const& edge_flags)
+uint32_t ColorRooms::GetColorFlags(int room_id) const
 {
 	if((edge_flags[room_id] & 0x03) == 3 || (edge_flags[room_id] & 0x0C) == 0xC)
 		return 1;
 
 	uint32_t bits = 0x00;
 
-	Range r2 = range;
-	for(range.setRoom(room_id); !range.empty(); range.popFront())
+	for(auto e : edges[room_id])
 	{
-		auto front = range.front();
-		assert((uint32_t)front < color.size());
-
-		if(color[front] >= 0)
-			bits |= 1 << color[front];
-
-		for(r2.setRoom(front); !r2.empty(); r2.popFront())
-		{
-			auto front = r2.front();
-			assert((uint32_t)front < color.size());
-
-			if(color[front] >= 0)
-				bits |= 1 << color[front];
-		}
+		if(coloring[e] >= 0)
+			bits |= 1 << coloring[e];
 	}
 
 	if(edge_flags[room_id] & 0x06)
-		return 0x07 ^ bits;
+		return 0x0E & ~bits;
 
-	return 0x03F8 ^ bits;
+	return 0x00FFFFF0 & ~bits;
 }
 
-std::vector<int8_t> ColorRooms::DoColoring(std::vector<Door> const& doors, std::vector<DoorList> const& indices, std::vector<uint8_t> const& edge_flags)
+int32_t ColorRooms::NoColorsUsed() const
 {
-	std::vector<int8_t> r;
-	if(!DoColoring(r, doors, indices, edge_flags))
+	int8_t r = 0;
+
+	for(auto c : coloring)
+		r = std::max(c, r);
+
+	return r;
+}
+
+void ColorRooms::DoColoring()
+{
+	Range range(doors, indices);
+	auto edges = GetEdgeList(doors, indices);
+	if(!DoColoringInternal())
 		throw std::runtime_error("Coloring failed");
 
-	CheckColoring(r, doors, indices);
+	CheckColoring();
 /*
 	assert(r.size() == edge_flags.size());
 
@@ -101,44 +120,12 @@ std::vector<int8_t> ColorRooms::DoColoring(std::vector<Door> const& doors, std::
 		if((edge_flags[i] & 0x03) == 3 || (edge_flags[i] & 0x0C) == 0xC)
 			r[i] = 9;
 	}*/
-
-	return r;
 }
 
-bool ColorRooms::DoColoring(std::vector<int8_t> & r, std::vector<uint32_t> & face_queue, StackFrame & frame, Range range, std::vector<uint8_t> const& edge_flags)
+bool ColorRooms::DoColoringInternal()
 {
-	auto flags = GetColorFlags(range, frame.face_id, r, edge_flags);
-
-//no available colors
-	if(flags == 0)
-		return false;
-
-	for(; frame.color < 4; ++frame.color)
-	{
-		auto c = 1 << frame.color;
-		auto f = flags & c;
-		if(0 == f)
-			continue;
-
-		r[frame.face_id] = frame.color;
-		for(range.setRoom(frame.face_id); !range.empty(); range.popFront())
-		{
-			if(r[range.front()] < 0)
-				face_queue.push_back(range.front());
-		}
-
-		return true;
-	}
-
-	return false;
-}
-
-bool ColorRooms::DoColoring(std::vector<int8_t> & r, std::vector<Door> const& doors, std::vector<DoorList> const& indices, std::vector<uint8_t> const& edge_flags)
-{
-	r.clear();
-	r.resize(indices.size()/4, -1);
-
-	Range range(doors, indices);
+	coloring.clear();
+	coloring.resize(edges.size(), -1);
 
 	std::vector<StackFrame> stack;
 	std::vector<uint32_t>   face_queue;
@@ -147,7 +134,7 @@ bool ColorRooms::DoColoring(std::vector<int8_t> & r, std::vector<Door> const& do
 	while(stack.size())
 	{
 //no available colors
-		if(!DoColoring(r, face_queue, stack.back(), range, edge_flags))
+		if(!DoColoring(face_queue, stack.back()))
 		{
 			stack.pop_back();
 			continue;
@@ -155,7 +142,7 @@ bool ColorRooms::DoColoring(std::vector<int8_t> & r, std::vector<Door> const& do
 
 		for(;face_queue.size(); face_queue.pop_back())
 		{
-			if(r[face_queue.back()] < 0)
+			if(coloring[face_queue.back()] < 0)
 			{
 				stack.push_back({face_queue.back(), 0});
 				face_queue.pop_back();
@@ -163,9 +150,9 @@ bool ColorRooms::DoColoring(std::vector<int8_t> & r, std::vector<Door> const& do
 			}
 		}
 
-		for(uint32_t i = 0; i < r.size(); ++i)
+		for(uint32_t i = 0; i < coloring.size(); ++i)
 		{
-			if(r[i] < 0)
+			if(coloring[i] < 0)
 			{
 				stack.push_back({i, 0});
 				goto end_loop;
@@ -181,18 +168,51 @@ end_loop:
 	return false;
 }
 
-void ColorRooms::CheckColoring(std::vector<int8_t> const& r, std::vector<Door> const& doors, std::vector<DoorList> const& indices)
+bool ColorRooms::DoColoring(std::vector<uint32_t> & face_queue, StackFrame & frame)
 {
 	Range range(doors, indices);
 
-	for(uint32_t i = 0; i < r.size(); ++i)
+	auto flags = GetColorFlags(frame.face_id);
+
+//no available colors
+	if(flags == 0)
+		return false;
+
+	for(;; ++frame.color)
 	{
-		if(r[i] < 0)
+		uint32_t c = 1 << frame.color;
+
+		if(0 == (flags & c))
+			continue;
+		else if(c > flags)
+			break;
+
+		coloring[frame.face_id] = frame.color;
+		for(range.setRoom(frame.face_id); !range.empty(); range.popFront())
+		{
+			if(coloring[range.front()] < 0)
+				face_queue.push_back(range.front());
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
+void ColorRooms::CheckColoring() const
+{
+	for(uint32_t i = 0; i < edges.size(); ++i)
+	{
+		if(coloring[i] < 0)
 			throw std::runtime_error("room not colored");
 
-		for(range.setRoom(i); !range.empty(); range.popFront())
+		if(coloring[i] == 0)
+			continue;
+
+		for(auto e : edges[i])
 		{
-			if(r[range.front()] == r[i])
+			if(coloring[e] == coloring[i])
 				throw std::runtime_error("two adjacent rooms have same color");
 		}
 	}

@@ -3,20 +3,41 @@
 #include "quadtree.h"
 
 
-namespace ColorRooms
+class ColorRooms
 {
 struct Range;
 struct StackFrame;
 typedef QuadTree::Door Door;
 typedef QuadTree::DoorList DoorList;
-	std::vector<std::vector<int>> GetEdgeList(std::vector<Door> const& doors, std::vector<DoorList> const& indices);
+	static std::vector<std::vector<int>> GetEdgeList(std::vector<Door> const& doors, std::vector<DoorList> const& indices);
 
-	std::vector<int8_t> DoColoring(std::vector<Door> const& doors, std::vector<DoorList> const& indicies, std::vector<uint8_t> const& edge_flags);
-	bool DoColoring(std::vector<int8_t> & r, std::vector<Door> const& doors, std::vector<DoorList> const& indicies, std::vector<uint8_t> const& edge_flags);
-	void CheckColoring(std::vector<int8_t> const& r, std::vector<Door> const& doors, std::vector<DoorList> const& indicies);
-	int GetMaxDegree( std::vector<DoorList> const& indicies, int * room);
-	uint32_t GetColorFlags(Range range, int room_id, const std::vector<int8_t> & color, std::vector<uint8_t> const& edge_flags);
-	bool DoColoring(std::vector<int8_t> & r, std::vector<uint32_t> & face_queue, StackFrame & frame, Range range, const std::vector<uint8_t> & edge_flags);
+public:
+	ColorRooms(std::vector<Door> & doors, std::vector<DoorList> & indices, std::vector<uint8_t> && edge_flags) :
+		doors(doors),
+		indices(indices),
+		edge_flags(std::move(edge_flags)),
+		edges(GetEdgeList(doors, indices))
+	{
+	}
+
+	void DoColoring();
+	std::vector<int8_t> const& GetColoring() const { return coloring; }
+
+	int		 GetMaxDegree(int * room) const;
+	uint32_t GetColorFlags(int room_id) const;
+	int      NoColorsUsed() const;
+	void	 CheckColoring() const;
+
+private:
+	bool DoColoringInternal();
+	bool DoColoring(std::vector<uint32_t> & face_queue, StackFrame & frame);
+
+	std::vector<Door>				const& doors;
+	std::vector<DoorList>			const& indices;
+	std::vector<uint8_t>			const  edge_flags;
+	std::vector<std::vector<int>>	edges;
+
+	std::vector<int8_t>				coloring;
 };
 
 struct ColorRooms::StackFrame

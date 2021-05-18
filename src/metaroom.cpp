@@ -262,9 +262,15 @@ uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 	fp.write((char*)&door_indices[0], sizeof(QuadTree::DoorList) * door_indices.size());
 	fp.write((char*)&door_list[0], sizeof(QuadTree::Door) * door_list.size());
 
-	auto coloring = ColorRooms::DoColoring(door_list, door_indices, m_tree.GetEdgeFlags());
 	m_tree.WriteTree(fp);
 
+	ColorRooms color(door_list, door_indices, m_tree.GetEdgeFlags());
+	color.DoColoring();
+
+	auto const& coloring = color.GetColoring();
+	int8_t noColors = color.NoColorsUsed();
+
+	fp.write((char*)&noColors, sizeof(noColors));
 	fp.write((char*)&coloring[0], sizeof(coloring[0]) * coloring.size());
 
 	return offset;
