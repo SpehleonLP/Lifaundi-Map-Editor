@@ -88,7 +88,7 @@ public:
 	void AddFace(glm::ivec2 min, glm::ivec2 max);
 
 	int AddFaces(int no_faces = 1);
-	int GetFace(glm::ivec2 position);
+	inline int GetFace(glm::ivec2 position) const { return m_tree.GetFace(position); }
 
 	void RemoveFace(int id);
 	void RemoveFaces(std::vector<int> const& vec);
@@ -97,7 +97,7 @@ public:
 	void Rotate(glm::ivec2 center, glm::vec2 complex);
 	void Scale(glm::ivec2 center, glm::vec2 scale);
 
-	void ClickSelect(glm::ivec2 pos, Bitwise flags);
+	void ClickSelect(glm::ivec2 pos, Bitwise flags, bool alt);
 	void BoxSelect(glm::ivec2 tl, glm::ivec2 br, Bitwise flags);
 
 	void CancelMove();
@@ -140,7 +140,11 @@ public:
 	bool m_dirty{true};
 
 	void remove_face_links(int id);
+	void RingSelectFace(int face, glm::ivec2 mouse, Bitwise flags);
+	void RingSelectFaceInternal(int edge, glm::ivec2 position, Bitwise flags);
 
+	void RingSelectEdge(int face, Bitwise flags);
+	void RingSelectEdgeInternal(int face, Bitwise flags);
 
 	void solve_constraints() {};
 
@@ -163,14 +167,32 @@ public:
 	uint32_t                      m_uuid_counter{};
 #endif
 
+	enum Buffers
+	{
+		bVertices=0,
+		bHalls=2,
+		bGravity = 3,
+		NoBuffers,
+
+	};
+
+	enum Arrays
+	{
+		aRooms = 0,
+		aHalls = 2,
+		aGravity,
+		NoArrays,
+
+	};
+
 	uint32_t allocated{};
 	uint32_t faces{};
 
 	uint32_t gl_vert_texture{};
 	uint32_t gl_vert_vbo{};
 
-	uint32_t m_vao[3]{};
-	uint32_t m_buffers[3]{};
+	uint32_t m_vao[NoArrays]{};
+	uint32_t m_buffers[NoBuffers]{};
 
 	uint32_t m_glAlloced{};
 	uint32_t m_hallAlloc{};

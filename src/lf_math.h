@@ -3,6 +3,7 @@
 #include <glm/vec2.hpp>
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 
 namespace math
 {

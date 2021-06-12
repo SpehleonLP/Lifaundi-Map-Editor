@@ -99,8 +99,8 @@ void Metaroom::Release(GLViewWidget *gl)
     SelectedRoomShader::Shader.Release(gl);
     ArrowShader::Shader.Release(gl);
 
-    gl->glDeleteVertexArrays(3, m_vao);
-    gl->glDeleteBuffers(3, m_buffers);
+    gl->glDeleteVertexArrays(NoArrays, m_vao);
+    gl->glDeleteBuffers(NoBuffers, m_buffers);
 }
 void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 {
@@ -775,11 +775,11 @@ void Metaroom::Prepare(GLViewWidget* gl)
 
 	if(initialized_vaos == false)
 	{
-        gl->glGenVertexArrays(3, m_vao);
-        gl->glGenBuffers(3, m_buffers);
+        gl->glGenVertexArrays(NoArrays, m_vao);
+        gl->glGenBuffers(NoBuffers, m_buffers);
 
         gl->glBindVertexArray(m_vao[0]);
-        gl->glBindBuffer(GL_ARRAY_BUFFER, m_buffers[0]);
+        gl->glBindBuffer(GL_ARRAY_BUFFER, m_buffers[bVertices]);
         gl->glVertexAttribIPointer(0, 2, GL_INT, sizeof(glm::ivec2), 0);
         gl->glEnableVertexAttribArray(0);
 
@@ -791,14 +791,22 @@ void Metaroom::Prepare(GLViewWidget* gl)
 
 // create selected face shader
         gl->glBindVertexArray(m_vao[1]);
-        gl->glBindBuffer(GL_ARRAY_BUFFER, m_buffers[0]);
+        gl->glBindBuffer(GL_ARRAY_BUFFER, m_buffers[bVertices]);
         gl->glVertexAttribIPointer(0, 2, GL_INT, sizeof(glm::ivec2), 0);
         gl->glEnableVertexAttribArray(0);
 
         gl->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_selection.GetIndices());
 
-        gl->glBindVertexArray(m_vao[2]);
-        gl->glBindBuffer(GL_ARRAY_BUFFER, m_buffers[2]);
+        gl->glBindVertexArray(m_vao[aHalls]);
+        gl->glBindBuffer(GL_ARRAY_BUFFER, m_buffers[bHalls]);
+        gl->glVertexAttribIPointer(0, 2, GL_INT, sizeof(ArrowShader::Vertex), (void*) offsetof(ArrowShader::Vertex, position));
+        gl->glVertexAttribPointer(1, 2, GL_SHORT, GL_TRUE, sizeof(ArrowShader::Vertex), (void*) offsetof(ArrowShader::Vertex, rotation));
+
+        gl->glEnableVertexAttribArray(0);
+        gl->glEnableVertexAttribArray(1);
+
+		gl->glBindVertexArray(m_vao[aGravity]);
+        gl->glBindBuffer(GL_ARRAY_BUFFER, m_buffers[bGravity]);
         gl->glVertexAttribIPointer(0, 2, GL_INT, sizeof(ArrowShader::Vertex), (void*) offsetof(ArrowShader::Vertex, position));
         gl->glVertexAttribPointer(1, 2, GL_SHORT, GL_TRUE, sizeof(ArrowShader::Vertex), (void*) offsetof(ArrowShader::Vertex, rotation));
 
@@ -807,24 +815,13 @@ void Metaroom::Prepare(GLViewWidget* gl)
 	}
 
     gl->glBindVertexArray(0);
-    gl->glBindBuffer(GL_ARRAY_BUFFER, m_buffers[0]);
-
-    gl->glAssert();
-	if(m_glAlloced < allocated)
-	{
-		m_glAlloced = allocated;
-        gl->glBufferData(GL_ARRAY_BUFFER, sizeof(glm::ivec2)*allocated*4, &m_verts[0], GL_DYNAMIC_DRAW);
-	}
-	else if(size() > 0)
-	{
-        gl->glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(glm::ivec2)*allocated*4, &m_verts[0]);
-	}
+    gl->glBindBuffer(GL_ARRAY_BUFFER, m_buffers[bVertices]);
+    gl->glBufferData(GL_ARRAY_BUFFER, sizeof(glm::ivec2)*allocated*4, &m_verts[0], GL_DYNAMIC_DRAW);
     gl->glAssert();
 
 //prepare hall transitions
 	std::vector<ArrowShader::Vertex> halls;
 	halls.reserve(faces);
-
 
 	ArrowShader::Vertex buffer;
 	for(uint32_t i = 1; i < faces; ++i)
@@ -866,22 +863,27 @@ void Metaroom::Prepare(GLViewWidget* gl)
 		}
 	}
 
-    gl->glBindBuffer(GL_ARRAY_BUFFER, m_buffers[2]);
+    gl->glBindBuffer(GL_ARRAY_BUFFER, m_buffers[bHalls]);
     gl->glAssert();
 
-	if(m_hallAlloc < halls.capacity())
-	{
-		m_hallAlloc = halls.capacity();
-        gl->glBufferData(GL_ARRAY_BUFFER, sizeof(halls[0])*halls.capacity(), &halls[0], GL_DYNAMIC_DRAW);
-	}
-	else if(halls.size() > 0)
-	{
-        gl->glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(halls[0])*halls.size(), &halls[0]);
-	}
-
+    gl->glBufferData(GL_ARRAY_BUFFER, sizeof(halls[0])*halls.capacity(), &halls[0], GL_DYNAMIC_DRAW);
     m_noHalls = halls.size();
     gl->glAssert();
 
+//prepare gravity arrows
+	halls.resize(faces);
+
+	for(uint32_t i = 0; i < faces; ++i)
+	{
+		halls[i].position = (GetVertex(i, 0) + GetVertex(i, 1) + GetVertex(i, 2) + GetVertex(i, 3))/4;
+		halls[i].rotation = (float)SHRT_MAX * glm::normalize(glm::unpackHalf2x16(m_gravity[i]));
+	}
+
+    gl->glBindBuffer(GL_ARRAY_BUFFER, m_buffers[bGravity]);
+    gl->glAssert();
+
+    gl->glBufferData(GL_ARRAY_BUFFER, sizeof(halls[0])*faces, &halls[0], GL_DYNAMIC_DRAW);
+    gl->glAssert();
 }
 
 void Metaroom::Render(GLViewWidget *gl, int selected_door_type)
@@ -905,10 +907,16 @@ void Metaroom::Render(GLViewWidget *gl, int selected_door_type)
 
     m_tree.Render(gl, selected_door_type);
 
-	if(m_noHalls)
+	if(m_noHalls && document->m_window->viewHalls())
 	{
-        gl->glBindVertexArray(m_vao[2]);
-        ArrowShader::Shader.Render(gl, m_noHalls);
+        gl->glBindVertexArray(m_vao[aHalls]);
+        ArrowShader::Shader.Render(gl, m_noHalls, glm::vec4(1, 0, 0, 1));
+	}
+
+	if(size() && document->m_window->viewGravity())
+	{
+        gl->glBindVertexArray(m_vao[aGravity]);
+        ArrowShader::Shader.Render(gl, size(), glm::vec4(0, 0, 1, 1));
 	}
 }
 
@@ -1115,6 +1123,8 @@ void Metaroom::RestoreVerts(const std::vector<glm::i16vec2> & vec)
 	{
 		m_verts[i] = vec[i];
 	}
+
+	memcpy(&m_prev_verts[0], &m_verts[0], sizeof(m_verts[0]) * faces*4);
 }
 
 void Metaroom::GetFaceAABB(int id, glm::i16vec2 & tl, glm::i16vec2 & br) const
@@ -1173,7 +1183,7 @@ void Metaroom::BoxSelect(glm::ivec2 tl, glm::ivec2 br, Bitwise flags)
 	return;
 }
 
-void Metaroom::ClickSelect(glm::ivec2 pos, Bitwise flags)
+void Metaroom::ClickSelect(glm::ivec2 pos, Bitwise flags, bool alt)
 {
 	if(flags == Bitwise::SET)
 		m_selection.clear();
@@ -1205,18 +1215,23 @@ void Metaroom::ClickSelect(glm::ivec2 pos, Bitwise flags)
 			{
 				m_selection.select_edge(i, flags);
 				selected = true;
+
+				if(alt)
+				{
+					RingSelectEdge(i, flags);
+				}
 			}
 		}
 	}
 
 	if(selected == false)
 	{
-		for(uint32_t i = 0; i < faces; ++i)
+		int face = GetFace(pos);
+
+		if(face != -1)
 		{
-			if(IsPointContained(i, pos))
-			{
-				m_selection.select_face(i, flags);
-			}
+			m_selection.select_face(face, flags);
+			if(alt)	RingSelectFace(face, pos, flags);
 		}
 	}
 
@@ -1233,4 +1248,98 @@ bool Metaroom::IsPointContained(int i, glm::ivec2 pos)
 	&& (math::cross(m_verts[i*4+2] - m_verts[i*4+1], pos - m_verts[i*4+1]) <= 0)
 	&& (math::cross(m_verts[i*4+3] - m_verts[i*4+2], pos - m_verts[i*4+2]) <= 0)
 	&& (math::cross(m_verts[i*4+0] - m_verts[i*4+3], pos - m_verts[i*4+3]) <= 0);
+}
+
+void Metaroom::RingSelectFace(int face, glm::ivec2 mouse, Bitwise flags)
+{
+	int best_edge		= -1;
+	float best_distance = FLT_MAX;
+
+	for(int i = face*4; i < (face+1)*4; ++i)
+	{
+		int j = NextInEdge(i);
+
+		float distance2 = math::SemgentDistanceSquared(m_verts[i], m_verts[j], mouse);
+
+		if(0 <= distance2 && distance2 < best_distance)
+		{
+			best_edge = i;
+			best_distance = distance2;
+		}
+	}
+
+	float percentage = ProjectOntoEdge(best_edge, mouse);
+
+	if(flags == Bitwise::SET)
+		flags = Bitwise::OR;
+
+	m_selection.MarkFace(face);
+	RingSelectFaceInternal(best_edge, GetPointOnEdge(best_edge, percentage), flags);
+	best_edge = Metaroom::GetOppositeEdge(best_edge);
+	RingSelectFaceInternal(best_edge, GetPointOnEdge(best_edge, percentage), flags);
+	m_selection.ClearMarks();
+}
+
+void Metaroom::RingSelectFaceInternal(int edge, glm::ivec2 position, Bitwise flags)
+{
+	float mid;
+
+	while(m_tree.GetSliceFace(
+		GetVertex(edge),
+		GetVertex(Metaroom::NextInEdge(edge)),
+		position,
+		edge,
+		mid))
+	{
+		if(m_selection.MarkFace(edge/4) == false)
+			return;
+
+		m_selection.select_face(edge/4, flags);
+
+		edge     = Metaroom::GetOppositeEdge(edge);
+		position = GetPointOnEdge(edge, mid);
+	}
+}
+
+void Metaroom::RingSelectEdge(int edge, Bitwise flags)
+{
+
+
+}
+
+#include "edgerange.h"
+
+void Metaroom::RingSelectEdgeInternal(int edge, Bitwise flags)
+{
+	EdgeRange range(&m_tree, edge);
+
+	int bestEdge = -1;
+	float highestDot = FLT_MIN;
+
+	auto v0 = GetVertex(edge);
+	auto v1 = GetNextVertex(edge);
+	auto vec = v1 - v0;
+
+	while(range.popFront(EdgeRange::Flags::None))
+	{
+		for(int i = 0; i < 4; ++i)
+		{
+			auto a0 = GetVertex(range.face()*4+i);
+			auto a1 = GetNextVertex(range.face()*4+i);
+
+			if(!(v0 == a0 || v0 == a1 || v1 == a0 || v1 == a1))
+				continue;
+
+			float dot = std::fabs(glm::dot(vec, a1 - a0));
+
+			if(dot > highestDot)
+			{
+				highestDot = dot;
+				bestEdge = range.face()*4+i;
+			}
+		}
+	}
+
+
+
 }

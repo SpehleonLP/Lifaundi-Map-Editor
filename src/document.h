@@ -45,7 +45,7 @@ public:
 	void Delete();
 	void Reseat();
 	void Paste(glm::vec2 center);
-	void Duplicate();
+	void Duplicate(glm::vec2 center);
 	void SelectAll() ;
 	void SelectNone() {}
 	void RemoveLinks() {}

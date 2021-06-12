@@ -38,6 +38,7 @@ SOURCES += \
     src/commandlist.cpp \
 	src/edgerange.cpp \
 	src/fluidlinks.cpp \
+	src/glm_iostream.cpp \
     src/glviewwidget.cpp \
     src/backgroundimage.cpp \
     src/glprogram.cpp \
@@ -72,6 +73,7 @@ HEADERS += \
 	src/edgerange.h \
 	src/enums.hpp \
 	src/fluidlinks.h \
+	src/glm_iostream.h \
     src/glviewwidget.h \
     src/fmoderror.h \
     src/backgroundlayer.h \

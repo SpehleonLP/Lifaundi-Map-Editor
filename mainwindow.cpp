@@ -27,7 +27,7 @@ QMainWindow(parent),
 ui(new Ui::MainWindow),
 escape(Qt::Key_Escape, this),
 create(Qt::Key_N, this),
-//duplicate(QKeySequence("Shift+Ctrl+D"), this),
+duplicate(QKeySequence("Shift+D"), this),
 translate(Qt::Key_G, this),
 rotate(Qt::Key_R, this),
 scale(Qt::Key_S, this),
@@ -41,7 +41,7 @@ enter(Qt::Key_Z, this)
 
 	escape.setContext(Qt::ApplicationShortcut);
 	create.setContext(Qt::ApplicationShortcut);
-//	duplicate.setContext(Qt::ApplicationShortcut);
+	duplicate.setContext(Qt::ApplicationShortcut);
 	translate.setContext(Qt::ApplicationShortcut);
 	rotate.setContext(Qt::ApplicationShortcut);
 	scale.setContext(Qt::ApplicationShortcut);
@@ -95,17 +95,17 @@ enter(Qt::Key_Z, this)
   //  connect(ui->musicMute,       &QAction::toggled, this, &MainWindow::musicMute);
 
 	connect(ui->toolNew,         &QAction::triggered,[this]() { toolbox.SetTool(Tool::Create); } );
-//    connect(ui->toolDuplicate,   &QAction::triggered,[this]() { toolbox.SetTool(Tool::Duplicate); } );
+	connect(ui->toolDuplicate,   &QAction::triggered,[this]() { document->Duplicate(ui->viewWidget->GetWorldPosition()); } );
     connect(ui->toolTranslate,   &QAction::triggered,[this]() { toolbox.SetTool(Tool::Translate); } );
     connect(ui->toolRotate,      &QAction::triggered,[this]() { toolbox.SetTool(Tool::Rotate); } );
 	connect(ui->toolScale,       &QAction::triggered,[this]() { toolbox.SetTool(Tool::Scale); } );
-//	connect(ui->toolExtrude,     &QAction::triggered,[this]() { toolbox.SetTool(Tool::Extrude); } );
+	connect(ui->toolExtrude,     &QAction::triggered,[this]() { toolbox.SetTool(Tool::Extrude); } );
 	connect(ui->toolSlice,       &QAction::triggered,[this]() { toolbox.SetTool(Tool::Slice); } );
 	connect(ui->toolReseat,      &QAction::triggered,[this]() { toolbox.SetTool(Tool::Order); } );
 
 	connect(&escape,             &QShortcut::activated, [this]() { toolbox.SetTool(Tool::None); } );
 	connect(&create,             &QShortcut::activated, [this]() { toolbox.SetTool(Tool::Create); } );
-//	connect(&duplicate,          &QShortcut::activated, [this]() { toolbox.SetTool(Tool::Duplicate); } );
+	connect(&duplicate,          &QShortcut::activated, [this]() { document->Duplicate(ui->viewWidget->GetWorldPosition()); } );
 	connect(&translate,          &QShortcut::activated, [this]() { toolbox.SetTool(Tool::Translate); } );
 	connect(&rotate,             &QShortcut::activated, [this]() { toolbox.SetTool(Tool::Rotate); } );
 	connect(&scale,              &QShortcut::activated, [this]() { toolbox.SetTool(Tool::Scale); } );
@@ -261,7 +261,7 @@ void MainWindow::OnSelectionChanged()
 	ui->permeability->setEnabled(document->noEdgesSelected() != 0);
 
 	ui->room_music->setEnabled(selected);
-	ui->distance->setEnabled(document->drawDistance);
+	ui->distance->setEnabled(selected);
 
 #if HAVE_WALL_TYPE
 	ui->door_type->setCurrentIndex(document->wall_type);
@@ -330,6 +330,15 @@ void MainWindow::SetTrackList(std::vector<std::string> const& tracks)
 void MainWindow::SetStatusBarMessage(const char * m)
 {
 	statusBar()->showMessage(m);
+	m_haveMessage = (m != nullptr);
+}
+
+void MainWindow::SetStatusBarMessage(glm::ivec2 coords)
+{
+	if(!m_haveMessage)
+	{
+		statusBar()->showMessage(QString("x: %1 y: %2").arg(coords.x).arg(coords.y));
+	}
 }
 
 bool MainWindow::fileClose()
@@ -695,6 +704,7 @@ bool MainWindow::viewChecker() const { return ui->viewChecker->isChecked(); }
 bool MainWindow::viewRooms() const { return ui->viewRooms->isChecked(); }
 bool MainWindow::viewHalls() const { return ui->viewHalls->isChecked(); }
 bool MainWindow::viewLinks() const { return ui->viewLinks->isChecked(); }
+bool MainWindow::viewGravity() const { return ui->viewGravity->isChecked(); }
 
 
 glm::vec2  MainWindow::GetScroll()

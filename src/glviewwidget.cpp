@@ -16,6 +16,7 @@
 #include <QEvent>
 #include <cmath>
 #include <chrono>
+#include <iostream>
 
 struct Matrices
 {
@@ -77,6 +78,8 @@ Bitwise   GLViewWidget::GetFlags(QMouseEvent * event)
 {
 	auto modifier = event->modifiers();
 
+	modifier &= ~Qt::AltModifier;
+
 	if(modifier == Qt::ControlModifier)
 		return Bitwise::XOR;
 	else if(modifier == Qt::ShiftModifier)
@@ -130,6 +133,20 @@ void GLViewWidget::initializeGL()
 
 void GLViewWidget::mouseMoveEvent(QMouseEvent * event)
 {
+	w->SetStatusBarMessage(GetWorldPosition(event));
+
+	if(m_canvasDrag && w && w->document)
+	{
+		auto screenPos = GetScreenPosition();
+		auto delta    = m_screenPos - screenPos;
+
+		glm::vec2 dimensions         = w->document->GetDimensions();
+		glm::vec2 world_position     = m_scrollPos * dimensions + delta / w->GetZoom();
+		glm::vec2 scroll_destination = world_position / dimensions;
+
+		w->SetScroll(scroll_destination);
+	}
+
 	super::mouseMoveEvent(event);
 
     if(w->toolbox.OnMouseMove(GetWorldPosition(event), GetFlags(event)))
@@ -139,11 +156,19 @@ void GLViewWidget::mouseMoveEvent(QMouseEvent * event)
 
 void GLViewWidget::mousePressEvent(QMouseEvent * event)
 {
+	if((event->button() & Qt::MidButton)
+	&& w->document != nullptr)
+	{
+		m_canvasDrag  = true;
+		m_screenPos   = GetScreenPosition();
+		m_scrollPos   = w->GetScroll();
+	}
+
 	if((event->button() & Qt::LeftButton) == false)
 		super::mousePressEvent(event);
 	else
 	{
-        if(w->toolbox.OnLeftDown(GetWorldPosition(event), GetFlags(event)))
+        if(w->toolbox.OnLeftDown(GetWorldPosition(event), GetFlags(event), (event->modifiers() & Qt::AltModifier)))
 			need_repaint();
 
 		if(w->toolbox.HaveTool() == false)
@@ -156,11 +181,16 @@ void GLViewWidget::mousePressEvent(QMouseEvent * event)
 
 void GLViewWidget::mouseReleaseEvent(QMouseEvent * event)
 {
+	if((event->button() & Qt::MidButton))
+	{
+		m_canvasDrag  = false;
+	}
+
 	if((event->button() & Qt::LeftButton) == false)
 		super::mouseReleaseEvent(event);
 	else
 	{
-        if(w->toolbox.OnLeftUp(GetWorldPosition(event), GetFlags(event)))
+        if(w->toolbox.OnLeftUp(GetWorldPosition(event), GetFlags(event), (event->modifiers() & Qt::AltModifier)))
 			need_repaint();
 
         if(w->toolbox.HaveTool() == false)
@@ -286,8 +316,9 @@ void GLViewWidget::paintGL()
     if(w->document == nullptr)
 		return;
 
-    if(w->document->m_metaroom.m_selection.Changed())
-        w->OnSelectionChanged();
+    if(w->document->m_metaroom.m_selection.Changed()) w->OnSelectionChanged();
+
+	w->SetStatusBarMessage(GetWorldPosition());
 
 	glActiveTexture(GL_TEXTURE10);
 	glBindTexture(GL_TEXTURE_1D, permeabilities);

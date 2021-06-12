@@ -18,10 +18,12 @@ void ArrowShader::construct(GLViewWidget* gl)
     attribute(gl, 1, "a_rotation");
     link(gl);
 
+	uniform(gl, u_color, "u_color");
+
     uniformBlock(gl, 0, "Matrices");
 }
 
-void ArrowShader::Render(GLViewWidget* gl, uint32_t size)
+void ArrowShader::Render(GLViewWidget* gl, uint32_t size, glm::vec4 color)
 {
     if(bindShader(gl))
 	{
@@ -33,7 +35,7 @@ void ArrowShader::Render(GLViewWidget* gl, uint32_t size)
 	}
 
     gl->glPointSize(10.f);
-
+	gl->glUniform4fv(u_color, 1, &color[0]);
     gl->glDrawArrays(GL_POINTS, 0, size);
 }
 
@@ -89,8 +91,6 @@ static const char * kGeometry()
 		in vec2 v_position[];
 		in vec2 v_rotation[];
 
-		out float f_bg;
-
 		void main()
 		{
 			mat2 rotation = mat2(1);
@@ -104,8 +104,6 @@ static const char * kGeometry()
 				vec4 pos    = vec4(rotation * verts[indices[i]], 0, 0) + position;
 
 				gl_Position = u_projection * (pos);
-				f_bg        = 0.f;
-
 				EmitVertex();
 			}
 
@@ -116,12 +114,12 @@ static const char * kGeometry()
 static const char * kFrag()
 {
 	return SHADER(
-		in float f_bg;
+		uniform vec4 u_color;
 
 		out vec4 frag_color;
 
 		void main()
 		{
-			frag_color = vec4(1, f_bg, f_bg, 1);
+			frag_color = u_color;
 		});
 }

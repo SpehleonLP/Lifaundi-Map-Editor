@@ -43,6 +43,7 @@ enum class State : int
 	ScaleBegin,
 	SliceBegin,
 	ExtrudeBegin,
+	WeldBegin,
 
 	Reorder,
 };
@@ -73,11 +74,11 @@ enum class Tools
 
 enum class Bitwise
 {
-	SET,
-	AND,
-	OR,
-	XOR,
-	NOT,
+	SET = 1,
+	AND = 2,
+	OR  = 4,
+	XOR = 8,
+	NOT = 16,
 };
 
 

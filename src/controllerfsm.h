@@ -37,8 +37,8 @@ public:
 	bool OnDoubleClick(glm::ivec2, Bitwise);
 	bool OnFinish();
 
-	bool OnLeftDown(glm::vec2, Bitwise);
-	bool OnLeftUp(glm::vec2, Bitwise);
+	bool OnLeftDown(glm::vec2, Bitwise, bool alt);
+	bool OnLeftUp(glm::vec2, Bitwise, bool alt);
 	void AddFace();
 
 	bool OnMouseMove(glm::vec2, Bitwise);

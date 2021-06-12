@@ -15,12 +15,13 @@ static ArrowShader Shader;
 		glm::i16vec2  rotation;
 	};
 
-    void Render(GLViewWidget* gl, uint32_t size);
+    void Render(GLViewWidget* gl, uint32_t size, glm::vec4 color);
 
 private:
     void construct(GLViewWidget* gl);
 
 	int32_t u_vertices;
+	int32_t u_color;
 };
 
 #endif // ARROWSHADER_H

@@ -41,6 +41,14 @@ bool ControllerFSM::OnDoubleClick(glm::ivec2, Bitwise)
 
 void ControllerFSM::SetTool(Tool tool)
 {
+	if(tool == Tool::Scale)
+	{
+		if(m_state == State::ScaleBegin)
+			m_state = State::WeldBegin;
+		else if(m_state == State::WeldBegin)
+			m_state = State::ScaleBegin;
+	}
+
 	selection_center = m_parent->document->m_metaroom.GetSelectionCenter();
 	mouse_down_pos   = m_parent->ui->viewWidget->GetWorldPosition();
 
@@ -116,10 +124,27 @@ void ControllerFSM::ClearTool()
 	m_parent->ui->viewWidget->need_repaint();
 }
 
-bool ControllerFSM::OnLeftDown(glm::vec2 position, Bitwise flags)
+bool ControllerFSM::OnLeftDown(glm::vec2 position, Bitwise , bool)
 {
-	mouse_down_pos    = position;
 	mouse_current_pos = position;
+
+	switch(m_state)
+	{
+	case State::CreateBegin:
+	case State::BoxSelectBegin:
+	case State::TranslateBegin:
+	case State::RotateBegin:
+	case State::ScaleBegin:
+	case State::SliceBegin:
+	case State::ExtrudeBegin:
+	case State::WeldBegin:
+		return false;
+
+	default:
+		break;
+	}
+
+	mouse_down_pos    = position;
 
 	if(m_parent->document == nullptr)
 		return false;
@@ -172,6 +197,7 @@ bool ControllerFSM::OnLeftDown(glm::vec2 position, Bitwise flags)
 	case State::ScaleBegin:
 	case State::SliceBegin:
 	case State::ExtrudeBegin:
+	case State::WeldBegin:
 		return false;
 	default:
 		return false;
@@ -180,7 +206,7 @@ bool ControllerFSM::OnLeftDown(glm::vec2 position, Bitwise flags)
 	return false;
 }
 
-bool ControllerFSM::OnLeftUp(glm::vec2 position, Bitwise flags)
+bool ControllerFSM::OnLeftUp(glm::vec2 position, Bitwise flags, bool alt)
 {
 	mouse_current_pos = position;
 
@@ -202,7 +228,7 @@ bool ControllerFSM::OnLeftUp(glm::vec2 position, Bitwise flags)
 	case State::MouseDownOnUnselected:
 	case State::MouseDownOnNothing:
 	{
-		m_parent->document->m_metaroom.ClickSelect(position, flags);
+		m_parent->document->m_metaroom.ClickSelect(position, flags, alt);
 		m_state = State::None;
 	}	return true;
 
@@ -249,6 +275,10 @@ bool ControllerFSM::OnLeftUp(glm::vec2 position, Bitwise flags)
 		return true;
 	case State::ExtrudeBegin:
 		return false;
+	case State::WeldBegin:
+		m_parent->document->PushCommand(new TransformCommand(m_parent->document.get()));
+		m_state = State::None;
+		return true;
 	case State::Reorder:
 	{
 		int face = m_parent->document->m_metaroom.m_tree.GetFace(mouse_down_pos);
@@ -331,6 +361,10 @@ bool ControllerFSM::OnFinish()
 		return true;
 
 	case State::ExtrudeBegin:
+		return true;
+	case State::WeldBegin:
+		m_parent->document->PushCommand(new TransformCommand(m_parent->document.get()));
+		m_state = State::None;
 		return true;
 
 	case State::Reorder:
@@ -458,6 +492,11 @@ bool ControllerFSM::OnMouseMove(glm::vec2 p, Bitwise flags)
 	case State::SliceBegin:
 	case State::ExtrudeBegin:
 		return true;
+	case State::WeldBegin:
+	{
+		m_parent->document->m_metaroom.Scale(selection_center, glm::vec2(0, 0));
+	}
+
 	default:
 		return false;
 	}
@@ -484,7 +523,7 @@ void ControllerFSM::CreateSlice(std::vector<SliceInfo> & slices, int edge, glm::
 		if(selected && !selection.IsFaceSelected(edge / 4))
 			return;
 
-		if(metaroom.m_selection.MarkFace(edge/4) == false)
+		if(selection.MarkFace(edge/4) == false)
 			return;
 
 		slices.push_back({edge, position, 0});

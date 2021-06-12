@@ -280,7 +280,7 @@ std::vector<uint32_t> QuadTree::GetOverlappingEdges(glm::ivec2 v0, glm::ivec2 v1
 
 bool QuadTree::GetSliceFace(const glm::ivec2 v0, const glm::ivec2 v1, const glm::ivec2 v2, int & edge_id, float & mid)
 {
-	EdgeRange range(this, v0, v2);
+	EdgeRange range(this, v0, v1, v2);
 
 	while(range.popFront())
 	{

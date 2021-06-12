@@ -55,11 +55,13 @@ public:
 	void loadDefaultWalls();
 
 	void SetStatusBarMessage(const char * m = nullptr);
+	void SetStatusBarMessage(glm::ivec2 coords);
 
 	bool viewChecker() const;
     bool viewRooms() const;
     bool viewHalls() const;
     bool viewLinks() const;
+	bool viewGravity() const;
 
 	bool SetAsterisk(bool);
 
@@ -115,11 +117,12 @@ friend class Document;
 	bool did_release{false};
 	bool updating_fields{false};
 	bool m_asterisk{false};
+	bool m_haveMessage{false};
 
 	QShortcut escape;
 
 	QShortcut create;
-	//QShortcut duplicate;
+	QShortcut duplicate;
 	QShortcut translate;
 	QShortcut rotate;
 	QShortcut scale;

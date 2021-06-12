@@ -51,7 +51,12 @@ private:
 	std::chrono::time_point<std::chrono::high_resolution_clock> current_time;
 
 	uint32_t m_ubo{};
-	uint32_t  permeabilities{};
+	uint32_t permeabilities{};
+
+	bool       m_canvasDrag{false};
+	glm::vec2  m_scrollPos{0,0};
+	glm::vec2  m_screenPos{0,0};
+
 };
 
 #define glAssert() displayOpenGlError(__FILE__, __FUNCTION__, __LINE__);

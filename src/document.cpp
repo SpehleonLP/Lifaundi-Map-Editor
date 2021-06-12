@@ -58,6 +58,18 @@ void Document::Copy()
 	}
 }
 
+void Document::Duplicate(glm::vec2 center)
+{
+	auto vec = Clipboard::Extract(&m_metaroom);
+
+	if(vec.size())
+	{
+		Clipboard::Center(vec);
+		Clipboard::Translate(vec, center);
+		PushCommand(new InsertCommand(this, std::move(vec)));
+	}
+}
+
 void Document::Paste(glm::vec2 center)
 {
 	auto vec = Clipboard::GetClipBoard();
@@ -112,7 +124,7 @@ glm::vec2 Document::GetScreenCenter() const
 glm::vec2 Document::GetDimensions() const
 {
 	if(m_background == nullptr)
-		return glm::vec2(1, 1);
+		return glm::vec2(-SHRT_MIN/2, -SHRT_MIN/2);
 
 	return glm::vec2(m_background->dimensions());
 }

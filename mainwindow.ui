@@ -47,23 +47,27 @@
       <property name="bottomMargin">
        <number>6</number>
       </property>
-      <item row="7" column="1">
-       <spacer name="verticalSpacer">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>20</width>
-          <height>40</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item row="0" column="0">
-       <widget class="QLabel" name="label_3">
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_6">
         <property name="text">
-         <string>Room Properties</string>
+         <string>Gravity</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="label_20">
+        <property name="text">
+         <string>Music</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="1">
+       <widget class="QSpinBox" name="permeability">
+        <property name="minimum">
+         <number>-1</number>
+        </property>
+        <property name="maximum">
+         <number>100</number>
         </property>
        </widget>
       </item>
@@ -74,10 +78,37 @@
         </property>
        </widget>
       </item>
-      <item row="4" column="0">
-       <widget class="QLabel" name="label_2">
+      <item row="3" column="1">
+       <widget class="QComboBox" name="room_music">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="editable">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="0">
+       <widget class="QLabel" name="Permeability">
         <property name="text">
-         <string>Type</string>
+         <string>Permeability</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>Distance</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QComboBox" name="room_type">
+        <property name="maxCount">
+         <number>16</number>
         </property>
        </widget>
       </item>
@@ -100,6 +131,12 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+          <property name="minimum">
+           <double>-20.000000000000000</double>
+          </property>
+          <property name="maximum">
+           <double>20.000000000000000</double>
+          </property>
          </widget>
         </item>
         <item>
@@ -113,72 +150,50 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+          <property name="minimum">
+           <double>-20.000000000000000</double>
+          </property>
+          <property name="maximum">
+           <double>20.000000000000000</double>
+          </property>
          </widget>
         </item>
        </layout>
       </item>
-      <item row="3" column="0">
-       <widget class="QLabel" name="label_20">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_3">
         <property name="text">
-         <string>Music</string>
+         <string>Room Properties</string>
         </property>
        </widget>
       </item>
-      <item row="4" column="1">
-       <widget class="QComboBox" name="room_type">
-        <property name="maxCount">
-         <number>16</number>
-        </property>
-       </widget>
-      </item>
-      <item row="6" column="0">
-       <widget class="QLabel" name="Permeability">
+      <item row="4" column="0">
+       <widget class="QLabel" name="label_2">
         <property name="text">
-         <string>Permeability</string>
+         <string>Type</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="label_6">
-        <property name="text">
-         <string>Gravity</string>
+      <item row="7" column="1">
+       <spacer name="verticalSpacer">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
         </property>
-       </widget>
-      </item>
-      <item row="6" column="1">
-       <widget class="QSpinBox" name="permeability">
-        <property name="minimum">
-         <number>-1</number>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>40</height>
+         </size>
         </property>
-        <property name="maximum">
-         <number>100</number>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="1">
-       <widget class="QComboBox" name="room_music">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="editable">
-         <bool>true</bool>
-        </property>
-       </widget>
+       </spacer>
       </item>
       <item row="2" column="1">
        <widget class="QDoubleSpinBox" name="distance">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="maximum">
          <double>255.000000000000000</double>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="label_4">
-        <property name="text">
-         <string>Distance</string>
         </property>
        </widget>
       </item>
@@ -192,16 +207,16 @@
       <item row="1" column="0">
        <widget class="QScrollBar" name="horizontalScrollBar">
         <property name="maximum">
-         <number>255</number>
+         <number>65535</number>
         </property>
         <property name="singleStep">
-         <number>4</number>
+         <number>1024</number>
         </property>
         <property name="pageStep">
-         <number>16</number>
+         <number>4096</number>
         </property>
         <property name="value">
-         <number>127</number>
+         <number>32767</number>
         </property>
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -211,16 +226,19 @@
       <item row="0" column="1">
        <widget class="QScrollBar" name="verticalScrollBar">
         <property name="maximum">
-         <number>255</number>
+         <number>65535</number>
         </property>
         <property name="singleStep">
-         <number>4</number>
+         <number>1024</number>
         </property>
         <property name="pageStep">
-         <number>16</number>
+         <number>4096</number>
         </property>
         <property name="value">
-         <number>128</number>
+         <number>32767</number>
+        </property>
+        <property name="sliderPosition">
+         <number>32767</number>
         </property>
         <property name="orientation">
          <enum>Qt::Vertical</enum>
@@ -306,6 +324,7 @@
     <addaction name="viewHalls"/>
     <addaction name="viewLinks"/>
     <addaction name="separator"/>
+    <addaction name="viewGravity"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
     <property name="title">
@@ -333,6 +352,7 @@
     <addaction name="toolScale"/>
     <addaction name="toolSlice"/>
     <addaction name="toolReseat"/>
+    <addaction name="toolDuplicate"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -741,6 +761,22 @@
   <action name="toolAlign">
    <property name="text">
     <string>Merge (alt+W)</string>
+   </property>
+  </action>
+  <action name="viewGravity">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Gravity</string>
+   </property>
+  </action>
+  <action name="toolDuplicate">
+   <property name="text">
+    <string>Duplicate</string>
+   </property>
+   <property name="shortcut">
+    <string>Shift+D</string>
    </property>
   </action>
  </widget>
