@@ -46,8 +46,15 @@ public:
 	void Reseat();
 	void Paste(glm::vec2 center);
 	void Duplicate(glm::vec2 center);
-	void SelectAll() ;
-	void SelectNone() {}
+	void SelectAll();
+	void SelectNone();
+	void InvertSelection();
+
+	void SelectByType();
+	void SelectByMusic();
+	void SelectOverlapping();
+	void SelectLinked();
+
 	void RemoveLinks() {}
 
 	void ReseatSelection();

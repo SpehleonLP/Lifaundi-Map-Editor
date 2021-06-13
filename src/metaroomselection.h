@@ -6,18 +6,21 @@
 #include <cstdint>
 
 class GLViewWidget;
+class Metaroom;
 
 class MetaroomSelection
 {
 public:
 	MetaroomSelection() = default;
-	MetaroomSelection(MetaroomSelection & it);
+	MetaroomSelection(MetaroomSelection const& it) = delete;
+	MetaroomSelection(MetaroomSelection &&) = delete;
 	MetaroomSelection(uint32_t size) { resize(size); }
 	~MetaroomSelection();
 
     void Release(GLViewWidget *gl);
 
-	bool ToggleSelectAll(uint32_t faces);
+	bool ToggleSelectAll(uint32_t faces, Bitwise flags);
+
 	bool Changed() const { return m_selectionChanged; }
 
 	void MergeSelection(MetaroomSelection const&, Bitwise flags);

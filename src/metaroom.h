@@ -86,6 +86,7 @@ public:
 	float      ProjectOntoEdge(int v0, glm::ivec2) const;
 
 	void AddFace(glm::ivec2 min, glm::ivec2 max);
+	bool CanAddFace(glm::ivec2 * verts);
 
 	int AddFaces(int no_faces = 1);
 	inline int GetFace(glm::ivec2 position) const { return m_tree.GetFace(position); }

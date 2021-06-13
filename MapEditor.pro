@@ -60,6 +60,8 @@ SOURCES += \
     src/Shaders/doorshader.cpp \
     src/clipboard.cpp \
 	src/reseatalgorithm.cpp \
+	src/roomrange.cpp \
+	src/sort_unique.cpp \
 	src/walltype_db.cpp
 
 HEADERS += \
@@ -98,6 +100,8 @@ HEADERS += \
     src/Shaders/doorshader.h \
     src/clipboard.h \
 	src/reseatalgorithm.h \
+	src/roomrange.h \
+	src/sort_unique.h \
 	src/walltype_db.h
 
 FORMS += \

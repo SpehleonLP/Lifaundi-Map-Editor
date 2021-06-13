@@ -3,6 +3,7 @@
 #include "quadtree.h"
 #include "document.h"
 #include "glviewwidget.h"
+#include "roomrange.h"
 #include "Shaders/roomoutlineshader.h"
 #include "Shaders/selectedroomshader.h"
 #include "Shaders/arrowshader.h"
@@ -920,6 +921,35 @@ void Metaroom::Render(GLViewWidget *gl, int selected_door_type)
 	}
 }
 
+bool Metaroom::CanAddFace(glm::ivec2 * verts)
+{
+	glm::ivec2 min = glm::min(glm::min(verts[0], verts[1]), glm::min(verts[2], verts[3]));
+	glm::ivec2 max = glm::max(glm::max(verts[0], verts[1]), glm::max(verts[2], verts[3]));
+
+	RoomRange range(&m_tree, min, max);
+
+	while(range.popFront())
+	{
+		int N = (range.face()+1)*4;
+
+//if the first point is not contained then if we intersect there must be a line crossing boundary...
+		if(math::IsPointContained(&m_verts[range.face()*4], verts[0])
+		|| math::IsPointContained(verts, m_verts[range.face()*4]))
+			return false;
+
+		for(int i = range.face()*4; i < N; ++i)
+		{
+			for(int j = 0; j < 4; ++j)
+			{
+				if(math::DoLinesIntersect(GetVertex(i), GetNextVertex(i), verts[j], verts[(j+1)%4]))
+					return false;
+			}
+		}
+	}
+
+	return true;
+}
+
 void Metaroom::AddFace(glm::ivec2 min, glm::ivec2 max)
 {
     if(m_tree.DoesOverlap(min, max))
@@ -1243,11 +1273,7 @@ void Metaroom::ClickSelect(glm::ivec2 pos, Bitwise flags, bool alt)
 
 bool Metaroom::IsPointContained(int i, glm::ivec2 pos)
 {
-	return
-	   (math::cross(m_verts[i*4+1] - m_verts[i*4+0], pos - m_verts[i*4+0]) <= 0)
-	&& (math::cross(m_verts[i*4+2] - m_verts[i*4+1], pos - m_verts[i*4+1]) <= 0)
-	&& (math::cross(m_verts[i*4+3] - m_verts[i*4+2], pos - m_verts[i*4+2]) <= 0)
-	&& (math::cross(m_verts[i*4+0] - m_verts[i*4+3], pos - m_verts[i*4+3]) <= 0);
+	return math::IsPointContained(&m_verts[i*4], pos);
 }
 
 void Metaroom::RingSelectFace(int face, glm::ivec2 mouse, Bitwise flags)
@@ -1306,7 +1332,7 @@ void Metaroom::RingSelectEdge(int edge, Bitwise flags)
 
 
 }
-
+/*
 #include "edgerange.h"
 
 void Metaroom::RingSelectEdgeInternal(int edge, Bitwise flags)
@@ -1343,3 +1369,4 @@ void Metaroom::RingSelectEdgeInternal(int edge, Bitwise flags)
 
 
 }
+*/

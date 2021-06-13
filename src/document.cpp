@@ -5,6 +5,7 @@
 #include "clipboard.h"
 #include "lf_math.h"
 #include "src/walltype_db.h"
+#include "roomrange.h"
 #include "Shaders/blitshader.h"
 #include <fstream>
 #include <glm/mat4x4.hpp>
@@ -105,8 +106,132 @@ uint32_t Document::noEdgesSelected() const
 
 void Document::SelectAll()
 {
-	m_metaroom.m_selection.ToggleSelectAll(m_metaroom.faces);
+	m_metaroom.m_selection.ToggleSelectAll(m_metaroom.faces, Bitwise::SET);
 }
+
+void Document::SelectNone()
+{
+	m_metaroom.m_selection.ToggleSelectAll(m_metaroom.faces, Bitwise::NOT);
+}
+
+void Document::InvertSelection()
+{
+	m_metaroom.m_selection.ToggleSelectAll(m_metaroom.faces, Bitwise::XOR);
+}
+
+void Document::SelectByType()
+{
+	auto selection = m_metaroom.m_selection.GetFaceSelection();
+
+	uint32_t types = 0;
+
+	for(auto i : selection)
+	{
+		types |= 1 << (m_metaroom.m_roomType[i] + 1);
+	}
+
+	if(types == 0)
+		types = 1;
+
+	for(uint32_t i = 0; i < m_metaroom.size(); ++i)
+	{
+		if(types & (1 << (m_metaroom.m_roomType[i] + 1)))
+			m_metaroom.m_selection.select_face(i, Bitwise::SET);
+	}
+}
+
+void Document::SelectByMusic()
+{
+	auto selection = m_metaroom.m_selection.GetFaceSelection();
+
+	std::unique_ptr<uint8_t[]> music_flags(new uint8_t[128]);
+	memset(&music_flags[0], 0, 128);
+
+	int set_flags = 0;
+
+	for(auto i : selection)
+	{
+		music_flags[std::max(0, m_metaroom.m_music[i]+1)] = 1;
+		++set_flags;
+	}
+
+	if(!set_flags)
+		music_flags[0] = 0;
+
+	for(uint32_t i = 0; i < m_metaroom.size(); ++i)
+	{
+		if(music_flags[std::max(0, m_metaroom.m_music[i]+1)])
+			m_metaroom.m_selection.select_face(i, Bitwise::SET);
+	}
+}
+
+void Document::SelectOverlapping()
+{
+	auto verts = m_metaroom.m_selection.GetVertSelection();
+
+	for(auto i : verts)
+	{
+		RoomRange range(&m_metaroom.m_tree, m_metaroom.GetVertex(i),  m_metaroom.GetVertex(i));
+
+		while(range.popFront())
+		{
+			auto N = (range.face()+1)*4;
+			for(int i = range.face()*4; i < N; ++i)
+			{
+				if(m_metaroom.GetVertex(i) == range.min)
+				{
+					m_metaroom.m_selection.select_vertex(i, Bitwise::SET);
+				}
+			}
+		}
+	}
+}
+
+void Document::SelectLinked()
+{
+	auto verts = m_metaroom.m_selection.GetVertSelection();
+	std::vector<int> stack;
+
+	for(auto i : verts)
+	{
+		if(m_metaroom.m_selection.MarkFace(i/4))
+		{
+			m_metaroom.m_selection.select_face(i/4, Bitwise::OR);
+			stack.push_back(i/4);
+		}
+	}
+
+	for(uint32_t j = 0; j < stack.size(); ++j)
+	{
+		auto i = stack[j];
+
+		for(int j = 0; j < 4; ++j)
+		{
+			RoomRange range(&m_metaroom.m_tree, m_metaroom.GetVertex(i*4+j),  m_metaroom.GetVertex(i*4+j));
+
+			while(range.popFront())
+			{
+				auto N = (range.face()+1)*4;
+				for(int i = range.face()*4; i < N; ++i)
+				{
+					if(m_metaroom.GetVertex(i) == range.min)
+					{
+						if(m_metaroom.m_selection.MarkFace(range.face()))
+						{
+							m_metaroom.m_selection.select_face(range.face(), Bitwise::OR);
+							stack.push_back(range.face());
+						}
+
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	m_metaroom.m_selection.ClearMarks();
+}
+
 
 void Document::RenderBackground(GLViewWidget * gl)
 {

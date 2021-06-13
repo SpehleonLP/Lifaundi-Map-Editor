@@ -2,10 +2,10 @@
 #include "controllerfsm.h"
 #include "commandlist.h"
 #include "mainwindow.h"
-#include "ui_mainwindow.h"
 #include "lf_math.h"
 #include "document.h"
 #include "Shaders/uniformcolorshader.h"
+#include "sort_unique.h"
 #include <iostream>
 #include <glm/glm.hpp>
 
@@ -38,8 +38,109 @@ bool ControllerFSM::OnDoubleClick(glm::ivec2, Bitwise)
 	return false;
 }
 
+static float GetAngle(glm::i16vec2 center, glm::i16vec2 point)
+{
+	point -= center;
+	glm::vec2 vec = glm::normalize(glm::vec2(point - center));
+	return std::atan2(vec.y, vec.x);
+}
 
-void ControllerFSM::SetTool(Tool tool)
+static bool ArrangeClockwise(glm::ivec2 * verts)
+{
+	glm::ivec2 center = ((verts[0]) + (verts[1]) + (verts[2]) + (verts[3]))/4;
+
+	std::pair<int, float> order[4]{
+		{0, GetAngle(center, verts[0])},
+		{1, GetAngle(center, verts[1])},
+		{2, GetAngle(center, verts[2])},
+		{3, GetAngle(center, verts[3])}
+	};
+
+	std::sort(&order[0], &order[4], [](auto const& a, auto const& b)
+	{
+		return a.second < b.second;
+	});
+
+	glm::ivec2 cpy[4]{
+		verts[order[0].first],
+		verts[order[1].first],
+		verts[order[2].first],
+		verts[order[3].first]
+	};
+
+	memcpy(verts, cpy, sizeof(cpy));
+
+	bool sign = math::cross(verts[1] - verts[0], verts[2] - verts[1]) <= 0;
+
+	return sign == (math::cross(verts[2] - verts[1], verts[3] - verts[2]) <= 0)
+		&& sign == (math::cross(verts[3] - verts[2], verts[0] - verts[3]) <= 0)
+		&& sign == (math::cross(verts[0] - verts[3], verts[1] - verts[0]) <= 0);
+}
+
+bool GetVerticies(glm::ivec2 * dst, std::vector<int> const& selection, Metaroom * metaroom)
+{
+	std::vector<glm::ivec2> vec(selection.size());
+
+	for(uint32_t i = 0; i < selection.size(); ++i)
+		vec[i] = metaroom->GetVertex(selection[i]);
+
+	if(vec.size() > 4)
+	{
+		std::sort(vec.begin(), vec.end(), [](auto const& a, auto const& b)
+		{
+			return math::GetZOrder(a) < math::GetZOrder(b);
+		});
+
+		Uniq(vec);
+	}
+
+	if(vec.size() != 4)
+		return false;
+
+	memcpy(dst, &vec[0], sizeof(dst[0])*4);
+	return true;
+}
+
+template<typename T>
+static T GetMode(T const* array, std::vector<int> const& selection)
+{
+	std::vector<T> vec(selection.size());
+
+	for(size_t i = 0; i < selection.size(); ++i)
+	{
+		vec[i] = array[selection[i]];
+	}
+
+	std::sort(vec.begin(), vec.end());
+	return *GetMode(vec);
+}
+
+static uint16_t GetAverage(uint16_t const* array, std::vector<int> const& selection)
+{
+	size_t accumulator=0;
+
+	for(size_t i = 0; i < selection.size(); ++i)
+	{
+		accumulator += array[selection[i]];
+	}
+
+	return accumulator / selection.size();
+}
+
+static uint32_t GetGravity(uint32_t const* array, std::vector<int> const& selection)
+{
+	glm::dvec2 accumulator{0,0};
+
+	for(size_t i = 0; i < selection.size(); ++i)
+	{
+		accumulator += glm::unpackHalf2x16(array[selection[i]]);
+	}
+
+	return glm::packHalf2x16(accumulator /(double) selection.size());
+}
+
+
+bool ControllerFSM::SetTool(Tool tool)
 {
 	if(tool == Tool::Scale)
 	{
@@ -50,17 +151,55 @@ void ControllerFSM::SetTool(Tool tool)
 	}
 
 	selection_center = m_parent->document->m_metaroom.GetSelectionCenter();
-	mouse_down_pos   = m_parent->ui->viewWidget->GetWorldPosition();
+	mouse_down_pos   = m_parent->GetWorldPosition();
 
 	if(m_state == State::Reorder && tool == Tool::Order)
 	{
 		m_state = State::None;
 		m_parent->document->PushCommand(new ReorderCommand(m_parent->document.get(), std::move(m_ordering)));
-		return;
+		return false;
 	}
 
 	if(m_state != State::None && tool != Tool::None)
-		return;
+		return false;
+
+	if(tool == Tool::Face)
+	{
+		auto& metaroom = m_parent->document->m_metaroom;
+		auto selection = metaroom.m_selection.GetVertSelection();
+
+		glm::ivec2 verts[4];
+		if(!GetVerticies(verts, selection, &metaroom))
+		{
+			m_parent->SetStatusBarMessage("Add face requires exactly 4 points selected");
+			return false;
+		}
+
+		if(!ArrangeClockwise(verts))
+		{
+			m_parent->SetStatusBarMessage("Selected points do not define a convex polygon");
+			return false;
+		}
+
+		if(!metaroom.CanAddFace(verts))
+		{
+			m_parent->SetStatusBarMessage("Face addition would make graph non-planar");
+			return false;
+		}
+
+		Room room;
+
+		room.type		  = GetMode(&metaroom.m_roomType[0], selection);
+		room.music_track  = GetMode(&metaroom.m_roomType[0], selection);
+		room.gravity      = GetGravity(&metaroom.m_gravity[0], selection);
+		room.drawDistance = GetAverage(&metaroom.m_drawDistance[0], selection);
+
+		memset(&room.wall_types[0], 0, sizeof(room.wall_types));
+		memcpy(&room.verts[0], verts, sizeof(verts));
+
+		m_parent->document->PushCommand(new InsertCommand(m_parent->document.get(), {room}));
+		return true;
+	}
 
 	switch(tool)
 	{
@@ -77,24 +216,24 @@ void ControllerFSM::SetTool(Tool tool)
 		break;
 	case Tool::Translate:
 		m_state = State::TranslateSet;
-		m_parent->ui->viewWidget->setMouseTracking(true);
+		m_parent->SetMouseTracking(true);
 		xy_filter = glm::ivec2(1, 1);
 		m_parent->SetStatusBarMessage(XY_FILTER);
 		break;
 	case Tool::Rotate:
 		m_state = State::RotateBegin;
-		m_parent->ui->viewWidget->setMouseTracking(true);
+		m_parent->SetMouseTracking(true);
 		xy_filter = glm::ivec2(1, 1);
 		break;
 	case Tool::Scale:
 		m_state = State::ScaleBegin;
-		m_parent->ui->viewWidget->setMouseTracking(true);
+		m_parent->SetMouseTracking(true);
 		xy_filter = glm::ivec2(1, 1);
 		m_parent->SetStatusBarMessage(XY_FILTER);
 		break;
 	case Tool::Slice:
 		m_state = State::SliceSet;
-		m_parent->ui->viewWidget->setMouseTracking(true);
+		m_parent->SetMouseTracking(true);
 		xy_filter = glm::ivec2(1, 1);
 		break;
 	case Tool::Extrude:
@@ -112,6 +251,8 @@ void ControllerFSM::SetTool(Tool tool)
 	default:
 		break;
 	}
+
+	return false;
 }
 
 void ControllerFSM::ClearTool()
@@ -120,8 +261,8 @@ void ControllerFSM::ClearTool()
 	m_slice.clear();
 	m_ordering.clear();
 	m_parent->document->m_metaroom.CancelMove();
-	m_parent->ui->viewWidget->setMouseTracking(false);
-	m_parent->ui->viewWidget->need_repaint();
+	m_parent->SetMouseTracking(false);
+	m_parent->need_repaint();
 }
 
 bool ControllerFSM::OnLeftDown(glm::vec2 position, Bitwise , bool)

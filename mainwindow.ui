@@ -20,7 +20,7 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <layout class="QHBoxLayout" name="horizontalLayout_3">
+   <layout class="QGridLayout" name="gridLayout_2">
     <property name="leftMargin">
      <number>0</number>
     </property>
@@ -33,7 +33,7 @@
     <property name="bottomMargin">
      <number>0</number>
     </property>
-    <item>
+    <item row="0" column="0">
      <layout class="QGridLayout" name="gridLayout">
       <property name="leftMargin">
        <number>6</number>
@@ -199,7 +199,7 @@
       </item>
      </layout>
     </item>
-    <item>
+    <item row="0" column="1">
      <layout class="QGridLayout" name="gridLayout_4">
       <property name="spacing">
        <number>0</number>
@@ -303,6 +303,18 @@
      <addaction name="zoomOut"/>
      <addaction name="zoomActual"/>
     </widget>
+    <widget class="QMenu" name="menuSelect_2">
+     <property name="title">
+      <string>Select</string>
+     </property>
+     <addaction name="selectAll"/>
+     <addaction name="selectNone"/>
+     <addaction name="selectInvert"/>
+     <addaction name="selectConnected"/>
+     <addaction name="selectOverlap"/>
+     <addaction name="selectRoomType"/>
+     <addaction name="selectRoomMusic"/>
+    </widget>
     <addaction name="editUndo"/>
     <addaction name="editRedo"/>
     <addaction name="separator"/>
@@ -312,8 +324,7 @@
     <addaction name="editDelete"/>
     <addaction name="separator"/>
     <addaction name="menuZoom"/>
-    <addaction name="editSelectAll"/>
-    <addaction name="separator"/>
+    <addaction name="menuSelect_2"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -347,12 +358,19 @@
      <string>Tools</string>
     </property>
     <addaction name="toolNew"/>
+    <addaction name="toolFace"/>
+    <addaction name="toolDuplicate"/>
+    <addaction name="separator"/>
+    <addaction name="toolReseat"/>
+    <addaction name="separator"/>
     <addaction name="toolTranslate"/>
     <addaction name="toolRotate"/>
     <addaction name="toolScale"/>
+    <addaction name="toolExtrude"/>
     <addaction name="toolSlice"/>
-    <addaction name="toolReseat"/>
-    <addaction name="toolDuplicate"/>
+    <addaction name="separator"/>
+    <addaction name="toolRealign"/>
+    <addaction name="toolPropagate"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -465,7 +483,7 @@
     <string>Ctrl+Shift+Z</string>
    </property>
   </action>
-  <action name="editSelectAll">
+  <action name="selectAll">
    <property name="enabled">
     <bool>true</bool>
    </property>
@@ -516,9 +534,9 @@
     <string>Ctrl+Shift+=</string>
    </property>
   </action>
-  <action name="editSelectNone">
+  <action name="selectNone">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>Select None</string>
@@ -656,16 +674,6 @@
     <string>Halls</string>
    </property>
   </action>
-  <action name="fileExportWalls">
-   <property name="text">
-    <string>Export Wall Types</string>
-   </property>
-  </action>
-  <action name="fileLoadRooms">
-   <property name="text">
-    <string>Load Room System</string>
-   </property>
-  </action>
   <action name="toolNew">
    <property name="text">
     <string>Create Room (N)</string>
@@ -690,7 +698,10 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Slice (ctrl+R)</string>
+    <string>Slice</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
    </property>
   </action>
   <action name="musicMute">
@@ -744,7 +755,7 @@
   </action>
   <action name="toolReseat">
    <property name="text">
-    <string>Reorder</string>
+    <string>Reseat</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+H</string>
@@ -758,17 +769,12 @@
     <string>Export CAOS</string>
    </property>
   </action>
-  <action name="toolAlign">
-   <property name="text">
-    <string>Merge (alt+W)</string>
-   </property>
-  </action>
   <action name="viewGravity">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Gravity</string>
+    <string>Gravity Direction</string>
    </property>
   </action>
   <action name="toolDuplicate">
@@ -777,6 +783,70 @@
    </property>
    <property name="shortcut">
     <string>Shift+D</string>
+   </property>
+  </action>
+  <action name="toolFace">
+   <property name="text">
+    <string>Add Face (F)</string>
+   </property>
+   <property name="shortcut">
+    <string>F</string>
+   </property>
+  </action>
+  <action name="toolRealign">
+   <property name="text">
+    <string>Align Gravity To Floor</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+G</string>
+   </property>
+  </action>
+  <action name="toolPropagate">
+   <property name="text">
+    <string>Propagate Gravity</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+G</string>
+   </property>
+  </action>
+  <action name="selectInvert">
+   <property name="text">
+    <string>Invert Selection</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+I</string>
+   </property>
+  </action>
+  <action name="selectConnected">
+   <property name="text">
+    <string>Connected</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+L</string>
+   </property>
+  </action>
+  <action name="selectOverlap">
+   <property name="text">
+    <string>Overlapping</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+L</string>
+   </property>
+  </action>
+  <action name="selectRoomType">
+   <property name="text">
+    <string>By Room Type</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+T</string>
+   </property>
+  </action>
+  <action name="selectRoomMusic">
+   <property name="text">
+    <string>By Room Music</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+M</string>
    </property>
   </action>
  </widget>

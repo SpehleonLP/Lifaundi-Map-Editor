@@ -27,6 +27,7 @@ QMainWindow(parent),
 ui(new Ui::MainWindow),
 escape(Qt::Key_Escape, this),
 create(Qt::Key_N, this),
+face(Qt::Key_K, this),
 duplicate(QKeySequence("Shift+D"), this),
 translate(Qt::Key_G, this),
 rotate(Qt::Key_R, this),
@@ -41,6 +42,7 @@ enter(Qt::Key_Z, this)
 
 	escape.setContext(Qt::ApplicationShortcut);
 	create.setContext(Qt::ApplicationShortcut);
+	face.setContext(Qt::ApplicationShortcut);
 	duplicate.setContext(Qt::ApplicationShortcut);
 	translate.setContext(Qt::ApplicationShortcut);
 	rotate.setContext(Qt::ApplicationShortcut);
@@ -72,7 +74,6 @@ enter(Qt::Key_Z, this)
 		ui->editRedo->setEnabled(document->CanRedo());
 		ui->viewWidget->need_repaint();
 	});
-    connect(ui->editSelectAll,   &QAction::triggered, [this]() { document->SelectAll(); ui->viewWidget->need_repaint(); });
 //    connect(ui->editSelectNone,  &QAction::triggered, [this]() { document->SelectNone(); });
     connect(ui->editUndo,        &QAction::triggered, [this]()
 	{
@@ -81,6 +82,14 @@ enter(Qt::Key_Z, this)
 		ui->editRedo->setEnabled(document->CanRedo());
 		ui->viewWidget->need_repaint();
 	});
+
+	connect(ui->selectAll,        &QAction::triggered, [this]() { document->SelectAll(); ui->viewWidget->need_repaint(); });
+	connect(ui->selectNone,       &QAction::triggered, [this]() { document->SelectNone(); ui->viewWidget->need_repaint(); });
+	connect(ui->selectInvert,     &QAction::triggered, [this]() { document->InvertSelection(); ui->viewWidget->need_repaint(); });
+	connect(ui->selectRoomType,   &QAction::triggered, [this]() { document->SelectByType(); ui->viewWidget->need_repaint(); });
+	connect(ui->selectRoomMusic,  &QAction::triggered, [this]() { document->SelectByMusic(); ui->viewWidget->need_repaint(); });
+	connect(ui->selectOverlap,    &QAction::triggered, [this]() { document->SelectOverlapping(); ui->viewWidget->need_repaint(); });
+	connect(ui->selectConnected,  &QAction::triggered, [this]() { document->SelectLinked(); ui->viewWidget->need_repaint(); });
 
 	connect(ui->fileLoadBackground,   &QAction::triggered, [this]() { fileOpen(false, true); });
     connect(ui->fileOpen,           &QAction::triggered, [this]() { fileOpen(true, false); });
@@ -96,6 +105,7 @@ enter(Qt::Key_Z, this)
 
 	connect(ui->toolNew,         &QAction::triggered,[this]() { toolbox.SetTool(Tool::Create); } );
 	connect(ui->toolDuplicate,   &QAction::triggered,[this]() { document->Duplicate(ui->viewWidget->GetWorldPosition()); } );
+	connect(ui->toolFace,	     &QAction::triggered,[this]() { toolbox.SetTool(Tool::Face); } );
     connect(ui->toolTranslate,   &QAction::triggered,[this]() { toolbox.SetTool(Tool::Translate); } );
     connect(ui->toolRotate,      &QAction::triggered,[this]() { toolbox.SetTool(Tool::Rotate); } );
 	connect(ui->toolScale,       &QAction::triggered,[this]() { toolbox.SetTool(Tool::Scale); } );
@@ -104,6 +114,7 @@ enter(Qt::Key_Z, this)
 	connect(ui->toolReseat,      &QAction::triggered,[this]() { toolbox.SetTool(Tool::Order); } );
 
 	connect(&escape,             &QShortcut::activated, [this]() { toolbox.SetTool(Tool::None); } );
+	connect(&face,				 &QShortcut::activated,[this]() { toolbox.SetTool(Tool::Face); } );
 	connect(&create,             &QShortcut::activated, [this]() { toolbox.SetTool(Tool::Create); } );
 	connect(&duplicate,          &QShortcut::activated, [this]() { document->Duplicate(ui->viewWidget->GetWorldPosition()); } );
 	connect(&translate,          &QShortcut::activated, [this]() { toolbox.SetTool(Tool::Translate); } );
@@ -692,6 +703,16 @@ void MainWindow::SetEnabled()
 	ui->editRedo->setEnabled(document->CanRedo());
 
 
+}
+
+glm::ivec2 MainWindow::GetWorldPosition() const
+{
+	return ui->viewWidget->GetWorldPosition();
+}
+
+void MainWindow::SetMouseTracking(bool v)
+{
+	ui->viewWidget->setMouseTracking(v);
 }
 
 void MainWindow::need_repaint()

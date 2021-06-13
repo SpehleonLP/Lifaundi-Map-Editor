@@ -18,6 +18,7 @@ enum class Tool : int
 	Slice,
 	Extrude,
 	Order,
+	Face,
 	Finish
 };
 

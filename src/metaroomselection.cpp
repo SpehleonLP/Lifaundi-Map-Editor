@@ -166,19 +166,17 @@ void MetaroomSelection::SetVertexSelection(std::vector<int> const& vec)
 	}
 }
 
-bool MetaroomSelection::ToggleSelectAll(uint32_t faces)
+bool MetaroomSelection::ToggleSelectAll(uint32_t faces, Bitwise flags)
 {
 	m_selectionChanged = true;
 
-	uint32_t changed = false;
+	bool changed = false;
 
-    for(uint32_t i = 0; i < faces; ++i)
+    for(uint32_t i = 0; i < faces*4; ++i)
 	{
-		if(!IsFaceSelected(i))
-		{
-			select_face(i, Bitwise::SET);
-			changed = true;
-		}
+		bool is_selected = IsVertSelected(i);
+		select_vertex(i, flags);
+		changed |= (IsVertSelected(i) != is_selected);
 	}
 
 	if(changed == false)
@@ -198,7 +196,7 @@ void MetaroomSelection::select_vertex(int id, Bitwise flags)
 	case Bitwise::AND:	m_array[id] |=  1;	break;
 	case Bitwise::OR:   m_array[id]  =  1;	break;
 	case Bitwise::XOR:  m_array[id] ^=  1;	break;
-	case Bitwise::NOT:	m_array[id]  =  0;	break;
+	case Bitwise::NOT:	m_array[id] &=  0xFE;	break;
 	}
 }
 

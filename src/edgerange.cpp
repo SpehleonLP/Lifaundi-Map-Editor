@@ -6,36 +6,26 @@
 #include <cfloat>
 
 EdgeRange::EdgeRange(const QuadTree * tree, int edge, bool minimum) :
-	EdgeRange(tree, tree->m_metaroom->GetVertex(edge), tree->m_metaroom->GetNextVertex(edge), minimum? edge/4 : -1)
+	RoomRange(tree, edge, minimum),
+	v0(m_metaroom->GetVertex(edge)),
+	v1(m_metaroom->GetNextVertex(edge))
 {
 }
 
 EdgeRange::EdgeRange(const QuadTree * tree, glm::ivec2 v0, glm::ivec2 v1,  glm::ivec2 v2, int minimum) :
+	RoomRange(tree, v0, v2, minimum),
 	v0(v0),
-	v1(v1),
-	min(glm::min(v0, v2)),
-	max(glm::max(v0, v2)),
-	m_nodes(&tree->m_nodes[0]),
-	m_metaroom(tree->m_metaroom),
-	minimum(minimum)
+	v1(v1)
 {
 
 	if(m_nodes != nullptr)
 		stack.push(0);
 }
 
-
-bool EdgeRange::popFront(Flags f)
+bool EdgeRange::popFront()
 {
-top:
-	if(child > -1)
-	{
-		if(f == Flags::None && i == -1)
-		{
-			i = 0;
-			return true;
-		}
-		else if(f == Flags::Colinear)
+	do {
+		if(child > -1)
 		{
 			while(++i < 4)
 			{
@@ -47,33 +37,12 @@ top:
 				&& math::IsColinear(v0, v1, a0, a1))
 					return true;
 			}
+
+			child = -1;
 		}
 
-		child = -1;
-	}
-
-	while(stack.size())
-	{
-		auto & node = m_nodes[stack.top()];
-		stack.pop();
-
-		if(math::intersects(min, max, node.min, node.max) == false)
-			continue;
-
-		if(node.leaf == false)
-		{
-			stack.push(node.child+0);
-			stack.push(node.child+1);
-			continue;
-		}
-
-		if(minimum < 0 || (uint32_t)minimum < node.child)
-		{
-			child = node.child;
-			i     = -1;
-			goto top;
-		}
-	}
+		i     = -1;
+	} while(RoomRange::popFront());
 
 	return false;
 }

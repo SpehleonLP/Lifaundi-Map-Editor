@@ -104,7 +104,7 @@ public:
 	void PrintTree(int node, int tabs) const;
 
 private:
-friend class EdgeRange;
+friend class RoomRange;
 	std::vector<EdgeVertex> GetRenderWalls();
 
 	void GetWriteDoors(int edge, std::stack<int> & stack, std::vector<DoorInfo> & edges, int typeId);

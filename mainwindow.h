@@ -66,6 +66,9 @@ public:
 	bool SetAsterisk(bool);
 
 	bool musicSet();
+
+	glm::ivec2 GetWorldPosition() const;
+	void SetMouseTracking(bool);
 	void need_repaint();
 
 	glm::vec2 GetScroll();
@@ -122,6 +125,7 @@ friend class Document;
 	QShortcut escape;
 
 	QShortcut create;
+	QShortcut face;
 	QShortcut duplicate;
 	QShortcut translate;
 	QShortcut rotate;

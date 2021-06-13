@@ -103,14 +103,14 @@ namespace math
 	}
 
 	template<typename U, typename V, glm::qualifier Q=glm::highp>
-	inline bool intersects(glm::vec<2, U, Q> v0, glm::vec<2, U, Q> v1, glm::vec<2, V, Q> u0, glm::vec<2, V, Q> u1)
+	inline bool boxIntersects(glm::vec<2, U, Q> v0, glm::vec<2, U, Q> v1, glm::vec<2, V, Q> u0, glm::vec<2, V, Q> u1)
 	{
 		return v0.x <= u1.x && v0.y <= u1.y
 			&& u0.x <= v1.x && u0.y <= v1.y;
 	}
 
 	template<typename U, typename V, glm::qualifier Q=glm::highp>
-	inline bool contains(glm::vec<2, U, Q> u, glm::vec<2, V, Q> v0, glm::vec<2, V, Q> v1)
+	inline bool boxContains(glm::vec<2, U, Q> u, glm::vec<2, V, Q> v0, glm::vec<2, V, Q> v1)
 	{
 		return v0.x < u.x && u.x < v1.x
 			&& v0.y < u.y && u.y < v1.y;
@@ -162,7 +162,42 @@ namespace math
 		return GetZOrder(v.x, v.y);
 	}
 
+	template<typename T, glm::qualifier Q=glm::highp>
+	bool IsPointContained(glm::vec<2, T, Q> const * verts, glm::vec<2, T, Q> pos)
+	{
+		return
+			(math::cross(verts[1] - verts[0], pos - verts[0]) <= 0)
+		&&  (math::cross(verts[2] - verts[1], pos - verts[1]) <= 0)
+		&&  (math::cross(verts[3] - verts[2], pos - verts[2]) <= 0)
+		&&  (math::cross(verts[0] - verts[3], pos - verts[3]) <= 0);
+	}
 
+	template<typename T, glm::qualifier Q=glm::highp>
+	int orientation(glm::vec<2, T, Q> p, glm::vec<2, T, Q> q, glm::vec<2, T, Q> r)
+	{
+		// See https://www.geeksforgeeks.org/orientation-3-ordered-points/
+		// for details of below formula.
+		int val = (q.y - p.y) * (r.x - q.x) -
+		(q.x - p.x) * (r.y - q.y);
+
+		if (val == 0) return 0;  // colinear
+
+		return (val > 0)? 1: 2; // clock or counterclock wise
+	}
+
+	template<typename T, glm::qualifier Q=glm::highp>
+	bool DoLinesIntersect(glm::vec<2, T, Q> p1, glm::vec<2, T, Q> p2, glm::vec<2, T, Q> q1, glm::vec<2, T, Q> q2)
+	{
+		int i = math::cross(q1-p1, p2-p1) * math::cross(q2-p1, p2-p1);
+		int j = math::cross(p1-q1, q2-q1) * math::cross(p2-q1, q2-q1);
+
+		if(i < 0 && j < 0)
+			return true;
+		if( i > 0 && j > 0)
+			return true;
+
+		return false;
+	}
 
 };
 

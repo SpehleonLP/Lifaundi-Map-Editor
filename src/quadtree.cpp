@@ -319,7 +319,7 @@ int QuadTree::GetFace(glm::ivec2 position)
 		auto & node = m_nodes[stack.top()];
 		stack.pop();
 
-		if(math::contains(position, node.min, node.max))
+		if(math::boxContains(position, node.min, node.max))
 		{
 			if(node.leaf == true)
 			{
@@ -581,7 +581,7 @@ bool QuadTree::DoesOverlap(glm::ivec2 min, glm::ivec2 max)
 		auto & node = m_nodes[stack.top()];
 		stack.pop();
 
-		if(math::intersects(min, max, node.min, node.max))
+		if(math::boxIntersects(min, max, node.min, node.max))
 		{
 			if(node.leaf == false)
 			{
@@ -613,7 +613,7 @@ void QuadTree::GetOverlappingRooms(glm::ivec2 min, glm::ivec2 max, std::vector<i
 		auto & node = m_nodes[stack.top()];
 		stack.pop();
 
-		if(math::intersects(min, max, node.min, node.max))
+		if(math::boxIntersects(min, max, node.min, node.max))
 		{
 			if(node.leaf == false)
 			{

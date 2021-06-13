@@ -31,15 +31,16 @@ public:
 	void clear();
 	void ClearTool();
 
-	void SetTool(Tool);
+	bool SetTool(Tool);
 	bool HaveTool() const { return m_state != State::None; }
+
+	void AddFace();
 
 	bool OnDoubleClick(glm::ivec2, Bitwise);
 	bool OnFinish();
 
 	bool OnLeftDown(glm::vec2, Bitwise, bool alt);
 	bool OnLeftUp(glm::vec2, Bitwise, bool alt);
-	void AddFace();
 
 	bool OnMouseMove(glm::vec2, Bitwise);
 
