@@ -98,7 +98,7 @@ public:
 	void Rotate(glm::ivec2 center, glm::vec2 complex);
 	void Scale(glm::ivec2 center, glm::vec2 scale);
 
-	void ClickSelect(glm::ivec2 pos, Bitwise flags, bool alt);
+	void ClickSelect(glm::ivec2 pos, Bitwise flags, bool alt, float zoom);
 	void BoxSelect(glm::ivec2 tl, glm::ivec2 br, Bitwise flags);
 
 	void CancelMove();

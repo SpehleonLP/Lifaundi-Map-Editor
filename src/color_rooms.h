@@ -24,7 +24,7 @@ public:
 	std::vector<int8_t> const& GetColoring() const { return coloring; }
 
 	int		 GetMaxDegree(int * room) const;
-	uint32_t GetColorFlags(int room_id) const;
+	uint64_t GetColorFlags(int room_id) const;
 	int      NoColorsUsed() const;
 	void	 CheckColoring() const;
 

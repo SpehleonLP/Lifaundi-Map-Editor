@@ -70,7 +70,7 @@ std::vector<std::vector<int>> ColorRooms::GetEdgeList(std::vector<Door> const& d
 	return r;
 }
 
-uint32_t ColorRooms::GetColorFlags(int room_id) const
+uint64_t ColorRooms::GetColorFlags(int room_id) const
 {
 	if((edge_flags[room_id] & 0x03) == 3 || (edge_flags[room_id] & 0x0C) == 0xC)
 		return 1;
@@ -86,7 +86,7 @@ uint32_t ColorRooms::GetColorFlags(int room_id) const
 	if(edge_flags[room_id] & 0x06)
 		return 0x0E & ~bits;
 
-	return 0x00FFFFF0 & ~bits;
+	return 0x0000000000FFFFF0 & ~bits;
 }
 
 int32_t ColorRooms::NoColorsUsed() const

@@ -38,14 +38,13 @@ bool ControllerFSM::OnDoubleClick(glm::ivec2, Bitwise)
 	return false;
 }
 
-static float GetAngle(glm::i16vec2 center, glm::i16vec2 point)
+static float GetAngle(glm::ivec2 center, glm::ivec2 point)
 {
-	point -= center;
 	glm::vec2 vec = glm::normalize(glm::vec2(point - center));
 	return std::atan2(vec.y, vec.x);
 }
 
-static bool ArrangeClockwise(glm::ivec2 * verts)
+static bool ArrangeCounterClockwise(glm::ivec2 * verts)
 {
 	glm::ivec2 center = ((verts[0]) + (verts[1]) + (verts[2]) + (verts[3]))/4;
 
@@ -58,7 +57,7 @@ static bool ArrangeClockwise(glm::ivec2 * verts)
 
 	std::sort(&order[0], &order[4], [](auto const& a, auto const& b)
 	{
-		return a.second < b.second;
+		return a.second > b.second;
 	});
 
 	glm::ivec2 cpy[4]{
@@ -70,11 +69,11 @@ static bool ArrangeClockwise(glm::ivec2 * verts)
 
 	memcpy(verts, cpy, sizeof(cpy));
 
-	bool sign = math::cross(verts[1] - verts[0], verts[2] - verts[1]) <= 0;
+	bool sign = math::cross(verts[1] - verts[0], verts[0] - verts[3]) <= 0;
 
-	return sign == (math::cross(verts[2] - verts[1], verts[3] - verts[2]) <= 0)
-		&& sign == (math::cross(verts[3] - verts[2], verts[0] - verts[3]) <= 0)
-		&& sign == (math::cross(verts[0] - verts[3], verts[1] - verts[0]) <= 0);
+	return sign == (math::cross(verts[2] - verts[1], verts[1] - verts[0]) <= 0)
+		&& sign == (math::cross(verts[3] - verts[2], verts[2] - verts[1]) <= 0)
+		&& sign == (math::cross(verts[0] - verts[3], verts[3] - verts[2]) <= 0);
 }
 
 bool GetVerticies(glm::ivec2 * dst, std::vector<int> const& selection, Metaroom * metaroom)
@@ -175,7 +174,7 @@ bool ControllerFSM::SetTool(Tool tool)
 			return false;
 		}
 
-		if(!ArrangeClockwise(verts))
+		if(!ArrangeCounterClockwise(verts))
 		{
 			m_parent->SetStatusBarMessage("Selected points do not define a convex polygon");
 			return false;
@@ -369,7 +368,7 @@ bool ControllerFSM::OnLeftUp(glm::vec2 position, Bitwise flags, bool alt)
 	case State::MouseDownOnUnselected:
 	case State::MouseDownOnNothing:
 	{
-		m_parent->document->m_metaroom.ClickSelect(position, flags, alt);
+		m_parent->document->m_metaroom.ClickSelect(position, flags, alt, m_parent->GetZoom());
 		m_state = State::None;
 	}	return true;
 

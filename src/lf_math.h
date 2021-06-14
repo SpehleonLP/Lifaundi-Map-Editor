@@ -3,6 +3,7 @@
 #include <glm/vec2.hpp>
 #include <algorithm>
 #include <cmath>
+#include "glm_iostream.h"
 #include <iostream>
 
 namespace math
@@ -19,10 +20,10 @@ namespace math
 		return sqrt(length2(p));
 	}
 
-	template<typename T, glm::qualifier Q=glm::highp>
-	inline T cross(glm::vec<2, T, Q> const &p, glm::vec<2, T, Q> const &q)
+	template<typename T, typename S, glm::qualifier Q=glm::highp>
+	inline auto cross(glm::vec<2, T, Q> const &p, glm::vec<2, S, Q> const &q)
 	{
-		return p.x*q.y - q.x*p.y;
+		return p.x*q.y - p.y*q.x;
 	}
 
 	template<typename T, glm::qualifier Q=glm::highp>
@@ -117,7 +118,7 @@ namespace math
 	}
 
 	template<typename T, glm::qualifier Q=glm::highp>
-	float LineDistanceSquared(glm::vec<2, T, Q> v0, glm::vec<2, T, Q> v1, glm::vec<2, T, Q> pos)
+	inline float LineDistanceSquared(glm::vec<2, T, Q> v0, glm::vec<2, T, Q> v1, glm::vec<2, T, Q> pos)
 	{
 		glm::vec<2, T, Q> distance = v1 -  v0;
 		const float l2 = math::length2(distance);
@@ -129,7 +130,7 @@ namespace math
 	}
 
 	template<typename T, glm::qualifier Q=glm::highp>
-	float SemgentDistanceSquared(glm::vec<2, T, Q> v0, glm::vec<2, T, Q> v1, glm::vec<2, T, Q> pos)
+	inline float SemgentDistanceSquared(glm::vec<2, T, Q> v0, glm::vec<2, T, Q> v1, glm::vec<2, T, Q> pos)
 	{
 		glm::vec<2, T, Q> distance = v1 -  v0;
 		const float l2 = math::length2(distance);
@@ -163,7 +164,7 @@ namespace math
 	}
 
 	template<typename T, glm::qualifier Q=glm::highp>
-	bool IsPointContained(glm::vec<2, T, Q> const * verts, glm::vec<2, T, Q> pos)
+	inline bool IsPointContained(glm::vec<2, T, Q> const * verts, glm::vec<2, T, Q> pos)
 	{
 		return
 			(math::cross(verts[1] - verts[0], pos - verts[0]) <= 0)
@@ -173,7 +174,7 @@ namespace math
 	}
 
 	template<typename T, glm::qualifier Q=glm::highp>
-	int orientation(glm::vec<2, T, Q> p, glm::vec<2, T, Q> q, glm::vec<2, T, Q> r)
+	inline int orientation(glm::vec<2, T, Q> p, glm::vec<2, T, Q> q, glm::vec<2, T, Q> r)
 	{
 		// See https://www.geeksforgeeks.org/orientation-3-ordered-points/
 		// for details of below formula.
@@ -186,17 +187,25 @@ namespace math
 	}
 
 	template<typename T, glm::qualifier Q=glm::highp>
-	bool DoLinesIntersect(glm::vec<2, T, Q> p1, glm::vec<2, T, Q> p2, glm::vec<2, T, Q> q1, glm::vec<2, T, Q> q2)
+	inline bool DoLinesIntersect(glm::vec<2, T, Q> s1, glm::vec<2, T, Q> s_p, glm::vec<2, T, Q> r_p, glm::vec<2, T, Q> r1)
 	{
-		int i = math::cross(q1-p1, p2-p1) * math::cross(q2-p1, p2-p1);
-		int j = math::cross(p1-q1, q2-q1) * math::cross(p2-q1, q2-q1);
+		auto s_d = s1 - s_p;
+		auto r_d = r1 - r_p;
 
-		if(i < 0 && j < 0)
-			return true;
-		if( i > 0 && j > 0)
-			return true;
+		float T1, T2;
+		T2 = math::cross(r_d, s_d);
+//runs parallel
+		if(T2 == 0.f) return false;
+		T2 = math::cross(s_p - r_p, r_d) / T2;
 
-		return false;
+		if(!(0.f < T2 && T2 < 1.f)) return false;
+
+		if(std::abs(r_d.x) > std::abs(r_d.y))
+			T1 = (s_p.x + s_d.x*T2 - r_p.x)/r_d.x;
+		else
+			T1 = (s_p.y + s_d.y*T2 - r_p.y)/r_d.y;
+
+		return (0.f < T1 && T1 < 1.f);
 	}
 
 };

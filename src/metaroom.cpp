@@ -206,7 +206,7 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 
 		for(auto i = begin; i < end; ++i)
 		{
-			if(0 <= i->perm && i->perm < 100 && index < i->face)
+			if(0 <= i->perm && i->perm < 100 && index < i->face && i->face < (int)size())
 			{
 				m_permeabilities.push_back(std::make_pair<uint64_t, uint8_t>
 					(GetDoorKey(index, i->face), i->perm));
@@ -291,9 +291,7 @@ int Metaroom::Insert(std::vector<Room> const& list)
 		m_selection.select_face(i, Bitwise::SET);
 	}
 
-	memcpy(&m_prev_verts[first*4], &m_verts[first*4], sizeof(glm::ivec2) * list.size()*4);
-    m_tree.SetDirty();
-	m_dirty = true;
+	CommitMove();
 
 	return first;
 }
@@ -933,9 +931,9 @@ bool Metaroom::CanAddFace(glm::ivec2 * verts)
 		int N = (range.face()+1)*4;
 
 //if the first point is not contained then if we intersect there must be a line crossing boundary...
-		if(math::IsPointContained(&m_verts[range.face()*4], verts[0])
+	/*	if(math::IsPointContained(&m_verts[range.face()*4], verts[0])
 		|| math::IsPointContained(verts, m_verts[range.face()*4]))
-			return false;
+			return false;*/
 
 		for(int i = range.face()*4; i < N; ++i)
 		{
@@ -1213,14 +1211,14 @@ void Metaroom::BoxSelect(glm::ivec2 tl, glm::ivec2 br, Bitwise flags)
 	return;
 }
 
-void Metaroom::ClickSelect(glm::ivec2 pos, Bitwise flags, bool alt)
+void Metaroom::ClickSelect(glm::ivec2 pos, Bitwise flags, bool alt, float zoom)
 {
 	if(flags == Bitwise::SET)
 		m_selection.clear();
 	if(flags == Bitwise::AND)
 		m_selection.begin_and();
 
-	static constexpr float radius = 36;
+	float radius = 36 / zoom;
 
 	bool selected = false;
 
