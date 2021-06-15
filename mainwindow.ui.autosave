@@ -380,6 +380,7 @@
     <addaction name="debugDoorSymmetry"/>
     <addaction name="separator"/>
     <addaction name="viewRoomId"/>
+    <addaction name="actionSelect_room_By_ID"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -875,6 +876,11 @@
    </property>
    <property name="text">
     <string>View Room IDs</string>
+   </property>
+  </action>
+  <action name="actionSelect_room_By_ID">
+   <property name="text">
+    <string>Select Room By ID</string>
    </property>
   </action>
  </widget>

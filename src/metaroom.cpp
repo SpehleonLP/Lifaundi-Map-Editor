@@ -4,6 +4,7 @@
 #include "document.h"
 #include "glviewwidget.h"
 #include "roomrange.h"
+#include "edgerange.h"
 #include "Shaders/roomoutlineshader.h"
 #include "Shaders/selectedroomshader.h"
 #include "Shaders/arrowshader.h"
@@ -1330,6 +1331,84 @@ void Metaroom::RingSelectEdge(int edge, Bitwise flags)
 
 
 }
+
+
+std::string Metaroom::TestTreeSymmetry()
+{
+	std::string r;
+
+	for(uint32_t i = 0; i < size(); ++i)
+	{
+		glm::i16vec2 tl, br;
+		GetFaceAABB(i, tl, br);
+		RoomRange range(&m_tree, tl, br);
+
+		while(range.popFront())
+		{
+			if(range.face() < (int)i)
+				continue;
+
+			bool match_found = false;
+
+			RoomRange r2(&m_tree, range.face());
+			while(r2.popFront())
+			{
+				if(r2.face() == (int)i)
+				{
+					match_found = true;
+					break;
+				}
+			}
+
+			if(match_found == false)
+			{
+				char buffer[256];
+				snprintf(buffer, sizeof(buffer), "Tree asymmetrical for pair %d, %d\n", i, range.face());
+				r += buffer;
+			}
+		}
+	}
+
+	return {};
+}
+
+std::string Metaroom::TestDoorSymmetry()
+{
+	std::string r;
+
+	for(uint32_t i = 0; i < size()*4; ++i)
+	{
+		EdgeRange range(&m_tree, i);
+
+		while(range.popFront())
+		{
+			if(range.face() < (int)i/4)
+				continue;
+
+			bool match_found = false;
+
+			EdgeRange r2(&m_tree, range.edge());
+			while(r2.popFront())
+			{
+				if(r2.edge() == (int)i)
+				{
+					match_found = true;
+					break;
+				}
+			}
+
+			if(match_found == false)
+			{
+				char buffer[256];
+				snprintf(buffer, sizeof(buffer), "Tree asymmetrical for pair %d, %d\n", i, range.edge());
+				r += buffer;
+			}
+		}
+	}
+
+	return {};
+}
+
 /*
 #include "edgerange.h"
 

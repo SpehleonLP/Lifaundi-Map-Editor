@@ -149,6 +149,9 @@ public:
 
 	void solve_constraints() {};
 
+	std::string TestTreeSymmetry();
+	std::string TestDoorSymmetry();
+
 	std::vector<std::pair<uint64_t, uint8_t> > m_permeabilities;
 
 	std::unique_ptr<glm::ivec2[]> m_verts;

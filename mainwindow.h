@@ -79,6 +79,7 @@ public:
 	float GetZoom() const { return m_zoom; }
 
 	void onMouseEvent(QMouseEvent*) {}
+	void DisplayString(std::string && str);
 
 	Ui::MainWindow *ui;
 

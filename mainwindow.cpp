@@ -128,6 +128,9 @@ enter(Qt::Key_Z, this)
 		toolbox.SetTool(Tool::Finish);
 	} );
 
+	connect(ui->debugTreeSymmetry,     &QAction::triggered, [this]() { DisplayString(document->m_metaroom.TestTreeSymmetry()); });
+	connect(ui->debugDoorSymmetry,     &QAction::triggered, [this]() { DisplayString(document->m_metaroom.TestDoorSymmetry()); });
+
     connect(ui->viewChecker,     &QAction::triggered, ui->viewWidget, &GLViewWidget::need_repaint);
     connect(ui->viewHalls,       &QAction::triggered, ui->viewWidget, &GLViewWidget::need_repaint);
     connect(ui->viewLinks,       &QAction::triggered, ui->viewWidget, &GLViewWidget::need_repaint);
@@ -285,6 +288,19 @@ void MainWindow::OnSelectionChanged()
 	updating_fields = false;
 }
 
+void MainWindow::DisplayString(std::string && str)
+{
+	if(str.empty())
+		str = "Passed Test.";
+
+	QMessageBox::information(
+		this,
+		QGuiApplication::applicationDisplayName(),
+		QString::fromStdString(str),
+		QMessageBox::Ok,
+		QMessageBox::Ok);
+}
+
 std::vector<std::string> MainWindow::GetTrackList(int8_t * music, uint32_t length)
 {
 	std::vector<std::string> r;
@@ -348,7 +364,14 @@ void MainWindow::SetStatusBarMessage(glm::ivec2 coords)
 {
 	if(!m_haveMessage)
 	{
-		statusBar()->showMessage(QString("x: %1 y: %2").arg(coords.x).arg(coords.y));
+		if( ui->viewRoomId->isChecked() && document)
+		{
+			statusBar()->showMessage(QString("room id: %1").arg(document->m_metaroom.m_tree.GetFace(coords)));
+		}
+		else
+		{
+			statusBar()->showMessage(QString("x: %1 y: %2").arg(coords.x).arg(coords.y));
+		}
 	}
 }
 

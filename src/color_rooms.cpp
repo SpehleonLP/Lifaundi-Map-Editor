@@ -38,6 +38,12 @@ std::vector<std::vector<int>> ColorRooms::GetEdgeList(std::vector<Door> const& d
 	{
 		std::vector<int> v;
 
+		if(i == 13 || i == 164)
+		{
+			int break_point = 0;
+			++break_point;
+		}
+
 		for(range.setRoom(i); !range.empty(); range.popFront())
 		{
 			v.push_back(range.front());
@@ -54,12 +60,7 @@ std::vector<std::vector<int>> ColorRooms::GetEdgeList(std::vector<Door> const& d
 		uint32_t write = 0, read = 0, j;
 		for(;read < v.size(); read = j)
 		{
-			for(j = read; j < v.size(); ++j)
-			{
-				if(v[j] != v[read])
-					break;
-			}
-
+			for(j = read; j < v.size() && v[j] == v[read]; ++j) {}
 			v[write++] = v[read];
 		}
 
@@ -197,6 +198,7 @@ bool ColorRooms::DoColoring(std::vector<uint32_t> & face_queue, StackFrame & fra
 		return true;
 	}
 
+	frame.color = -1;
 	return false;
 }
 
@@ -213,7 +215,12 @@ void ColorRooms::CheckColoring() const
 		for(auto e : edges[i])
 		{
 			if(coloring[e] == coloring[i])
+			{
+				auto & v_0 = edges[i];
+				auto & v_1 = edges[e];
+
 				throw std::runtime_error("two adjacent rooms have same color");
+			}
 		}
 	}
 }
