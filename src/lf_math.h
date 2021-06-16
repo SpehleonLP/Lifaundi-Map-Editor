@@ -1,5 +1,6 @@
 #ifndef LF_MATH_H
 #define LF_MATH_H
+#include <glm/mat3x3.hpp>
 #include <glm/vec2.hpp>
 #include <algorithm>
 #include <cmath>
@@ -8,6 +9,12 @@
 
 namespace math
 {
+	template<typename T, glm::qualifier Q=glm::highp>
+	inline auto ortho(glm::vec<2, T, Q> const &p)
+	{
+		return glm::vec<2, T, Q>(p.y, -p.x);
+	}
+
 	template<typename T, glm::qualifier Q=glm::highp>
 	inline T length2(glm::vec<2, T, Q> const &p)
 	{
@@ -206,6 +213,23 @@ namespace math
 			T1 = (s_p.y + s_d.y*T2 - r_p.y)/r_d.y;
 
 		return (0.f < T1 && T1 < 1.f);
+	}
+
+	inline glm::mat3 GetRotation(glm::vec2 const& a, glm::vec2 const& b)
+	{
+		auto _sin = std::fabs(math::cross(a, b));
+		auto _cos = glm::dot(a, b);
+
+		return glm::mat3(
+			_cos, -_sin, 0,
+			_sin,  _cos, 0,
+			0, 0, 1);
+	}
+
+
+	inline glm::vec2 OrthoNormal(glm::ivec2 const& a)
+	{
+		return glm::normalize(glm::vec2(math::ortho(a)));
 	}
 
 };

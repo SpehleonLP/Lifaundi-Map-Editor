@@ -247,6 +247,13 @@ bool ControllerFSM::SetTool(Tool tool)
 		m_parent->SetStatusBarMessage();
 		OnFinish();
 		break;
+	case Tool::SliceGravity:
+		m_state = State::SliceSetGravity;
+		m_parent->SetMouseTracking(true);
+		xy_filter = glm::ivec2(1, 1);
+		break;
+	case Tool::PropagateGravity:
+		break;
 	default:
 		break;
 	}
@@ -338,6 +345,11 @@ bool ControllerFSM::OnLeftDown(glm::vec2 position, Bitwise , bool)
 	case State::SliceBegin:
 	case State::ExtrudeBegin:
 	case State::WeldBegin:
+		return false;
+	case State::RotateGravity:
+	case State::DirectGravity:
+	case State::ScaleGravity:
+	case State::SliceGravity:
 		return false;
 	default:
 		return false;
@@ -443,6 +455,54 @@ bool ControllerFSM::OnLeftUp(glm::vec2 position, Bitwise flags, bool alt)
 			}
 		}
 	}	return true;
+
+	case State::SliceSetGravity:
+		if(m_slice.empty() || slice_face < 0)
+			m_state = State::None;
+		else
+		{
+			m_state = State::SliceGravity;
+			slice_face = m_slice.front().edge;
+		}
+		return true;
+	case State::SliceGravity:
+	{
+		m_state = State::None;
+
+		if(m_slice.empty())
+			return false;
+
+		std::vector<int> list;
+		std::vector<uint32_t> values;
+
+		list.resize(m_slice.size()/2);
+		values.resize(m_slice.size()/2);
+
+		for(uint32_t i = 0; i < m_slice.size(); i += 2)
+		{
+			list[i/2] = (m_slice[i].edge/4);
+		}
+
+		auto const& mta = m_parent->document->m_metaroom;
+		int edge = ((m_slice[0].percent > m_slice[1].percent? m_slice[0].edge : m_slice[1].edge) + 1);
+		int id   = edge - m_slice[0].edge;
+
+		glm::vec2 gravity		= mta.GetGravity(list[0]);
+		glm::vec2 floor_normal  = math::OrthoNormal(mta.GetEdge(list[0], edge));
+
+		for(uint32_t i = 0; i < list.size(); ++i)
+		{
+			glm::vec2 normal = math::OrthoNormal(mta.GetEdge(list[i], m_slice[i*2].edge+id));
+
+			auto mat = math::GetRotation(floor_normal, normal);
+			glm::vec2 grav = mat * glm::vec3(gravity, 1);
+			values[i] = glm::packHalf2x16(grav);
+		}
+
+		m_slice.clear();
+		m_parent->document->PushCommand(new DifferentialSetCommmand(m_parent->document.get(), std::move(list), std::move(values), DifferentialSetCommmand::Type::Gravity));
+		return true;
+	}
 	default:
 		return false;
 	}
@@ -510,6 +570,16 @@ bool ControllerFSM::OnFinish()
 	case State::Reorder:
 		m_state = State::None;
 		m_parent->document->PushCommand(new ReorderCommand(m_parent->document.get(), std::move(m_ordering)));
+		return true;
+
+	case State::SliceSetGravity:
+		if(m_slice.empty() || slice_face < 0)
+			m_state = State::None;
+		else
+		{
+			m_state = State::SliceGravity;
+			slice_face = m_slice.front().edge;
+		}
 		return true;
 	default:
 		break;
@@ -635,6 +705,7 @@ bool ControllerFSM::OnMouseMove(glm::vec2 p, Bitwise flags)
 	case State::WeldBegin:
 	{
 		m_parent->document->m_metaroom.Scale(selection_center, glm::vec2(0, 0));
+		return true;
 	}
 
 	default:
@@ -666,12 +737,16 @@ void ControllerFSM::CreateSlice(std::vector<SliceInfo> & slices, int edge, glm::
 		if(selection.MarkFace(edge/4) == false)
 			return;
 
-		slices.push_back({edge, position, 0});
+		uint16_t percent = (uint16_t)(mid * 65535);
+		if(edge < 2) percent = 65535 - percent;
+
+		slices.push_back({position, 0, (uint8_t)edge, (uint16_t)(mid * 65535)});
 
 		edge     = Metaroom::GetOppositeEdge(edge);
 		position = metaroom.GetPointOnEdge(edge, mid);
 
-		slices.push_back({edge, position, 0});
+		if(edge < 2) percent = 65535 - percent;
+		slices.push_back({position, 0, (uint8_t)edge, (uint16_t)(mid * 65535)});
 	}
 }
 
@@ -732,7 +807,7 @@ void ControllerFSM::Prepare(GLViewWidget *gl)
 		8, 9, 9, 10, 10, 11, 11, 8
 	};
 
-	if(m_state == State::SliceSet)
+	if(m_state == State::SliceSet || m_state == State::SliceSetGravity)
 	{
 		int face =  m_parent->document->m_metaroom.GetSliceEdge(mouse_current_pos);
 
@@ -742,7 +817,7 @@ void ControllerFSM::Prepare(GLViewWidget *gl)
 		if((slice_face = face) != -1)
 			SetUpSlices(m_slice, slice_face, .5);
 	}
-	else if(m_state == State::SliceBegin)
+	else if(m_state == State::SliceBegin || m_state == State::SliceGravity)
 	{
 		assert(slice_face >= 0);
 		SetUpSlices(m_slice, slice_face, m_parent->document->m_metaroom.ProjectOntoEdge(slice_face, mouse_current_pos));
@@ -787,21 +862,12 @@ void ControllerFSM::Prepare(GLViewWidget *gl)
 	{
         gl->glBindVertexArray(0);
         gl->glBindBuffer(GL_ARRAY_BUFFER, m_vbo[2]);
-
-		if(m_sliceLength < m_slice.capacity())
-		{
-			m_sliceLength = m_slice.capacity();
-            gl->glBufferData(GL_ARRAY_BUFFER, sizeof(m_slice[0])*m_slice.capacity(), &m_slice[0], GL_DYNAMIC_DRAW);
-		}
-		else
-		{
-            gl->glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(m_slice[0])*m_slice.size(), &m_slice[0]);
-		}
+        gl->glBufferData(GL_ARRAY_BUFFER, sizeof(m_slice[0])*m_slice.capacity(), &m_slice[0], GL_DYNAMIC_DRAW);
 	}
 
 
 	if(m_state == State::BoxSelectBegin
-	|| m_state == State::CreateBegin)
+	|| m_state == State::SliceGravity)
 	{
 		glm::ivec2 min(glm::vec2(m_parent->WidgetSize()) / (2 * m_parent->GetZoom()));
 		glm::ivec2 max = glm::ivec2(m_parent->document->GetDimensions()) - min;
@@ -860,8 +926,16 @@ void ControllerFSM::Render(GLViewWidget * gl)
 	{
         gl->glBindVertexArray(m_vao[1]);
 
-        gl->glLineWidth(1);
-        UniformColorShader::Shader.Bind(gl, 1.f, 0.f, 1.f, 1.f);
+		if(m_state < State::SliceSetGravity)
+		{
+			gl->glLineWidth(1);
+			UniformColorShader::Shader.Bind(gl, 1.f, 0.f, 1.f, 1.f);
+		}
+		else
+		{
+			gl->glLineWidth(2);
+			UniformColorShader::Shader.Bind(gl, 0.f, 1.f, 1.f, 1.f);
+		}
         gl->glDrawArrays(GL_LINES, 0, m_slice.size());
 	}
 }

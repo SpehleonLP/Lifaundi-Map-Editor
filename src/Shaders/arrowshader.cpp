@@ -94,8 +94,8 @@ static const char * kGeometry()
 		void main()
 		{
 			mat2 rotation = mat2(1);
-		//	rotation[0] = vec2(v_rotation[0].x, -v_rotation[0].y);
-		//	rotation[1] = vec2(v_rotation[0].y,  v_rotation[0].x);
+			rotation[0] = vec2(v_rotation[0].x, -v_rotation[0].y);
+			rotation[1] = vec2(v_rotation[0].y,  v_rotation[0].x);
 
 			vec4 position = u_modelview * vec4(v_position[0], 0, 1);
 

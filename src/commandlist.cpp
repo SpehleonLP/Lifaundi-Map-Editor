@@ -402,3 +402,106 @@ bool PermeabilityCommand::IsSelection(std::vector<std::pair<int, int>> const& li
 
 	return true;
 }
+
+
+DifferentialSetCommmand::DifferentialSetCommmand(Document * document, std::vector<int> && list, std::vector<uint32_t> && value, Type type) :
+	metaroom(&document->m_metaroom),
+	new_values(std::move(value)),
+	indices(std::move(list)),
+	type(type)
+{
+	prev_values.reset(new uint32_t[indices.size()]);
+
+	switch(type)
+	{
+	case Type::Gravity:
+		for(size_t i = 0; i < indices.size(); ++i)
+			prev_values[i] = metaroom->m_gravity[indices[i]];
+		break;
+	case Type::Track:
+		for(size_t i = 0; i < indices.size(); ++i)
+			prev_values[i] = metaroom->m_music[indices[i]];
+		break;
+	case Type::RoomType:
+		for(size_t i = 0; i < indices.size(); ++i)
+			prev_values[i] = metaroom->m_roomType[indices[i]];
+		break;
+	case Type::DrawDistance:
+		for(size_t i = 0; i < indices.size(); ++i)
+			prev_values[i] = metaroom->m_drawDistance[indices[i]];
+		break;
+	case Type::DoorType:
+		for(size_t i = 0; i < indices.size(); ++i)
+			prev_values[i] = metaroom->m_doorType[indices[i]];
+		break;
+	default:
+		break;
+	}
+
+	DifferentialSetCommmand::RollForward();
+
+}
+
+void DifferentialSetCommmand::RollForward()
+{
+	switch(type)
+	{
+	case Type::Gravity:
+		for(size_t i = 0; i < indices.size(); ++i)
+			 metaroom->m_gravity[indices[i]] = new_values[i];
+		break;
+	case Type::Track:
+		for(size_t i = 0; i < indices.size(); ++i)
+			metaroom->m_music[indices[i]]  = new_values[i];
+		break;
+	case Type::RoomType:
+		for(size_t i = 0; i < indices.size(); ++i)
+			metaroom->m_roomType[indices[i]] = new_values[i];
+		break;
+	case Type::DrawDistance:
+		for(size_t i = 0; i < indices.size(); ++i)
+			metaroom->m_drawDistance[indices[i]]  = new_values[i];
+		break;
+	case Type::DoorType:
+		for(size_t i = 0; i < indices.size(); ++i)
+			metaroom->m_doorType[indices[i]] = new_values[i];
+		metaroom->m_tree.SetVBODirty();
+		break;
+	default:
+		break;
+	}
+
+	metaroom->m_dirty = true;
+}
+
+void DifferentialSetCommmand::RollBack()
+{
+	switch(type)
+	{
+	case Type::Gravity:
+		for(size_t i = 0; i < indices.size(); ++i)
+			 metaroom->m_gravity[indices[i]] = prev_values[i];
+		break;
+	case Type::Track:
+		for(size_t i = 0; i < indices.size(); ++i)
+			metaroom->m_music[indices[i]]  = prev_values[i];
+		break;
+	case Type::RoomType:
+		for(size_t i = 0; i < indices.size(); ++i)
+			metaroom->m_roomType[indices[i]] = prev_values[i];
+		break;
+	case Type::DrawDistance:
+		for(size_t i = 0; i < indices.size(); ++i)
+			metaroom->m_drawDistance[indices[i]]  = prev_values[i];
+		break;
+	case Type::DoorType:
+		for(size_t i = 0; i < indices.size(); ++i)
+			metaroom->m_doorType[indices[i]] = prev_values[i];
+		metaroom->m_tree.SetVBODirty();
+		break;
+	default:
+		break;
+	}
+
+	metaroom->m_dirty = true;
+}

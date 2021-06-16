@@ -19,6 +19,10 @@ enum class Tool : int
 	Extrude,
 	Order,
 	Face,
+
+	SliceGravity,
+	PropagateGravity,
+
 	Finish
 };
 
@@ -45,6 +49,14 @@ enum class State : int
 	SliceBegin,
 	ExtrudeBegin,
 	WeldBegin,
+
+	SliceSetGravity,
+
+	RotateGravity,
+	DirectGravity,
+	ScaleGravity,
+	SliceGravity,
+	PropagateGravity,
 
 	Reorder,
 };

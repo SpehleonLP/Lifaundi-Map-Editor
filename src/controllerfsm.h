@@ -10,9 +10,10 @@ class MainWindow;
 
 struct SliceInfo
 {
-	int        edge;
 	glm::ivec2 vertex;
 	uint8_t    type;
+	uint8_t    edge;
+	uint16_t   percent;
 	int        uuid{-1};
 };
 

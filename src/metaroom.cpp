@@ -217,6 +217,8 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 
 	if(version >= 4)
 		m_tree.ReadTree(fp);
+
+	PruneDegenerate();
 }
 
 uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
@@ -951,15 +953,14 @@ bool Metaroom::CanAddFace(glm::ivec2 * verts)
 
 void Metaroom::AddFace(glm::ivec2 min, glm::ivec2 max)
 {
-    if(m_tree.DoesOverlap(min, max))
+	glm::ivec2 verts[4]{ max, {max.x, min.y}, min, {min.y, max.y} };
+
+    if(CanAddFace(verts))
 		return;
 
 	int face = AddFaces();
 
-	m_verts[face*4+0] = max;
-	m_verts[face*4+1] = glm::ivec2(max.x, min.y);
-	m_verts[face*4+2] = min;
-	m_verts[face*4+3] = glm::ivec2(min.x, max.y);
+	memcpy(&m_verts[face*4], verts, sizeof(verts));
 
 	m_gravity[face]   = glm::packHalf2x16(glm::vec2(0, 9.81));
 	m_music[face]     = -1;
@@ -1407,6 +1408,30 @@ std::string Metaroom::TestDoorSymmetry()
 	}
 
 	return {};
+}
+
+void Metaroom::PruneDegenerate()
+{
+	std::vector<int> degenerate_faces;
+
+	for(uint32_t i = 0; i < size(); ++i)
+	{
+		int sum = 0;
+
+		for(int j = 0; j < 4; ++j)
+		{
+			for(int k = j+1; k < 4; ++k)
+			{
+				sum += (GetVertex(i*4 + j) == GetVertex(i*4 + k));
+			}
+		}
+
+		if(sum > 1)
+			degenerate_faces.push_back(i);
+	}
+
+	RemoveFaces(degenerate_faces);
+	fprintf(stderr, "pruned %i degenerate faces\n", (int)degenerate_faces.size());
 }
 
 /*

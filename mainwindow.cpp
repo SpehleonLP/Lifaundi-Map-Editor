@@ -15,6 +15,7 @@
 #include <fstream>
 #include <glm/glm.hpp>
 #include <QStatusBar>
+#include <QInputDialog>
 
 static QString g_imagePath;
 static QDir g_blkPath = QDir::home();
@@ -113,6 +114,9 @@ enter(Qt::Key_Z, this)
 	connect(ui->toolSlice,       &QAction::triggered,[this]() { toolbox.SetTool(Tool::Slice); } );
 	connect(ui->toolReseat,      &QAction::triggered,[this]() { toolbox.SetTool(Tool::Order); } );
 
+	connect(ui->toolRealign,       &QAction::triggered,[this]() { toolbox.SetTool(Tool::SliceGravity); } );
+	connect(ui->toolPropagate,     &QAction::triggered,[this]() { toolbox.SetTool(Tool::PropagateGravity); } );
+
 	connect(&escape,             &QShortcut::activated, [this]() { toolbox.SetTool(Tool::None); } );
 	connect(&face,				 &QShortcut::activated,[this]() { toolbox.SetTool(Tool::Face); } );
 	connect(&create,             &QShortcut::activated, [this]() { toolbox.SetTool(Tool::Create); } );
@@ -130,6 +134,13 @@ enter(Qt::Key_Z, this)
 
 	connect(ui->debugTreeSymmetry,     &QAction::triggered, [this]() { DisplayString(document->m_metaroom.TestTreeSymmetry()); });
 	connect(ui->debugDoorSymmetry,     &QAction::triggered, [this]() { DisplayString(document->m_metaroom.TestDoorSymmetry()); });
+	connect(ui->debugSelectRoom,     &QAction::triggered, [this]() {
+		bool ok;
+		int text = QInputDialog::getInt(this, tr("Select Room By ID"),
+												tr("Room ID:"), 0, 0, document->m_metaroom.size(), 1, &ok);
+		if (ok)
+			document->m_metaroom.m_selection.select_face(text, Bitwise::SET);
+	});
 
     connect(ui->viewChecker,     &QAction::triggered, ui->viewWidget, &GLViewWidget::need_repaint);
     connect(ui->viewHalls,       &QAction::triggered, ui->viewWidget, &GLViewWidget::need_repaint);

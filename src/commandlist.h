@@ -155,5 +155,35 @@ private:
 	Type                    type;
 };
 
+class DifferentialSetCommmand : public CommandInterface
+{
+public:
+	enum class Type
+	{
+		Gravity,
+		Track,
+		RoomType,
+		DrawDistance,
+		DoorType,
+	};
+
+	DifferentialSetCommmand(Document * document, std::vector<int> && list, std::vector<uint32_t> && value, Type type);
+	virtual ~DifferentialSetCommmand() = default;
+
+	void RollForward();
+	void RollBack();
+
+	bool IsSelection(std::vector<int> const& list) const { return list == indices; }
+	bool IsType(Type value) const { return type == value; }
+
+private:
+	Metaroom                  * metaroom;
+	std::unique_ptr<uint32_t[]> prev_values;
+	std::vector<uint32_t>		new_values;
+	std::vector<int>            indices;
+
+	Type                    type;
+};
+
 
 #endif // COMMANDLIST_H
