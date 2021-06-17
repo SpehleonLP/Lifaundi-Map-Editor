@@ -165,8 +165,11 @@ public:
 		RoomType,
 		DrawDistance,
 		DoorType,
+		GravityAngle,
+		GravityStrength,
 	};
 
+	static std::unique_ptr<CommandInterface> GravityCommand(Document * document, std::vector<int> && list, float value, Type type);
 	DifferentialSetCommmand(Document * document, std::vector<int> && list, std::vector<uint32_t> && value, Type type);
 	virtual ~DifferentialSetCommmand() = default;
 

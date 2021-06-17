@@ -162,6 +162,7 @@ enter(Qt::Key_Z, this)
 #define QDoubleSpinBoxChanged()  (void (QDoubleSpinBox::*)(double)) &QDoubleSpinBox::valueChanged
 #define QSpinBoxChanged()  (void (QSpinBox::*)(int)) &QSpinBox::valueChanged
 #define QComboBoxChanged()  (void (QComboBox::*)(int)) &QComboBox::currentIndexChanged
+#define QSpinDialChanged()  (void (QDial::*)(double)) &QDial::valueChanged
 
 	connect(ui->room_music,         QComboBoxChanged(),      [this](int   value) { if(!updating_fields && value >= 0) document->SetRoomMusic(value); });
 	connect(ui->distance,           QDoubleSpinBoxChanged(), [this](double   value) { if(!updating_fields && value >= 0) document->SetDrawDistance(value); });
@@ -174,8 +175,8 @@ enter(Qt::Key_Z, this)
 #endif
 	connect(ui->room_type,          QComboBoxChanged(),      [this](int   value) { if(!updating_fields && value >= 0) document->SetRoomType(value); });
 
-    connect(ui->room_grav_x,        QDoubleSpinBoxChanged(), [this]() { if(!updating_fields) document->SetRoomGravity(ui->room_grav_x->value(), ui->room_grav_y->value()); } );
-    connect(ui->room_grav_y,        QDoubleSpinBoxChanged(), [this]() { if(!updating_fields) document->SetRoomGravity(ui->room_grav_x->value(), ui->room_grav_y->value()); } );
+    connect(ui->gravityStrength,    QDoubleSpinBoxChanged(), [this]() { if(!updating_fields) document->SetGravityStrength(ui->gravityStrength->value()); } );
+    connect(ui->gravityDir,         QSpinDialChanged(),		 [this]() { if(!updating_fields) document->SetGravityDirection((ui->gravityDir->value() + 900) * M_PI / 1800.f); } );
 	connect(ui->permeability,       QSpinBoxChanged(),       [this]() { if(!updating_fields) document->SetPermeability(ui->permeability->value()); } );
 
 
@@ -269,15 +270,21 @@ void MainWindow::OnSelectionChanged()
     document->OnSelectionChanged(ui->viewWidget);
 	bool selected = document->noFacesSelected() != 0;
 
-	auto gravity = glm::unpackHalf2x16(document->gravity);
-
+	float gravityStrength;
+	float gravityDir;
+	document->m_metaroom.GetGravity(&gravityStrength, &gravityDir);
 	updating_fields = true;
 
 	UpdateTrackField();
-	ui->room_grav_x->setValue(gravity.x);
-	ui->room_grav_y->setValue(gravity.y);
-	ui->room_grav_x->setEnabled(selected);
-	ui->room_grav_y->setEnabled(selected);
+
+	float degrees = (gravityDir * 180 / M_PI);
+	int dial_value = degrees*10 - 900;
+	if(dial_value < 0) dial_value += 3600;
+
+	ui->gravityStrength->setValue(gravityStrength);
+	ui->gravityDir->setValue(dial_value);
+	ui->gravityStrength->setEnabled(selected);
+	ui->gravityDir->setEnabled(selected);
 
 	ui->room_type->setCurrentIndex(document->room_type);
 	ui->room_type->setEnabled(selected);

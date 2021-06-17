@@ -1,6 +1,7 @@
 #include "commandlist.h"
 #include "document.h"
 #include "metaroom.h"
+#include <glm/glm.hpp>
 
 TransformCommand::TransformCommand(Document * document) :
 	metaroom(&document->m_metaroom),
@@ -231,6 +232,7 @@ void SettingCommand::RollForward()
 	case Type::Gravity:
 		for(auto i : indices)
 			metaroom->m_gravity[i] = value;
+		metaroom->m_dirty = true;
 		break;
 	case Type::Track:
 		for(auto i : indices)
@@ -261,6 +263,7 @@ void SettingCommand::RollBack()
 	case Type::Gravity:
 		for(size_t i = 0; i < indices.size(); ++i)
 			 metaroom->m_gravity[indices[i]] = prev_values[i];
+		metaroom->m_dirty = true;
 		break;
 	case Type::Track:
 		for(size_t i = 0; i < indices.size(); ++i)
@@ -403,6 +406,49 @@ bool PermeabilityCommand::IsSelection(std::vector<std::pair<int, int>> const& li
 	return true;
 }
 
+std::unique_ptr<CommandInterface> DifferentialSetCommmand::GravityCommand(Document * document, std::vector<int> && list, float value, Type type)
+{
+	assert(type == Type::GravityAngle || type == Type::GravityStrength);
+	std::vector<uint32_t> values(list.size());
+
+	bool unique = true;
+	glm::vec2 first;
+
+	if(type == Type::GravityAngle)
+	{
+		glm::vec2 direction(std::cos(value), std::sin(value));
+
+		for(size_t i = 0; i < list.size(); ++i)
+		{
+			glm::vec2 grav = glm::unpackHalf2x16(document->m_metaroom.m_gravity[list[i]]);
+			grav = direction * glm::length(grav);
+			values[i] = glm::packHalf2x16(grav);
+
+			if(i == 0) first = grav;
+			else		unique &= (glm::dot(grav, -first) < .004);
+		}
+	}
+	else if(type == Type::GravityStrength)
+	{
+		for(size_t i = 0; i < list.size(); ++i)
+		{
+			glm::vec2 grav = glm::unpackHalf2x16(document->m_metaroom.m_gravity[list[i]]);
+			grav = value * glm::normalize(grav);
+			values[i] = glm::packHalf2x16(grav);
+
+			if(i == 0) first = grav;
+			else		unique &= (glm::dot(grav, -first) < .004);
+		}
+	}
+
+	if(unique == true)
+	{
+		return std::unique_ptr<CommandInterface>(new SettingCommand(document, std::move(list), values[0], SettingCommand::Type::Gravity));
+	}
+
+	return std::unique_ptr<CommandInterface>(new DifferentialSetCommmand(document, std::move(list), std::move(values), Type::Gravity));
+}
+
 
 DifferentialSetCommmand::DifferentialSetCommmand(Document * document, std::vector<int> && list, std::vector<uint32_t> && value, Type type) :
 	metaroom(&document->m_metaroom),
@@ -449,6 +495,7 @@ void DifferentialSetCommmand::RollForward()
 	case Type::Gravity:
 		for(size_t i = 0; i < indices.size(); ++i)
 			 metaroom->m_gravity[indices[i]] = new_values[i];
+		metaroom->m_dirty = true;
 		break;
 	case Type::Track:
 		for(size_t i = 0; i < indices.size(); ++i)
@@ -471,7 +518,6 @@ void DifferentialSetCommmand::RollForward()
 		break;
 	}
 
-	metaroom->m_dirty = true;
 }
 
 void DifferentialSetCommmand::RollBack()
@@ -481,6 +527,7 @@ void DifferentialSetCommmand::RollBack()
 	case Type::Gravity:
 		for(size_t i = 0; i < indices.size(); ++i)
 			 metaroom->m_gravity[indices[i]] = prev_values[i];
+		metaroom->m_dirty = true;
 		break;
 	case Type::Track:
 		for(size_t i = 0; i < indices.size(); ++i)
@@ -502,6 +549,4 @@ void DifferentialSetCommmand::RollBack()
 	default:
 		break;
 	}
-
-	metaroom->m_dirty = true;
 }

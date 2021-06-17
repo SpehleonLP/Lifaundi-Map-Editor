@@ -10,11 +10,26 @@ class MainWindow;
 
 struct SliceInfo
 {
+	SliceInfo() = default;
+	SliceInfo(int edge, glm::ivec2 vertex, float percentage, int uuid = -1) :
+		edge(edge),
+		vertex(vertex),
+		type(0),
+		percent(((edge & 0x03) < 2? percentage : 1.f - percentage) * 65535),
+		uuid(uuid)
+	{
+	}
+
+	int        edge;
 	glm::ivec2 vertex;
 	uint8_t    type;
-	uint8_t    edge;
 	uint16_t   percent;
 	int        uuid{-1};
+
+	void setPercentage(float p)
+	{
+		percent = ((edge & 0x03) < 2? p : (1.f - p)) * 65535;
+	}
 };
 
 class GLViewWidget;
@@ -45,13 +60,13 @@ public:
 
 	bool OnMouseMove(glm::vec2, Bitwise);
 
-	void SetUpSlices(std::vector<SliceInfo> & slices, int face, float percentage);
+	void SetUpSlices(std::vector<SliceInfo> & slices, int edge, float percentage);
 	void CreateSlice(std::vector<SliceInfo> & slices, int edge, glm::ivec2 position);
 
 	std::vector<SliceInfo> m_slice;
 	std::vector<int>       m_ordering;
 
-	int slice_face{-1};
+	int slice_edge{-1};
 
 	void lock(int x, int y)
 	{

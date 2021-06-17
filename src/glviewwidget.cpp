@@ -24,6 +24,8 @@ struct Matrices
 	glm::mat4 u_camera;
 	glm::ivec4 u_screenSize;
 	float      u_ctime;
+	float      u_zoom;
+	float	   u_pad[2];
 };
 
 GLViewWidget::GLViewWidget(QWidget * p) :
@@ -350,6 +352,7 @@ void GLViewWidget::paintGL()
 				).count();
 
 	mat.u_ctime = time / 1000;
+	mat.u_zoom  = w->GetZoom();
 
 	glBindBuffer(GL_UNIFORM_BUFFER, m_ubo);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrices), &mat);

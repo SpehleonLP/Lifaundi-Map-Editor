@@ -217,7 +217,7 @@ namespace math
 
 	inline glm::mat3 GetRotation(glm::vec2 const& a, glm::vec2 const& b)
 	{
-		auto _sin = std::fabs(math::cross(a, b));
+		auto _sin = (math::cross(a, b));
 		auto _cos = glm::dot(a, b);
 
 		return glm::mat3(

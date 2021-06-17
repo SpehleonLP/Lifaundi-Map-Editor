@@ -38,12 +38,6 @@ std::vector<std::vector<int>> ColorRooms::GetEdgeList(std::vector<Door> const& d
 	{
 		std::vector<int> v;
 
-		if(i == 13 || i == 164)
-		{
-			int break_point = 0;
-			++break_point;
-		}
-
 		for(range.setRoom(i); !range.empty(); range.popFront())
 		{
 			v.push_back(range.front());
@@ -87,7 +81,7 @@ uint64_t ColorRooms::GetColorFlags(int room_id) const
 	if(edge_flags[room_id] & 0x06)
 		return 0x0E & ~bits;
 
-	return 0x0000000000FFFFF0 & ~bits;
+	return 0xFFFFFFFFFFFFFFF0 & ~bits;
 }
 
 int32_t ColorRooms::NoColorsUsed() const
@@ -104,8 +98,15 @@ void ColorRooms::DoColoring()
 {
 	Range range(doors, indices);
 	auto edges = GetEdgeList(doors, indices);
-	if(!DoColoringInternal())
-		throw std::runtime_error("Coloring failed");
+
+	coloring.clear();
+	coloring.resize(edges.size(), -1);
+	auto islands = GetIslands();
+	for(auto & island : islands)
+	{
+		if(!DoColoringInternal(island))
+			throw std::runtime_error("Coloring failed");
+	}
 
 	CheckColoring();
 /*
@@ -123,53 +124,70 @@ void ColorRooms::DoColoring()
 	}*/
 }
 
-bool ColorRooms::DoColoringInternal()
+
+void InsertUnique(std::vector<uint32_t> & vec, uint32_t item)
 {
-	coloring.clear();
-	coloring.resize(edges.size(), -1);
-
-	std::vector<StackFrame> stack;
-	std::vector<uint32_t>   face_queue;
-	stack.push_back({0, 0});
-
-	while(stack.size())
+	for(uint32_t i = 0; i < vec.size(); ++i)
 	{
-//no available colors
-		if(!DoColoring(face_queue, stack.back()))
-		{
-			stack.pop_back();
-			continue;
-		}
-
-		for(;face_queue.size(); face_queue.pop_back())
-		{
-			if(coloring[face_queue.back()] < 0)
-			{
-				stack.push_back({face_queue.back(), 0});
-				face_queue.pop_back();
-				goto end_loop;
-			}
-		}
-
-		for(uint32_t i = 0; i < coloring.size(); ++i)
-		{
-			if(coloring[i] < 0)
-			{
-				stack.push_back({i, 0});
-				goto end_loop;
-			}
-		}
-
-		return true;
-
-end_loop:
-		(void)0L;
+		if(vec[i] == item)
+			return;
 	}
 
-	return false;
+	vec.insert(vec.begin(), item);
 }
 
-bool ColorRooms::DoColoring(std::vector<uint32_t> & face_queue, StackFrame & frame)
+std::vector<std::vector<ColorRooms::StackFrame>>  ColorRooms::GetIslands() const
+{
+	Range range(doors, indices);
+	std::vector<std::vector<StackFrame>> r;
+	std::vector<uint8_t> marks(edges.size(), 0);
+
+	for(uint32_t i = 0; i < marks.size(); ++i)
+	{
+		if(marks[i] != 0) continue;
+		marks[i] = 1;
+
+		std::vector<StackFrame> queue;
+		queue.push_back({i, 0});
+		bool flags = (edge_flags[i] & 0x06) != 0;
+
+		for(i = 0; i < queue.size(); ++i)
+		{
+			for(range.setRoom(queue[i].face_id); !range.empty(); range.popFront())
+			{
+				if(marks[range.front()] == 0 && ((edge_flags[range.front()] & 0x06) != 0) == flags)
+				{
+					marks[range.front()] = 1;
+					queue.push_back({(uint32_t)range.front(), 0});
+				}
+			}
+		}
+
+		r.push_back(std::move(queue));
+	}
+
+	return r;
+}
+
+
+bool ColorRooms::DoColoringInternal(std::vector<StackFrame> & stack)
+{
+	for(uint32_t i = 0; i < stack.size(); ++i)
+	{
+//no available colors
+		while(!DoColoring(stack[i]))
+		{
+			if(--i > stack.size())
+			{
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+bool ColorRooms::DoColoring(StackFrame & frame)
 {
 	Range range(doors, indices);
 
@@ -181,7 +199,7 @@ bool ColorRooms::DoColoring(std::vector<uint32_t> & face_queue, StackFrame & fra
 
 	for(;; ++frame.color)
 	{
-		uint32_t c = 1 << frame.color;
+		uint64_t c = 1 << frame.color;
 
 		if(0 == (flags & c))
 			continue;
@@ -189,16 +207,10 @@ bool ColorRooms::DoColoring(std::vector<uint32_t> & face_queue, StackFrame & fra
 			break;
 
 		coloring[frame.face_id] = frame.color;
-		for(range.setRoom(frame.face_id); !range.empty(); range.popFront())
-		{
-			if(coloring[range.front()] < 0)
-				face_queue.push_back(range.front());
-		}
-
 		return true;
 	}
 
-	frame.color = -1;
+	frame.color = 0;
 	return false;
 }
 

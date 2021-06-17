@@ -401,30 +401,52 @@ int Metaroom::Slice(std::vector<SliceInfo> & slice)
 	return first;
 }
 
-uint32_t Metaroom::GetGravity() const
+uint32_t Metaroom::GetGravity(float * _length, float * _angle) const
 {
-	uint32_t g_id = 0;
-	bool     match = false;
+	float length{};
+	float angle{};
+	int   count{};
+
+	uint32_t r{};
+	bool match = true;
 
 	for(uint32_t i = 0; i < size(); ++i)
 	{
-		if(m_selection.IsFaceSelected(i))
+		if(!m_selection.IsFaceSelected(i))
+			continue;
+
+		if(match && r != m_gravity[i])
+			r = 0;
+		else
 		{
-			if(match == false)
-			{
-				g_id = m_gravity[i];
-				match = true;
-			}
-			else if(g_id != m_gravity[i])
-			{
-				g_id  = 0;
-				match = false;
-				break;
-			}
+			r = m_gravity[i];
+			match = true;
 		}
+
+		glm::vec2 vec = glm::unpackHalf2x16(m_gravity[i]);
+
+		float len = glm::length(vec);
+		length += len;
+
+		if(len)
+		{
+			vec /= len;
+			angle += std::atan2(vec.y, vec.x);
+		}
+
+		++count;
 	}
 
-	return g_id;
+	if(count)
+	{
+		length /= count;
+		angle /= count;
+	}
+
+	if(_length) *_length = length;
+	if(_angle) *_angle  = angle;
+
+	return r;
 }
 
 
@@ -695,7 +717,7 @@ void Metaroom::Expand(std::vector<int> const& indices)
 
 int        Metaroom::GetSliceEdge(glm::ivec2 p) const
 {
-    int face = m_tree.GetFace(p);
+    int face = GetFace(p);
 
 	if(face == -1)
 		return -1;

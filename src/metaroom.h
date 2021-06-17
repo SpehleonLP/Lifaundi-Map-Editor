@@ -56,7 +56,7 @@ public:
 	glm::vec2 GetGravity(int room) const;
 	glm::vec2 GetCenter(int room) const;
 
-	uint32_t GetGravity() const;
+	uint32_t GetGravity(float * length, float * angle) const;
 	int GetMusicTrack() const;
 	int GetRoomType() const;
 	int GetWallType() const;

@@ -84,7 +84,7 @@ void Document::Paste(glm::vec2 center)
 
 void Document::OnSelectionChanged(GLViewWidget *gl)
 {
-	gravity      = m_metaroom.GetGravity();
+	gravity      = m_metaroom.GetGravity(nullptr, nullptr);
 	track        = m_metaroom.GetMusicTrack();
 	room_type    = m_metaroom.GetRoomType();
 	wall_type    = m_metaroom.GetWallType();
@@ -328,13 +328,21 @@ void Document::SetRoomType(int value)
 	PushSettingCommand(value, SettingCommand::Type::RoomType);
 }
 
-void Document::SetRoomGravity(float x, float y)
+void Document::SetGravityDirection(float angle)
 {
-	uint32_t value = glm::packHalf2x16(glm::vec2(x, y));
+	PushGravityCommand(angle, DifferentialSetCommmand::Type::GravityAngle);
+}
+
+void Document::SetGravityStrength(float length)
+{
+	PushGravityCommand(length, DifferentialSetCommmand::Type::GravityStrength);
+
+	/*
+	uint32_t value = glm::packHalf2x16(glm::vec2(std::cos(angle), std::sin(angle)) * length);
 	if(value == gravity)
 		return;
 
-	PushSettingCommand(value, SettingCommand::Type::Gravity);
+	PushSettingCommand(value, SettingCommand::Type::Gravity);*/
 }
 
 void Document::SetDrawDistance(float distance)
@@ -417,6 +425,22 @@ void Document::PushSettingCommand(uint32_t value, SettingCommand::Type type)
 
 	m_history.resize(m_command);
 	m_history.push_back(std::unique_ptr<CommandInterface>(new SettingCommand(this, std::move(selection), value, type)));
+	m_command = m_history.size();
+
+	m_window->ui->editUndo->setEnabled(true);
+	m_window->ui->editRedo->setEnabled(false);
+}
+
+
+void Document::PushGravityCommand(float value, DifferentialSetCommmand::Type type)
+{
+	std::vector<int> selection =  m_metaroom.m_selection.GetFaceSelection();
+
+	if(selection.empty())
+		return;
+
+	m_history.resize(m_command);
+	m_history.push_back(DifferentialSetCommmand::GravityCommand(this, std::move(selection), value, type));
 	m_command = m_history.size();
 
 	m_window->ui->editUndo->setEnabled(true);

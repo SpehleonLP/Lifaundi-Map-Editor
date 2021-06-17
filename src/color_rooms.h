@@ -2,7 +2,6 @@
 #define COLOR_ROOMS_H
 #include "quadtree.h"
 
-
 class ColorRooms
 {
 struct Range;
@@ -20,6 +19,7 @@ public:
 	{
 	}
 
+
 	void DoColoring();
 	std::vector<int8_t> const& GetColoring() const { return coloring; }
 
@@ -29,8 +29,9 @@ public:
 	void	 CheckColoring() const;
 
 private:
-	bool DoColoringInternal();
-	bool DoColoring(std::vector<uint32_t> & face_queue, StackFrame & frame);
+	bool DoColoringInternal(std::vector<StackFrame> & face_queue);
+	bool DoColoring(StackFrame & frame);
+	std::vector<std::vector<StackFrame> > GetIslands() const;
 
 	std::vector<Door>				const& doors;
 	std::vector<DoorList>			const& indices;
@@ -43,7 +44,7 @@ private:
 struct ColorRooms::StackFrame
 {
 	uint32_t face_id;
-	uint32_t color;
+	 int32_t color;
 };
 
 struct ColorRooms::Range

@@ -324,7 +324,9 @@ int QuadTree::GetFace(glm::ivec2 position)
 			if(node.leaf == true)
 			{
 				if(m_metaroom->IsPointContained(node.child, position))
+				{
 					return node.child;
+				}
 			}
 			else
 			{

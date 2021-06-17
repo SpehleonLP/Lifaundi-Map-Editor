@@ -61,35 +61,58 @@ static const char * kVert()
 
 static const char * kGeometry()
 {
-	return
-		"#version 330\n"
-		"layout(points) in;\n"
-		"layout(triangle_strip, max_vertices = 18) out;\n"
-		"\n"
-		"const ivec2 verts[7] = ivec2[](\n"
-			"ivec2(-10,  4),\n"
-			"ivec2(- 8,  0),\n"
-			"ivec2(-10, -4),\n"
-			"ivec2(  2, -6),\n"
-			"ivec2( 10,  0),\n"
-			"ivec2(  2,  6),\n"
-			"ivec2(  5,  0)\n"
-		");\n"
-		"\n"
-		"const int indices[10] = int[](\n"
-			"0, 4, 1, 2, 2,\n"
-			"3, 3, 4, 6, 5\n"
-		");\n"
+	return SHADER(
+		layout(points) in;
+		layout(triangle_strip, max_vertices = 22) out;
 
-		TO_STRING(
+		const vec2 verts[11] = vec2[](
+			vec2(-10,  4), //0
+			vec2(- 8,  0), //1
+			vec2(-10, -4), //2
+			vec2(  2, -6), //3
+			vec2( 10,  0), //4
+			vec2(  2,  6), //5
+			vec2(  5,  0), //6
+
+			vec2(3,  0), //7
+			vec2(0, -6), //8
+			vec2(0,  6),  //9
+			vec2(0, 0)
+		);
+
+		const int indices[] = int[](
+			0,
+			0, 4, 1, 2, 2,
+			3, 3, 4, 6, 5,
+			0, 4, 1, 2, 2,
+			8, 8, 4, 7, 9, 9, 9
+		);
+
 		layout(std140) uniform Matrices
 		{
 			mat4 u_projection;
 			mat4 u_modelview;
+			ivec4 u_screenSize;
+			vec4 u_misc;
 		};
+
+		uniform vec4 u_color;
+		out vec4 g_color;
 
 		in vec2 v_position[];
 		in vec2 v_rotation[];
+
+		void DrawArrow(in vec4 position, in mat2 rotation, in vec2 scale, in vec4 color, int start)
+		{
+			for(int i = 0; i < 11; ++i)
+			{
+				vec4 pos    = vec4(rotation * (verts[indices[start+i]] * scale), 0, 0) + position;
+
+				gl_Position = u_projection * (pos);
+				g_color     = color;
+				EmitVertex();
+			}
+		}
 
 		void main()
 		{
@@ -99,13 +122,8 @@ static const char * kGeometry()
 
 			vec4 position = u_modelview * vec4(v_position[0], 0, 1);
 
-			for(int i = 0; i < 10; ++i)
-			{
-				vec4 pos    = vec4(rotation * verts[indices[i]], 0, 0) + position;
-
-				gl_Position = u_projection * (pos);
-				EmitVertex();
-			}
+			DrawArrow(position, rotation, 2* vec2(1.25, 1.5) * u_misc.y, vec4(1), 11);
+			DrawArrow(position, rotation, 2* vec2(1) * u_misc.y, u_color, 0);
 
 			EndPrimitive();
 		});
@@ -114,12 +132,12 @@ static const char * kGeometry()
 static const char * kFrag()
 {
 	return SHADER(
-		uniform vec4 u_color;
 
+		in vec4  g_color;
 		out vec4 frag_color;
 
 		void main()
 		{
-			frag_color = u_color;
+			frag_color = g_color;
 		});
 }
