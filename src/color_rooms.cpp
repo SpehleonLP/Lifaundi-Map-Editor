@@ -151,9 +151,9 @@ std::vector<std::vector<ColorRooms::StackFrame>>  ColorRooms::GetIslands() const
 		queue.push_back({i, 0});
 		bool flags = (edge_flags[i] & 0x06) != 0;
 
-		for(i = 0; i < queue.size(); ++i)
+		for(uint32_t j = 0; j < queue.size(); ++j)
 		{
-			for(range.setRoom(queue[i].face_id); !range.empty(); range.popFront())
+			for(range.setRoom(queue[j].face_id); !range.empty(); range.popFront())
 			{
 				if(marks[range.front()] == 0 && ((edge_flags[range.front()] & 0x06) != 0) == flags)
 				{

@@ -29,7 +29,7 @@ ui(new Ui::MainWindow),
 escape(Qt::Key_Escape, this),
 create(Qt::Key_N, this),
 face(Qt::Key_K, this),
-duplicate(QKeySequence("Shift+D"), this),
+//duplicate(QKeySequence("Shift+D"), this),
 translate(Qt::Key_G, this),
 rotate(Qt::Key_R, this),
 scale(Qt::Key_S, this),
@@ -44,7 +44,7 @@ enter(Qt::Key_Z, this)
 	escape.setContext(Qt::ApplicationShortcut);
 	create.setContext(Qt::ApplicationShortcut);
 	face.setContext(Qt::ApplicationShortcut);
-	duplicate.setContext(Qt::ApplicationShortcut);
+//	duplicate.setContext(Qt::ApplicationShortcut);
 	translate.setContext(Qt::ApplicationShortcut);
 	rotate.setContext(Qt::ApplicationShortcut);
 	scale.setContext(Qt::ApplicationShortcut);
@@ -120,7 +120,7 @@ enter(Qt::Key_Z, this)
 	connect(&escape,             &QShortcut::activated, [this]() { toolbox.SetTool(Tool::None); } );
 	connect(&face,				 &QShortcut::activated,[this]() { toolbox.SetTool(Tool::Face); } );
 	connect(&create,             &QShortcut::activated, [this]() { toolbox.SetTool(Tool::Create); } );
-	connect(&duplicate,          &QShortcut::activated, [this]() { document->Duplicate(ui->viewWidget->GetWorldPosition()); } );
+//	connect(&duplicate,          &QShortcut::activated, [this]() { document->Duplicate(ui->viewWidget->GetWorldPosition()); } );
 	connect(&translate,          &QShortcut::activated, [this]() { toolbox.SetTool(Tool::Translate); } );
 	connect(&rotate,             &QShortcut::activated, [this]() { toolbox.SetTool(Tool::Rotate); } );
 	connect(&scale,              &QShortcut::activated, [this]() { toolbox.SetTool(Tool::Scale); } );

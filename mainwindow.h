@@ -127,7 +127,7 @@ friend class Document;
 
 	QShortcut create;
 	QShortcut face;
-	QShortcut duplicate;
+//	QShortcut duplicate;
 	QShortcut translate;
 	QShortcut rotate;
 	QShortcut scale;
