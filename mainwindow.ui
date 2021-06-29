@@ -452,6 +452,7 @@
     <addaction name="separator"/>
     <addaction name="viewRoomId"/>
     <addaction name="debugSelectRoom"/>
+    <addaction name="debugDumpPermTable"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -952,6 +953,11 @@
   <action name="debugSelectRoom">
    <property name="text">
     <string>Select Room by ID</string>
+   </property>
+  </action>
+  <action name="debugDumpPermTable">
+   <property name="text">
+    <string>Dump Perm Table</string>
    </property>
   </action>
  </widget>

@@ -879,8 +879,8 @@ void Metaroom::Prepare(GLViewWidget* gl)
 				buffer.position = a0 + glm::ivec2(vec * avg);
 
 				vec = glm::normalize(vec);
-				buffer.rotation.x = SHRT_MAX * vec.x;
-				buffer.rotation.y = SHRT_MAX * vec.y;
+				buffer.rotation.x = -SHRT_MAX * vec.y;
+				buffer.rotation.y = -SHRT_MAX * vec.x;
 
 				halls.push_back(buffer);
 			}

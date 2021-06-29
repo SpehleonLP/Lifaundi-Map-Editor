@@ -153,6 +153,7 @@ public:
 	std::string TestDoorSymmetry();
 
 	void PruneDegenerate();
+	void DumpPermeabilityTable() { m_permeabilities.clear(); m_dirty = true; }
 
 	std::vector<std::pair<uint64_t, uint8_t> > m_permeabilities;
 

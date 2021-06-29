@@ -141,6 +141,7 @@ enter(Qt::Key_Z, this)
 		if (ok)
 			document->m_metaroom.m_selection.select_face(text, Bitwise::SET);
 	});
+	connect(ui->debugDumpPermTable,  &QAction::triggered, [this]() { document->m_metaroom.DumpPermeabilityTable(); });
 
     connect(ui->viewChecker,     &QAction::triggered, ui->viewWidget, &GLViewWidget::need_repaint);
     connect(ui->viewHalls,       &QAction::triggered, ui->viewWidget, &GLViewWidget::need_repaint);
