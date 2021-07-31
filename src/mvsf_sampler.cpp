@@ -205,6 +205,7 @@ glm::i16vec4 MVSF_sampler::GetBoundingBox(int id) const
 	glm::i16vec2 min{SHRT_MAX, SHRT_MAX};
 	glm::i16vec2 max{SHRT_MIN, SHRT_MIN};
 
+
 	glm::i16vec2 i;
 
 	for(i.y = 0; i.y < m_size.y; ++i.y)
@@ -223,16 +224,17 @@ glm::i16vec4 MVSF_sampler::GetBoundingBox(int id) const
 	max = glm::ivec2(max) * (int)m_stride + glm::ivec2(m_bounds.x, m_bounds.y) + (int)(m_stride*2-1) ;
 
 	glm::i16vec2 min2, max2;
-	m_metaroom->GetFaceAABB(id, min2, max2);
+	m_metaroom->GetFaceAABB(id, min, max);
+
+	min = glm::min(min, min2);
+	max = glm::max(max, max2);
+
 /*
 	if(!(min.x <= min2.x && max2.x <= max.x
 	&&   min.y <= min2.y && max2.y <= max.y))
 	{
 		throw std::runtime_error("calculated bounding boxes incorrectly :(");
 	}*/
-
-	min = glm::min(min, min2);
-	max = glm::max(max, max2);
 
 	return glm::i16vec4(min.x, min.y, max.x, max.y);
 }
