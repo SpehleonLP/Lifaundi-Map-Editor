@@ -176,7 +176,7 @@ void MVSF_sampler::PerformSampling()
 				if((uint32_t)math::length2(room_centers[j] - point) > m_pixels[y*m_size.x + x].length2)
 					continue;
 
-				auto i = rooms[j];
+				int i = rooms[j];
 
 				uint32_t distance2 = GetDistanceSquaredToRoom(point, &m_metaroom->m_verts[i*4]);
 
@@ -208,6 +208,8 @@ glm::i16vec4 MVSF_sampler::GetBoundingBox(int id) const
 
 	glm::i16vec2 i;
 
+	bool set = false;
+
 	for(i.y = 0; i.y < m_size.y; ++i.y)
 	{
 		for(i.x = 0; i.x < m_size.x; ++i.x)
@@ -216,15 +218,20 @@ glm::i16vec4 MVSF_sampler::GetBoundingBox(int id) const
 			{
 				min = glm::min(min, i);
 				max = glm::max(max, i);
+
+				set = true;
 			}
 		}
 	}
 
-	min = glm::ivec2(min) * (int)m_stride + glm::ivec2(m_bounds.x, m_bounds.y) - (int)(m_stride*2-1);
-	max = glm::ivec2(max) * (int)m_stride + glm::ivec2(m_bounds.x, m_bounds.y) + (int)(m_stride*2-1) ;
-
 	glm::i16vec2 min2, max2;
-	m_metaroom->GetFaceAABB(id, min, max);
+	m_metaroom->GetFaceAABB(id, min2, max2);
+
+	if(!set)
+		return glm::i16vec4(min2.x, min2.y, max2.x, max2.y);
+
+	min = glm::ivec2(min - (short)1) * (int)m_stride + glm::ivec2(m_bounds.x, m_bounds.y);
+	max = glm::ivec2(max + (short)1) * (int)m_stride + glm::ivec2(m_bounds.x, m_bounds.y);
 
 	min = glm::min(min, min2);
 	max = glm::max(max, max2);
