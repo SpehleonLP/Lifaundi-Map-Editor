@@ -314,17 +314,12 @@ void Document::SetRoomMusic(int value)
 
 void Document::SetDoorType(int value)
 {
-	if(value == wall_type)
-		return;
 
 	PushSettingCommand(value, SettingCommand::Type::DoorType);
 }
 
 void Document::SetRoomType(int value)
 {
-	if(value == wall_type)
-		return;
-
 	PushSettingCommand(value, SettingCommand::Type::RoomType);
 }
 
