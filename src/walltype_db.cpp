@@ -1,6 +1,5 @@
 #include "walltype_db.h"
 #include "ui_mainwindow.h"
-#include <QStringList>
 
 namespace MapData
 {

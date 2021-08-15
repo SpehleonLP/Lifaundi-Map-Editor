@@ -454,7 +454,7 @@ bool MainWindow::fileSaveAs()
 	dialog.setDirectory(g_blkPath);
 
 	bool accepted;
-	while ((accepted = (dialog.exec() == QDialog::Accepted)) && !document->SaveFile(dialog.selectedFiles().first())) {}
+	while ((accepted = (dialog.exec() == QDialog::Accepted)) && !document->SaveFile(QFileInfo(dialog.selectedFiles().first()))) {}
 
 	if(!accepted)
 		return false;
@@ -524,7 +524,7 @@ bool MainWindow::fileOpen(bool load_rooms, bool load_background)
 	{
 		try
 		{
-            if(document->LoadFile(ui->viewWidget, dialog.selectedFiles().first(), load_rooms, load_background))
+            if(document->LoadFile(ui->viewWidget, QFileInfo(dialog.selectedFiles().first()), load_rooms, load_background))
 				break;
 		}
 		catch(std::exception & e)

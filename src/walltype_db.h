@@ -1,13 +1,11 @@
 #ifndef WALLTYPE_DB_H
 #define WALLTYPE_DB_H
 #include "nlohmann/json_detail.hpp"
-
-class QStringList;
+#include <QStringList>
 
 namespace Ui {
 class MainWindow;
 }
-
 
 namespace MapData
 {

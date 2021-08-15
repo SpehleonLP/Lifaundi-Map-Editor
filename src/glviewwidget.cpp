@@ -158,7 +158,7 @@ void GLViewWidget::mouseMoveEvent(QMouseEvent * event)
 
 void GLViewWidget::mousePressEvent(QMouseEvent * event)
 {
-	if((event->button() & Qt::MidButton)
+	if((event->button() & Qt::MiddleButton)
 	&& w->document != nullptr)
 	{
 		m_canvasDrag  = true;
@@ -183,7 +183,7 @@ void GLViewWidget::mousePressEvent(QMouseEvent * event)
 
 void GLViewWidget::mouseReleaseEvent(QMouseEvent * event)
 {
-	if((event->button() & Qt::MidButton))
+	if((event->button() & Qt::MiddleButton))
 	{
 		m_canvasDrag  = false;
 	}
@@ -236,11 +236,11 @@ void GLViewWidget::wheelEvent(QWheelEvent * wheel)
 
 	if(wheel->modifiers() & Qt::ControlModifier)
 	{
-		if(wheel->orientation() == Qt::Vertical)
+		if(std::fabs(wheel->angleDelta().y()) > 0)
 		{
             if(w->document == nullptr) return;
 
-			auto pos = wheel->posF();
+			auto pos = wheel->position();
 			float angle = wheel->angleDelta().y();
 			float factor = std::pow(1.0015, angle);
 
@@ -262,9 +262,9 @@ void GLViewWidget::wheelEvent(QWheelEvent * wheel)
 			return;
 		}
 	}
-	else if(wheel->buttons() != Qt::MidButton)
+	else if(wheel->buttons() != Qt::ControlModifier)
 	{
-		if(wheel->orientation() == Qt::Horizontal)
+		if(std::fabs(wheel->angleDelta().x()) > 0)
 		{
             w->ui->horizontalScrollBar->event(wheel);
 		}
