@@ -25,7 +25,7 @@ public:
 
 	int		 GetMaxDegree(int * room) const;
 	uint64_t GetColorFlags(int room_id) const;
-	int      NoColorsUsed() const;
+	int      MaxColorUsed() const;
 	void	 CheckColoring() const;
 
 private:

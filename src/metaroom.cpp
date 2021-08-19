@@ -272,7 +272,7 @@ uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 	color.DoColoring();
 
 	auto const& coloring = color.GetColoring();
-	int8_t noColors = color.NoColorsUsed();
+	int8_t noColors = color.MaxColorUsed();
 
 	fp.write((char*)&noColors, sizeof(noColors));
 	fp.write((char*)&coloring[0], sizeof(coloring[0]) * coloring.size());

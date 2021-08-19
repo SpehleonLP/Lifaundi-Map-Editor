@@ -84,7 +84,7 @@ uint64_t ColorRooms::GetColorFlags(int room_id) const
 	return 0xFFFFFFFFFFFFFFF0 & ~bits;
 }
 
-int32_t ColorRooms::NoColorsUsed() const
+int32_t ColorRooms::MaxColorUsed() const
 {
 	int8_t r = 0;
 
@@ -230,6 +230,9 @@ void ColorRooms::CheckColoring() const
 			{
 				auto & v_0 = edges[i];
 				auto & v_1 = edges[e];
+
+				(void)v_0;
+				(void)v_1;
 
 				throw std::runtime_error("two adjacent rooms have same color");
 			}
