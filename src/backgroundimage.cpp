@@ -92,8 +92,8 @@ void BackgroundImage::Render(GLViewWidget* gl)
 {
     CreateVBO(gl);
 
-	TransparencyShader::Shader.bind(gl);
-	gl->glDrawArrays(GL_TRIANGLES, size()*6, 6); gl->glAssert();
+//	m_transparencyShader.bind(gl);
+//	gl->glDrawArrays(GL_TRIANGLES, size()*6, 6); gl->glAssert();
 
     BlitShader::Shader.bind(gl); gl->glAssert();
 

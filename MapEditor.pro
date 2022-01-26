@@ -70,6 +70,7 @@ HEADERS += \
 	nlohmann/json_detail.hpp \
 	src/Shaders/arrowshader.h \
 	src/color_rooms.h \
+	src/counted_ptr.hpp \
     src/document.h \
     src/commandlist.h \
 	src/edgerange.h \

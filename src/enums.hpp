@@ -3,7 +3,7 @@
 
 enum
 {
-	TILE_BYTES = 350000,
+	TILE_BYTES = 500000,
 };
 
 enum class Tool : int

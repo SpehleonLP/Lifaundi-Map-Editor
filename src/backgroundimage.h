@@ -78,6 +78,8 @@ private:
 
 	uint32_t m_vao{};
 	uint32_t m_vbo{};
+
+//	TransparencyShader m_transparencyShader;
 };
 
 
