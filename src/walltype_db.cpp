@@ -41,15 +41,20 @@ QStringList WallTypeDB::GetRoomTypes() const
 	if(room_types.empty())
 	{
 		list<< "Atmosphere"
-			<< "Wooden Walkway"
-			<< "Concrete Walkway"
-			<< "Indoor Concrete"
+			<< "Upper Atmosphere"
+			<< "Space"
+
+			<< "Wood"
+			<< "Steel"
+			<< "Plastic"
+
+			<< "Stone"
+			<< "Gravel"
+			<< "Glass"
+
 			<< "Normal Soil"
 			<< "Boggy Soil"
-			<< "Drained Soil"
-			<< "Fresh Water"
-			<< "Salt Water"
-			<< "Anti-Gadget";
+			<< "Sandy Soil";
 	}
 
 	uint32_t N = std::min<uint32_t>(MAX_ROOM_TYPES, room_types.size());
