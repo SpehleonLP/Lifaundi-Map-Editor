@@ -63,6 +63,8 @@ public:
 	void SetUpSlices(std::vector<SliceInfo> & slices, int edge, float percentage);
 	void CreateSlice(std::vector<SliceInfo> & slices, int edge, glm::ivec2 position);
 
+	bool AutoReseat();
+
 	std::vector<SliceInfo> m_slice;
 	std::vector<int>       m_ordering;
 

@@ -138,6 +138,52 @@ static uint32_t GetGravity(uint32_t const* array, std::vector<int> const& select
 	return glm::packHalf2x16(accumulator /(float) selection.size());
 }
 
+bool ControllerFSM::AutoReseat()
+{
+	auto doc = m_parent->document.get();
+
+	if(m_state != State::None || !doc)
+		return false;
+
+	std::vector<std::pair<glm::vec2, int>> sortInfo;
+	sortInfo.resize(doc->m_metaroom.size());
+
+	for(uint32_t i = 0; i < doc->m_metaroom.size(); ++i)
+	{
+		sortInfo[i] = std::make_pair(doc->m_metaroom.GetCenter(i), (int)i);
+	}
+
+	std::sort(sortInfo.begin(), sortInfo.end(), [](auto const& a, auto const& b) { return a.first.y < b.first.y; });
+
+	for(uint32_t i = 0, j = 0; i < sortInfo.size(); i = j)
+	{
+		for(j = i+1; j < sortInfo.size(); ++j)
+		{
+			if(std::fabs(sortInfo[j].first.y - sortInfo[i].first.y) > 128)
+				break;
+		}
+
+		if(j != i+1)
+		{
+			std::sort(sortInfo.begin()+i, sortInfo.begin()+j, [](auto const& a, auto const& b) { return a.first.x < b.first.x; });
+		}
+	}
+
+	std::vector<int> ordering(sortInfo.size());
+
+	bool didChange = false;
+
+	for(uint32_t i = 0; i < sortInfo.size(); ++i)
+	{
+		ordering[i] = sortInfo[i].second;
+		didChange |= ((uint32_t)ordering[i] != i);
+	}
+
+	if(didChange)
+		m_parent->document->PushCommand(new ReorderCommand(m_parent->document.get(), std::move(ordering)));
+
+	return didChange;
+}
 
 bool ControllerFSM::SetTool(Tool tool)
 {

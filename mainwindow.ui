@@ -442,6 +442,7 @@
     <addaction name="separator"/>
     <addaction name="toolRealign"/>
     <addaction name="toolPropagate"/>
+    <addaction name="toolAutoReseat"/>
    </widget>
    <widget class="QMenu" name="menuDebug">
     <property name="title">
@@ -958,6 +959,11 @@
   <action name="debugDumpPermTable">
    <property name="text">
     <string>Dump Perm Table</string>
+   </property>
+  </action>
+  <action name="toolAutoReseat">
+   <property name="text">
+    <string>Auto Reseat</string>
    </property>
   </action>
  </widget>

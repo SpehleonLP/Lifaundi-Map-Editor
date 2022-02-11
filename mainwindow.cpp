@@ -113,6 +113,7 @@ enter(Qt::Key_Z, this)
 	connect(ui->toolExtrude,     &QAction::triggered,[this]() { toolbox.SetTool(Tool::Extrude); } );
 	connect(ui->toolSlice,       &QAction::triggered,[this]() { toolbox.SetTool(Tool::Slice); } );
 	connect(ui->toolReseat,      &QAction::triggered,[this]() { toolbox.SetTool(Tool::Order); } );
+	connect(ui->toolAutoReseat,  &QAction::triggered,[this]() { toolbox.AutoReseat(); } );
 
 	connect(ui->toolRealign,       &QAction::triggered,[this]() { toolbox.SetTool(Tool::SliceGravity); } );
 	connect(ui->toolPropagate,     &QAction::triggered,[this]() { toolbox.SetTool(Tool::PropagateGravity); } );
