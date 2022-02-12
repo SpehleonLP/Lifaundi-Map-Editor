@@ -352,7 +352,13 @@ void PermeabilityCommand::InsertOriginalValues()
 	for(uint32_t i = 0; i < length; ++i)
 		array.push_back({keys[i], values[i] + 101});
 
-	std::sort(array.begin(), array.end(), [](auto const& a, auto const& b) { return a.first < b.first; });
+	std::sort(array.begin(), array.end(), [](auto const& a, auto const& b)
+	{
+		if(a.first != b.first)
+			return a.first < b.first;
+
+		return a.second < b.second;
+	});
 }
 
 void PermeabilityCommand::InsertNewValues()
@@ -364,7 +370,13 @@ void PermeabilityCommand::InsertNewValues()
 	for(uint32_t i = 0; i < length; ++i)
 		array.push_back({keys[i], permeability+101});
 
-	std::sort(array.begin(), array.end(), [](auto const& a, auto const& b) { return a.first < b.first; });
+	std::sort(array.begin(), array.end(), [](auto const& a, auto const& b)
+	{
+		if(a.first != b.first)
+			return a.first < b.first;
+
+		return a.second < b.second;
+	});
 }
 
 void PermeabilityCommand::RemoveDoubles()
@@ -372,21 +384,14 @@ void PermeabilityCommand::RemoveDoubles()
 	auto & array = metaroom->m_permeabilities;
 
 	uint32_t write{0};
-	for(uint32_t read=0; read < array.size(); ++read)
+	for(uint32_t read=0, next = 0; read < array.size(); read = next, ++write)
 	{
-		if(read+1 < array.size())
-		{
-			if(array[read].first == array[read+1].first)
-			{
-				array[read+1].second    = std::max(array[read].second,  array[read+1].second) - 101;
-				array[read].second  = 255;
-			}
-		}
+		for(next = read+1; next < array.size() && array[read].first == array[next].first; ++next) {}
 
-		array[read].second -= 101 * (array[read].second > 100);
+		if(write != next-1)
+			array[write] = array[next-1];
 
-		if(array[read].second < 100)
-			array[write++] = array[read];
+		array[write].second -= 101 * (array[write].second > 100);
 	}
 
 	array.resize(write);
