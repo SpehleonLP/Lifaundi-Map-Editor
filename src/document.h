@@ -61,13 +61,15 @@ public:
 
 	void SetRoomMusic(int);
 	void SetRoomType(int);
-	void SetDoorType(int);
-	void SetGravityStrength(float);
-	void SetGravityDirection(float angle);
+	void SetGravity(float angle, float strength);
+	void SetShade(float angle, float strength);
 
-	void SetDrawDistance(float);
+	void SetAmbientShade(uint32_t angle);
+	void SetAudio(glm::u8vec4);
+
 	void PushSettingCommand(uint32_t value, SettingCommand::Type type);
 	void PushGravityCommand(float value, DifferentialSetCommmand::Type type);
+	void PushShadeCommand(float value, DifferentialSetCommmand::Type type);
 	void SetPermeability(int);
 
 	void setImage(int layer, int mip, QImage && image);
@@ -102,10 +104,7 @@ public:
 	std::vector<std::unique_ptr<CommandInterface>> m_history;
 	size_t                                         m_command{};
 
-	uint32_t  gravity{};
-	bool	  isGravityInAgreement{};
 	int       track{};
-	uint16_t  drawDistance{};
 	int       room_type{};
 	int       wall_type{};
 	int       permeability{};

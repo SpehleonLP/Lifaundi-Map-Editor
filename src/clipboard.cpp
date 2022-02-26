@@ -17,14 +17,16 @@ std::vector<Room>   Clipboard::Extract(Metaroom* metaroom, std::vector<int> cons
 	{
 		Room room;
 
-		room.type        = metaroom->m_roomType[i];
-		room.music_track = metaroom->m_music[i];
-		room.gravity    = metaroom->m_gravity[i];
-		room.drawDistance = metaroom->m_drawDistance[i];
+		room.type				= metaroom->m_roomType[i];
+		room.music_track		= metaroom->m_music[i];
+		room.gravity			= metaroom->m_gravity[i];
+		room.directionalShade	= metaroom->m_directionalShade[i];
+		room.ambientShade		= metaroom->m_ambientShade[i];
+		room.audio				= metaroom->m_audio[i];
 
 		for(int j = 0; j < 4; ++j)
 		{
-			room.wall_types[j] = metaroom->m_doorType[i*4+j];
+	//		room.wall_types[j] = metaroom->m_doorType[i*4+j];
 			room.verts[j]      = metaroom->m_verts[i*4+j];
 		}
 

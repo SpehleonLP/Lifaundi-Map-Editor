@@ -35,6 +35,11 @@ class Document;
 class Metaroom
 {
 public:
+	enum
+	{
+		VERSION = 5
+	};
+
 	static int NextInEdge(int id) { return (id & 0xFFFFFFFC) + ((id+1) & 0x03); }
 	static int GetOppositeEdge(int id) { return id ^ 0x02; }
 
@@ -56,11 +61,13 @@ public:
 	glm::vec2 GetGravity(int room) const;
 	glm::vec2 GetCenter(int room) const;
 
-	uint32_t GetGravity(float * length, float * angle) const;
+	glm::vec2 GetGravity() const;
+	glm::vec3 GetShade() const;
+	glm::vec4 GetAudio() const;
+
 	int GetMusicTrack() const;
 	int GetRoomType() const;
-	int GetWallType() const;
-	int GetDrawDistance() const;
+	//int GetWallType() const;
 
 	int GetPermeability() const;
 	int GetPermeability(int a, int b) const;
@@ -114,8 +121,6 @@ public:
 	inline glm::ivec2 GetVertex(int i, int j) const { return m_verts[i*4 + j%4]; }
 	inline glm::ivec2 GetEdge(int i, int j) const { return GetVertex(i, j+1) - GetVertex(i, j); }
 
-	inline int GetDoorType(int i, int j) const { return m_doorType[i*4 + j%4]; }
-
 	std::vector<glm::i16vec2> SaveVerts();
 	void RestoreVerts(std::vector<glm::i16vec2> const& vec);
 
@@ -165,14 +170,16 @@ public:
 	std::unique_ptr<uint32_t[]>  m_gravity;  // 2 half floats
 	std::unique_ptr<int8_t[]>    m_music;
 	std::unique_ptr<uint8_t[]>   m_roomType;
-	std::unique_ptr<uint8_t[]>   m_doorType;
-	std::unique_ptr<uint16_t[]>  m_drawDistance;
 	std::unique_ptr<int[]>	     m_color;
 	std::unique_ptr<std::pair<int, int>[]> m_hall;
 #if HAVE_UUID
 	std::unique_ptr<uint32_t[]>  m_uuid;
 	uint32_t                      m_uuid_counter{};
 #endif
+
+	std::unique_ptr<uint32_t[]>   m_directionalShade;  // 2 half floats
+	std::unique_ptr<float   []>   m_ambientShade;  // 2 half floats
+	std::unique_ptr<glm::u8vec4[]>m_audio;  // 2 half floats
 
 	enum Buffers
 	{

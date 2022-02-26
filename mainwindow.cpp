@@ -167,7 +167,6 @@ enter(Qt::Key_Z, this)
 #define QSpinDialChanged()  (void (QDial::*)(double)) &QDial::valueChanged
 
 	connect(ui->room_music,         QComboBoxChanged(),      [this](int   value) { if(!updating_fields && value >= 0) document->SetRoomMusic(value); });
-	connect(ui->distance,           QDoubleSpinBoxChanged(), [this](double   value) { if(!updating_fields && value >= 0) document->SetDrawDistance(value); });
 //	connect(ui->room_music->lineEdit(), &QLineEdit::editingFinished, this, &MainWindow::musicSet);
 
 	ui->room_music->lineEdit()->setMaxLength(24);
@@ -177,9 +176,18 @@ enter(Qt::Key_Z, this)
 #endif
 	connect(ui->room_type,          QComboBoxChanged(),      [this](int   value) { if(!updating_fields && value >= 0) document->SetRoomType(value); });
 
-    connect(ui->gravityStrength,    QDoubleSpinBoxChanged(), [this]() { if(!updating_fields) document->SetGravityStrength(ui->gravityStrength->value()); } );
-    connect(ui->gravityDir,         QSpinDialChanged(),		 [this]() { if(!updating_fields) document->SetGravityDirection((ui->gravityDir->value() + 900) * M_PI / 1800.f); } );
+    connect(ui->gravityStrength,    QDoubleSpinBoxChanged(), [this]() { if(!updating_fields) document->SetGravity((ui->gravityDir->value() + 900) * M_PI / 1800.f, ui->gravityStrength->value()); } );
+    connect(ui->gravityDir,         QSpinDialChanged(),		 [this]() { if(!updating_fields) document->SetGravity((ui->gravityDir->value() + 900) * M_PI / 1800.f, ui->gravityStrength->value()); } );
 	connect(ui->permeability,       QSpinBoxChanged(),       [this]() { if(!updating_fields) document->SetPermeability(ui->permeability->value()); } );
+
+	connect(ui->shadeStrength,    QDoubleSpinBoxChanged(), [this]() { if(!updating_fields) document->SetShade((ui->shadeDir->value() + 900) * M_PI / 1800.f, ui->shadeStrength->value()); } );
+    connect(ui->shadeDir,         QSpinDialChanged(),		 [this]() { if(!updating_fields) document->SetShade((ui->shadeDir->value() + 900) * M_PI / 1800.f, ui->shadeStrength->value()); } );
+	connect(ui->ambientShade,    &QSlider::valueChanged, [this]() { if(!updating_fields) document->SetAmbientShade(ui->ambientShade->value()); } );
+
+    connect(ui->audio0,         &QSlider::valueChanged,		 [this]() { if(!updating_fields) document->SetAudio(glm::u8vec4(ui->audio0->value(), ui->audio1->value(),ui->audio2->value(), ui->audio3->value())); } );
+	connect(ui->audio1,         &QSlider::valueChanged,		 [this]() { if(!updating_fields) document->SetAudio(glm::u8vec4(ui->audio0->value(), ui->audio1->value(),ui->audio2->value(), ui->audio3->value())); } );
+	connect(ui->audio2,         &QSlider::valueChanged,		 [this]() { if(!updating_fields) document->SetAudio(glm::u8vec4(ui->audio0->value(), ui->audio1->value(),ui->audio2->value(), ui->audio3->value())); } );
+	connect(ui->audio3,         &QSlider::valueChanged,		 [this]() { if(!updating_fields) document->SetAudio(glm::u8vec4(ui->audio0->value(), ui->audio1->value(),ui->audio2->value(), ui->audio3->value())); } );
 
 
 	/*
@@ -265,6 +273,15 @@ void MainWindow::closeEvent(QCloseEvent *event)
 	}
 }
 
+static int convertDialValue(float value)
+{
+	float degrees = (value * 180 / M_PI);
+	int dial_value = degrees*10 - 900;
+	if(dial_value < 0) dial_value += 3600;
+
+	return dial_value;
+}
+
 void MainWindow::OnSelectionChanged()
 {
 	ui->viewWidget->makeCurrent();
@@ -272,19 +289,14 @@ void MainWindow::OnSelectionChanged()
     document->OnSelectionChanged(ui->viewWidget);
 	bool selected = document->noFacesSelected() != 0;
 
-	float gravityStrength;
-	float gravityDir;
-	document->m_metaroom.GetGravity(&gravityStrength, &gravityDir);
+	glm::vec2 gravity = document->m_metaroom.GetGravity();
 	updating_fields = true;
 
 	UpdateTrackField();
 
-	float degrees = (gravityDir * 180 / M_PI);
-	int dial_value = degrees*10 - 900;
-	if(dial_value < 0) dial_value += 3600;
+	ui->gravityStrength->setValue(gravity.x);
+	ui->gravityDir->setValue(convertDialValue(gravity.y));
 
-	ui->gravityStrength->setValue(gravityStrength);
-	ui->gravityDir->setValue(dial_value);
 	ui->gravityStrength->setEnabled(selected);
 	ui->gravityDir->setEnabled(selected);
 
@@ -295,7 +307,28 @@ void MainWindow::OnSelectionChanged()
 	ui->permeability->setEnabled(document->noEdgesSelected() != 0);
 
 	ui->room_music->setEnabled(selected);
-	ui->distance->setEnabled(selected);
+
+	auto shade = document->m_metaroom.GetShade();
+
+	ui->shadeStrength->setValue(shade.x);
+	ui->shadeDir->setValue(convertDialValue(shade.y));
+	ui->ambientShade->setValue(shade.z);
+
+	glm::vec4 audio = document->m_metaroom.GetAudio();
+
+	ui->audio0->setValue(audio.x);
+	ui->audio1->setValue(audio.y);
+	ui->audio2->setValue(audio.z);
+	ui->audio3->setValue(audio.w);
+
+	ui->shadeDir->setEnabled(selected);
+	ui->shadeStrength->setEnabled(selected);
+	ui->ambientShade->setEnabled(selected);
+
+	ui->audio0->setEnabled(selected);
+	ui->audio1->setEnabled(selected);
+	ui->audio2->setEnabled(selected);
+	ui->audio3->setEnabled(selected);
 
 #if HAVE_WALL_TYPE
 	ui->door_type->setCurrentIndex(document->wall_type);
@@ -472,8 +505,7 @@ void MainWindow::fileCAOS()
 	dialog.setNameFilter("Creatures Object Source (*.cos)");
 	dialog.setDirectory(g_blkPath);
 
-	bool accepted;
-	while ((accepted = (dialog.exec() == QDialog::Accepted)))
+	while (dialog.exec() == QDialog::Accepted)
 	{
 		g_blkPath = dialog.directory();
 

@@ -1,17 +1,21 @@
 #ifndef CLIPBOARD_H
 #define CLIPBOARD_H
 #include <glm/vec2.hpp>
+#include <glm/gtc/type_precision.hpp>
 #include <vector>
 
 struct Room
 {
 	uint8_t    type;
 	 int16_t   music_track;
-	uint8_t    wall_types[4];
+	//uint8_t    wall_types[4];
 	uint32_t   gravity;
-	uint16_t   drawDistance;
 	glm::ivec2 verts[4];
 	int        uuid{-1};
+
+	uint32_t	directionalShade;
+	float		ambientShade;
+	glm::u8vec4 audio;
 };
 
 class Metaroom;

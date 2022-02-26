@@ -155,11 +155,26 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 
 	fp.read((char*)&m_gravity[0],  4* size());
 	fp.read((char*)&m_roomType[0], 1* size());
-	fp.read((char*)&m_doorType[0], 4* size());
+
+	if(version < 5)
+	{
+		fp.seekg(4 * size(), std::ios_base::cur);
+	}
+
 	fp.read((char*)&m_music[0], 1* size());
 
-	if(version > 4)
-		fp.read((char*)&m_drawDistance[0], 4* size());
+	if(version >= 5)
+	{
+		fp.read((char*)&m_directionalShade[0], 4 * size());
+		fp.read((char*)&m_ambientShade[0], 4 * size());
+		fp.read((char*)&m_audio[0], 4 * size());
+	}
+	else
+	{
+		memset(&m_directionalShade[0], 0, 4 * size());
+		memset(&m_ambientShade[0], 0, 4 * size());
+		memset(&m_audio[0], 0, 4 * size());
+	}
 
 #if HAVE_UUID
 	for(uint i = 0; i < size(); ++i)
@@ -229,7 +244,7 @@ uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 
 	const char * title = "lfmp";
 
-	short version = 4;
+	short version = VERSION;
 	short no_tracks = tracks.size();
 
 	fp.write(title, 4);
@@ -246,9 +261,11 @@ uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 	fp.write((char*)&verts[0], sizeof(verts[0]) * verts.size());
 	fp.write((char*)&m_gravity[0],  4 * size());
 	fp.write((char*)&m_roomType[0], 1 * size());
-	fp.write((char*)&m_doorType[0], 4 * size());
 	fp.write((char*)&m_music[0],    1 * size());
-//	fp.write((char*)&m_drawDistance[0], 1 * size());
+
+	fp.write((char*)&m_directionalShade[0], 4 * size());
+	fp.write((char*)&m_ambientShade[0], 4 * size());
+	fp.write((char*)&m_audio[0], 4 * size());
 
 	for(uint32_t i = 0; i < tracks.size();++i)
 	{
@@ -304,10 +321,10 @@ void Metaroom::SetRoom(int index, Room const& room)
 	m_roomType[index]		= room.type;
 	m_gravity[index]		= room.gravity;
 	m_music[index]			= room.music_track;
-	m_drawDistance[index]   = room.drawDistance;
 
-	for(int j = 0; j < 4; ++j)
-		m_doorType[index*4+j] = room.wall_types[j];
+	m_directionalShade[index]	= room.directionalShade;
+	m_ambientShade[index]		= room.ambientShade;
+	m_audio[index]				= room.audio;
 
 	for(int j = 0; j < 4; ++j)
 		m_verts[index*4+j] = room.verts[j];
@@ -321,10 +338,10 @@ void  Metaroom::CopyRoom(int dst, int src)
 	m_roomType[dst]		= m_roomType[src];
 	m_gravity[dst]		= m_gravity[src];
 	m_music[dst]		= m_music[src];
-	m_drawDistance[dst] = m_drawDistance[src];
 
-	for(int j = 0; j < 4; ++j)
-		m_doorType[dst*4 + j] = m_doorType[src*4 + j];
+	m_directionalShade[dst] = m_directionalShade[src];
+	m_ambientShade[dst] = m_ambientShade[src];
+	m_audio[dst] = m_audio[src];
 
 	for(int j = 0; j < 4; ++j)
 		m_verts[dst*4 + j] = m_verts[src*4 + j];
@@ -382,8 +399,6 @@ int Metaroom::Slice(std::vector<SliceInfo> & slice)
 		m_verts[j*4 + e]         = slice[i  ].vertex;
 		m_verts[j*4 + (e+3) % 4] = slice[i+1].vertex;
 
-		m_doorType[j*4 + e]      = 0;
-
 		if(slice[i].uuid < 0)
 			slice[i].uuid = ++m_uuid_counter;
 
@@ -394,34 +409,22 @@ int Metaroom::Slice(std::vector<SliceInfo> & slice)
 	{
 		std::swap(m_verts[NextInEdge(slice[i].edge)], slice[i  ].vertex);
 		std::swap(m_verts[slice[i+1].edge], slice[i+1].vertex);
-		std::swap(m_doorType[Metaroom::NextInEdge(slice[i].edge)], slice[i].type);
 	}
 
 
 	return first;
 }
 
-uint32_t Metaroom::GetGravity(float * _length, float * _angle) const
+glm::vec2 Metaroom::GetGravity() const
 {
 	float length{};
 	float angle{};
 	int   count{};
 
-	uint32_t r{};
-	bool match = true;
-
 	for(uint32_t i = 0; i < size(); ++i)
 	{
 		if(!m_selection.IsFaceSelected(i))
 			continue;
-
-		if(match && r != m_gravity[i])
-			r = 0;
-		else
-		{
-			r = m_gravity[i];
-			match = true;
-		}
 
 		glm::vec2 vec = glm::unpackHalf2x16(m_gravity[i]);
 
@@ -437,17 +440,61 @@ uint32_t Metaroom::GetGravity(float * _length, float * _angle) const
 		++count;
 	}
 
-	if(count)
+	return glm::vec2(length, angle) / (count? count : 1.f);
+}
+
+glm::vec3 Metaroom::GetShade() const
+{
+	float length{};
+	float angle{};
+	float ambient{};
+	int   count{};
+
+	for(uint32_t i = 0; i < size(); ++i)
 	{
-		length /= count;
-		angle /= count;
+		if(!m_selection.IsFaceSelected(i))
+			continue;
+
+		glm::vec2 vec = glm::unpackHalf2x16(m_directionalShade[i]);
+		ambient += m_ambientShade[i];
+
+		float len = glm::length(vec);
+		length += len;
+
+		if(len)
+		{
+			vec /= len;
+			angle += std::atan2(vec.y, vec.x);
+		}
+
+		++count;
 	}
 
-	if(_length) *_length = length;
-	if(_angle) *_angle  = angle;
-
-	return r;
+	return glm::vec3(length, angle, ambient) / (count? count : 1.f);
 }
+
+glm::vec4 Metaroom::GetAudio() const
+{
+	glm::vec4 audio{0};
+	int   count{};
+
+	for(uint32_t i = 0; i < size(); ++i)
+	{
+		if(!m_selection.IsFaceSelected(i))
+			continue;
+
+		audio += m_audio[i];
+		++count;
+	}
+
+	if(count)
+	{
+		audio /= count;
+	}
+
+	return audio;
+}
+
 
 
 glm::vec2 Metaroom::GetGravity(int room) const
@@ -503,67 +550,6 @@ int Metaroom::GetRoomType() const
 				return -1;
 
 			r_type = m_roomType[i];
-			match = true;
-		}
-	}
-
-	return r_type;
-}
-
-int Metaroom::GetWallType() const
-{
-	bool match = false;
-	int   r_type = -1;
-
-	for(uint32_t i = 0; i < size()*4; ++i)
-	{
-		if(m_selection.IsEdgeSelected(i))
-		{
-			if(match == true && r_type != m_doorType[i])
-				return -1;
-
-			r_type = m_doorType[i];
-			match = true;
-		}
-	}
-
-	return r_type;
-}
-
-
-int Metaroom::GetDoorType()
-{
-	bool     match = false;
-	int   w_type = 0;
-
-	for(uint32_t i = 0; i < size()*4; ++i)
-	{
-		if(m_selection.IsEdgeSelected(i))
-		{
-			if(match == true && w_type != m_doorType[i])
-				return -1;
-
-			w_type = m_doorType[i];
-			match = true;
-		}
-	}
-
-	return w_type;
-}
-
-int Metaroom::GetDrawDistance() const
-{
-	bool match = false;
-	int   r_type = -1;
-
-	for(uint32_t i = 0; i < size(); ++i)
-	{
-		if(m_selection.IsFaceSelected(i))
-		{
-			if(match == true && r_type != m_drawDistance[i])
-				return -1;
-
-			r_type = m_drawDistance[i];
 			match = true;
 		}
 	}
@@ -688,13 +674,16 @@ int Metaroom::Duplicate(std::vector<int> const& faces)
 		memcpy(&m_music[(first+i)],        &m_music[faces[i]],         sizeof(m_music[0]));
 
 	for(size_t i = 0; i < faces.size(); ++i)
-		memcpy(&m_drawDistance[(first+i)], &m_drawDistance[faces[i]],  sizeof(m_drawDistance[0]));
+		memcpy(&m_directionalShade[(first+i)], &m_directionalShade[faces[i]],  sizeof(m_directionalShade[0]));
+
+	for(size_t i = 0; i < faces.size(); ++i)
+		memcpy(&m_ambientShade[(first+i)], &m_ambientShade[faces[i]],  sizeof(m_ambientShade[0]));
+
+	for(size_t i = 0; i < faces.size(); ++i)
+		memcpy(&m_audio[(first+i)], &m_audio[faces[i]],  sizeof(m_audio[0]));
 
 	for(size_t i = 0; i < faces.size(); ++i)
 		memcpy(&m_roomType[(first+i)],     &m_roomType[faces[i]],      sizeof(m_roomType[0]));
-
-	for(size_t i = 0; i < faces.size(); ++i)
-		memcpy(&m_doorType[(first+i)*4],   &m_doorType[faces[i]*4],    sizeof(m_doorType[0])*4);
 
 
 	return first;
@@ -708,11 +697,14 @@ void Metaroom::Expand(std::vector<int> const& indices)
 	ExpandStuff(m_gravity,  faces, indices, 1);
 	ExpandStuff(m_music,    faces, indices, 1);
 	ExpandStuff(m_roomType, faces, indices, 1);
-	ExpandStuff(m_doorType, faces, indices, 4);
-	ExpandStuff(m_drawDistance, faces, indices, 1);
+
 #if HAVE_UUID
 	ExpandStuff(m_uuid    , faces, indices, 1);
 #endif
+
+	ExpandStuff(m_directionalShade,	faces, indices, 1);
+	ExpandStuff(m_ambientShade,		faces, indices, 1);
+	ExpandStuff(m_audio,			faces, indices, 1);
 }
 
 int        Metaroom::GetSliceEdge(glm::ivec2 p) const
@@ -862,8 +854,8 @@ void Metaroom::Prepare(GLViewWidget* gl)
 
 			if(a0 == a1
 			|| b0 == b1
-			|| GetDoorType(i-1, a) != 0
-			|| GetDoorType(i  , b) != 0
+//			|| GetDoorType(i-1, a) != 0
+//			|| GetDoorType(i  , b) != 0
 			|| math::IsOpposite(a1 - a0, b1 - b0) == false
 			|| math::IsColinear(a0, a1, b0, b1) == false)
 				continue;
@@ -987,12 +979,14 @@ void Metaroom::AddFace(glm::ivec2 min, glm::ivec2 max)
 	m_gravity[face]   = glm::packHalf2x16(glm::vec2(0, 9.81));
 	m_music[face]     = -1;
 	m_roomType[face]  = 0;
-	m_drawDistance[face]  = 0;
+
 #if HAVE_UUID
 	m_uuid[face]      = m_uuid_counter++;
 #endif
 
-	memset(&m_doorType[face*4], 0, 4);
+	m_directionalShade[0]	= 0;
+	m_ambientShade[0]		= 0;
+	m_audio[0]				= glm::vec4(0);
 
 	memcpy(&m_prev_verts[face*4], &m_verts[face*4], sizeof(m_verts[0]) * 4);
 
@@ -1016,12 +1010,14 @@ int Metaroom::AddFaces(int no_faces)
 
 		m_gravity        = Realloc(m_gravity,        allocated, new_size, 1);
 		m_music          = Realloc(m_music,          allocated, new_size, 1);
-		m_drawDistance   = Realloc(m_drawDistance,   allocated, new_size, 1);
 		m_roomType       = Realloc(m_roomType,       allocated, new_size, 1);
-		m_doorType       = Realloc(m_doorType,       allocated, new_size, 4);
 #if HAVE_UUID
 		m_uuid           = Realloc(m_uuid    ,       allocated, new_size, 1);
 #endif
+
+		m_directionalShade   = Realloc(m_directionalShade,   allocated, new_size, 1);
+		m_ambientShade   = Realloc(m_ambientShade,   allocated, new_size, 1);
+		m_audio   = Realloc(m_audio,   allocated, new_size, 1);
 
 		m_selection.resize(new_size);
 		allocated = new_size;
@@ -1041,12 +1037,14 @@ void Metaroom::RemoveFace(int id)
 	MemMove(m_music,          id, allocated, 1);
 	MemMove(m_gravity,        id, allocated, 1);
 	MemMove(m_roomType,       id, allocated, 1);
-	MemMove(m_doorType,       id, allocated, 4);
-	MemMove(m_drawDistance,   id, allocated, 1);
 
 #if HAVE_UUID
 	MemMove(m_uuid    ,       id, allocated, 1);
 #endif
+
+	MemMove(m_directionalShade, id, allocated, 1);
+	MemMove(m_ambientShade,		id, allocated, 1);
+	MemMove(m_audio,			id, allocated, 1);
 
 	m_selection.erase(id);
 
@@ -1073,11 +1071,13 @@ void Metaroom::RemoveFaces(std::vector<int> const& vec)
 	RemoveStuff(m_music,          allocated, vec, 1);
 	RemoveStuff(m_gravity,        allocated, vec, 1);
 	RemoveStuff(m_roomType,       allocated, vec, 1);
-	RemoveStuff(m_doorType,       allocated, vec, 4);
-	RemoveStuff(m_drawDistance,   allocated, vec, 1);
 #if HAVE_UUID
 	RemoveStuff(m_uuid    ,       allocated, vec, 1);
 #endif
+
+	RemoveStuff(m_directionalShade, allocated, vec, 1);
+	RemoveStuff(m_ambientShade,		allocated, vec, 1);
+	RemoveStuff(m_audio,			allocated, vec, 1);
 
 	m_selection.clear();
 

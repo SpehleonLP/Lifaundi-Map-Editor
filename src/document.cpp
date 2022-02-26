@@ -84,12 +84,10 @@ void Document::Paste(glm::vec2 center)
 
 void Document::OnSelectionChanged(GLViewWidget *gl)
 {
-	gravity      = m_metaroom.GetGravity(nullptr, nullptr);
 	track        = m_metaroom.GetMusicTrack();
 	room_type    = m_metaroom.GetRoomType();
-	wall_type    = m_metaroom.GetWallType();
+//	wall_type    = m_metaroom.GetWallType();
 	permeability = m_metaroom.GetPermeability();
-	drawDistance = m_metaroom.GetDrawDistance();
 
     m_metaroom.m_selection.Prepare(gl);
 }
@@ -312,17 +310,23 @@ void Document::SetRoomMusic(int value)
 	PushSettingCommand(value, SettingCommand::Type::Track);
 }
 
-void Document::SetDoorType(int value)
-{
-
-	PushSettingCommand(value, SettingCommand::Type::DoorType);
-}
-
 void Document::SetRoomType(int value)
 {
 	PushSettingCommand(value, SettingCommand::Type::RoomType);
 }
 
+void Document::SetGravity(float angle, float strength)
+{
+	uint32_t value = glm::packHalf2x16(glm::vec2(std::cos(angle), std::sin(angle)) * strength);
+	PushSettingCommand(value, SettingCommand::Type::Gravity);
+}
+
+void Document::SetShade(float angle, float strength)
+{
+	uint32_t value = glm::packHalf2x16(glm::vec2(std::cos(angle), std::sin(angle)) * strength);
+	PushSettingCommand(value, SettingCommand::Type::Shade);
+}
+#if 0
 void Document::SetGravityDirection(float angle)
 {
 	PushGravityCommand(angle, DifferentialSetCommmand::Type::GravityAngle);
@@ -331,22 +335,29 @@ void Document::SetGravityDirection(float angle)
 void Document::SetGravityStrength(float length)
 {
 	PushGravityCommand(length, DifferentialSetCommmand::Type::GravityStrength);
-
-	/*
-	uint32_t value = glm::packHalf2x16(glm::vec2(std::cos(angle), std::sin(angle)) * length);
-	if(value == gravity)
-		return;
-
-	PushSettingCommand(value, SettingCommand::Type::Gravity);*/
 }
 
-void Document::SetDrawDistance(float distance)
+void Document::SetShadeStrength(float v)
 {
-	uint16_t value = distance * 257;
-	if(value == drawDistance)
-		return;
+	PushShadeCommand(v, DifferentialSetCommmand::Type::ShadeAngle);
+}
 
-	PushSettingCommand(value, SettingCommand::Type::DrawDistance);
+void  Document::SetShadeDirection(float v)
+{
+	PushShadeCommand(v, DifferentialSetCommmand::Type::ShadeStrength);
+}
+#endif
+
+void  Document::SetAmbientShade(uint32_t value)
+{
+	PushSettingCommand(value, SettingCommand::Type::AmbientShade);
+}
+
+void  Document::SetAudio(glm::u8vec4 value)
+{
+	uint32_t eax;
+	memcpy(&eax, &value, 4);
+	PushSettingCommand(eax, SettingCommand::Type::Audio);
 }
 
 
@@ -388,11 +399,10 @@ void Document::PushSettingCommand(uint32_t value, SettingCommand::Type type)
 	case SettingCommand::Type::Gravity:
 	case SettingCommand::Type::Track:
 	case SettingCommand::Type::RoomType:
-	case SettingCommand::Type::DrawDistance:
+	case SettingCommand::Type::Shade:
+	case SettingCommand::Type::AmbientShade:
+	case SettingCommand::Type::Audio:
 		selection = m_metaroom.m_selection.GetFaceSelection();
-		break;
-	case SettingCommand::Type::DoorType:
-		selection = m_metaroom.m_selection.GetEdgeSelection();
 		break;
 	default:
 		selection = m_metaroom.m_selection.GetSelection();
@@ -436,6 +446,22 @@ void Document::PushGravityCommand(float value, DifferentialSetCommmand::Type typ
 
 	m_history.resize(m_command);
 	m_history.push_back(DifferentialSetCommmand::GravityCommand(this, std::move(selection), value, type));
+	m_command = m_history.size();
+
+	m_window->ui->editUndo->setEnabled(true);
+	m_window->ui->editRedo->setEnabled(false);
+}
+
+
+void Document::PushShadeCommand(float value, DifferentialSetCommmand::Type type)
+{
+	std::vector<int> selection =  m_metaroom.m_selection.GetFaceSelection();
+
+	if(selection.empty())
+		return;
+
+	m_history.resize(m_command);
+	m_history.push_back(DifferentialSetCommmand::ShadeCommand(this, std::move(selection), value, type));
 	m_command = m_history.size();
 
 	m_window->ui->editUndo->setEnabled(true);

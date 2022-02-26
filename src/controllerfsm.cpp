@@ -114,9 +114,10 @@ static T GetMode(T const* array, std::vector<int> const& selection)
 	return *GetMode(vec);
 }
 
-static uint16_t GetAverage(uint16_t const* array, std::vector<int> const& selection)
+template<typename T>
+static T GetAverage(T const* array, std::vector<int> const& selection)
 {
-	size_t accumulator=0;
+	double accumulator=0;
 
 	for(size_t i = 0; i < selection.size(); ++i)
 	{
@@ -126,7 +127,7 @@ static uint16_t GetAverage(uint16_t const* array, std::vector<int> const& select
 	return accumulator / selection.size();
 }
 
-static uint32_t GetGravity(uint32_t const* array, std::vector<int> const& selection)
+static uint32_t GetAverageHalf2x16(uint32_t const* array, std::vector<int> const& selection)
 {
 	glm::vec2 accumulator{0,0};
 
@@ -136,6 +137,18 @@ static uint32_t GetGravity(uint32_t const* array, std::vector<int> const& select
 	}
 
 	return glm::packHalf2x16(accumulator /(float) selection.size());
+}
+
+static glm::u8vec4 GetAverageU8vec4(glm::u8vec4 const* array, std::vector<int> const& selection)
+{
+	glm::vec4 accumulator{0};
+
+	for(size_t i = 0; i < selection.size(); ++i)
+	{
+		accumulator += array[selection[i]];
+	}
+
+	return accumulator /(float) selection.size();
 }
 
 bool ControllerFSM::AutoReseat()
@@ -235,12 +248,13 @@ bool ControllerFSM::SetTool(Tool tool)
 
 		Room room;
 
-		room.type		  = GetMode(&metaroom.m_roomType[0], faces);
-		room.music_track  = GetMode(&metaroom.m_music[0], faces);
-		room.gravity      = GetGravity(&metaroom.m_gravity[0], faces);
-		room.drawDistance = GetAverage(&metaroom.m_drawDistance[0], faces);
+		room.type				= GetMode(&metaroom.m_roomType[0], faces);
+		room.music_track		= GetMode(&metaroom.m_music[0], faces);
+		room.gravity			= GetAverageHalf2x16(&metaroom.m_gravity[0], faces);
+		room.directionalShade	= GetAverageHalf2x16(&metaroom.m_directionalShade[0], faces);
+		room.ambientShade		= GetAverage(&metaroom.m_ambientShade[0], faces);
+		room.audio				= GetAverageU8vec4(&metaroom.m_audio[0], faces);
 
-		memset(&room.wall_types[0], 0, sizeof(room.wall_types));
 		memcpy(&room.verts[0], verts, sizeof(verts));
 
 		m_parent->document->PushCommand(new InsertCommand(m_parent->document.get(), {room}));
@@ -841,7 +855,11 @@ void ControllerFSM::AddFace()
 		room.gravity     = glm::packHalf2x16(glm::vec2(0, 9.81));
 		room.music_track = -1;
 		room.type        = 0;
-		memset(room.wall_types, 0, 4);
+		room.ambientShade     = 0;
+		room.directionalShade = glm::packHalf2x16(glm::vec2(0, 0));
+		room.audio			  = glm::u8vec4(0);
+
+//		memset(room.wall_types, 0, 4);
 
 		m_parent->document->PushCommand(new InsertCommand(m_parent->document.get(), {room}));
 	}

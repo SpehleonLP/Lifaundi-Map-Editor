@@ -354,8 +354,7 @@ void QuadTree::GetWriteDoors(std::vector<Door> & doors, std::vector<DoorList> & 
 
 	for(uint32_t i = 0; i < m_metaroom->size()*4; ++i)
 	{
-		if(typeId && m_metaroom->m_doorType[i] != 0)
-			continue;
+		//if(typeId && m_metaroom->m_doorType[i] != 0)	continue;
 
 		info.clear();
 		GetWriteDoors(i, s, info, typeId);
@@ -442,8 +441,7 @@ void QuadTree::GetHallDoors(int edge, std::vector<int> & doors)
 {
 	if(IsDirty()) Rebuild();
 
-	if(m_metaroom->m_doorType[edge] != 0)
-		return;
+//	if(m_metaroom->m_doorType[edge] != 0)	return;
 
 	EdgeRange range(this, edge);
 
@@ -491,8 +489,7 @@ void QuadTree::GetWriteDoors(int edge, std::stack<int> & stack, std::vector<Door
 {
 	if(IsDirty()) Rebuild();
 
-	if(typeId >= 0 && m_metaroom->m_doorType[edge] != typeId)
-		return;
+	//if(typeId >= 0 && m_metaroom->m_doorType[edge] != typeId) return;
 
 	stack.push(0);
 
@@ -500,8 +497,7 @@ void QuadTree::GetWriteDoors(int edge, std::stack<int> & stack, std::vector<Door
 
 	while(range.popFront())
 	{
-		if(typeId >= 0 && m_metaroom->m_doorType[range.edge()] != typeId)
-			continue;
+//		if(typeId >= 0 && m_metaroom->m_doorType[range.edge()] != typeId)			continue;
 
 //determine how far each thing is from an axis or whatever.
 		std::pair<float, int> begin, end;
@@ -542,14 +538,13 @@ void QuadTree::GetRenderWalls(int edge, std::vector<EdgeVertex> & edges) const
 	int next_edge = (edge & 0xFFFFFFFC) + (((edge & 0x03) + 1) & 0x03);
 
 	EdgeVertex e;
-	e.type    = m_metaroom->m_doorType[edge];
+	e.type    = 0;//m_metaroom->m_doorType[edge];
 
 	EdgeRange range(this, edge, false);
 
 	while(range.popFront())
 	{
-		if(m_metaroom->m_doorType[range.edge()] != e.type)
-			continue;
+	//	if(m_metaroom->m_doorType[range.edge()] != e.type)	continue;
 
 //determine how far each thing is from an axis or whatever.
 		std::pair<float, int> begin, end;

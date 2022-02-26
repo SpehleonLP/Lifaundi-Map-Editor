@@ -120,7 +120,6 @@ void SliceCommand::RollBack()
 	{
 		std::swap(metaroom->m_verts[Metaroom::NextInEdge(slice[i].edge)], slice[i  ].vertex);
 		std::swap(metaroom->m_verts[slice[i+1].edge], slice[i+1].vertex);
-		std::swap(metaroom->m_doorType[Metaroom::NextInEdge(slice[i].edge)], slice[i].type);
 	}
 
 	metaroom->CommitMove();
@@ -209,13 +208,17 @@ SettingCommand::SettingCommand(Document * document, std::vector<int> && list, ui
 		for(size_t i = 0; i < indices.size(); ++i)
 			prev_values[i] = metaroom->m_roomType[indices[i]];
 		break;
-	case Type::DrawDistance:
+	case Type::Shade:
 		for(size_t i = 0; i < indices.size(); ++i)
-			prev_values[i] = metaroom->m_drawDistance[indices[i]];
+			prev_values[i] = metaroom->m_directionalShade[indices[i]];
 		break;
-	case Type::DoorType:
+	case Type::AmbientShade:
 		for(size_t i = 0; i < indices.size(); ++i)
-			prev_values[i] = metaroom->m_doorType[indices[i]];
+			prev_values[i] = metaroom->m_ambientShade[indices[i]];
+		break;
+	case Type::Audio:
+		for(size_t i = 0; i < indices.size(); ++i)
+			memcpy(&prev_values[i], &metaroom->m_audio[indices[i]], 4);
 		break;
 	default:
 		break;
@@ -242,14 +245,17 @@ void SettingCommand::RollForward()
 		for(auto i : indices)
 			metaroom->m_roomType[i] = value;
 		break;
-	case Type::DrawDistance:
+	case Type::Shade:
 		for(auto i : indices)
-			metaroom->m_drawDistance[i] = value;
+			metaroom->m_directionalShade[i] = value;
 		break;
-	case Type::DoorType:
+	case Type::AmbientShade:
 		for(auto i : indices)
-			metaroom->m_doorType[i] = value;
-		metaroom->m_tree.SetVBODirty();
+			metaroom->m_ambientShade[i] = value;
+		break;
+	case Type::Audio:
+		for(auto i : indices)
+			memcpy(&metaroom->m_audio[i], &value, 4);
 		break;
 	default:
 		break;
@@ -273,14 +279,17 @@ void SettingCommand::RollBack()
 		for(size_t i = 0; i < indices.size(); ++i)
 			metaroom->m_roomType[indices[i]] = prev_values[i];
 		break;
-	case Type::DrawDistance:
+	case Type::Shade:
 		for(size_t i = 0; i < indices.size(); ++i)
-			metaroom->m_drawDistance[indices[i]]  = prev_values[i];
+			metaroom->m_directionalShade[indices[i]]  = prev_values[i];
 		break;
-	case Type::DoorType:
+	case Type::AmbientShade:
 		for(size_t i = 0; i < indices.size(); ++i)
-			metaroom->m_doorType[indices[i]] = prev_values[i];
-		metaroom->m_tree.SetVBODirty();
+			metaroom->m_ambientShade[indices[i]] = prev_values[i];
+		break;
+	case Type::Audio:
+		for(size_t i = 0; i < indices.size(); ++i)
+			memcpy(&metaroom->m_audio[indices[i]], &prev_values[i], 4);
 		break;
 	default:
 		break;
@@ -413,7 +422,7 @@ bool PermeabilityCommand::IsSelection(std::vector<std::pair<int, int>> const& li
 
 std::unique_ptr<CommandInterface> DifferentialSetCommmand::GravityCommand(Document * document, std::vector<int> && list, float value, Type type)
 {
-	assert(type == Type::GravityAngle || type == Type::GravityStrength);
+	assert(type == Type::GravityAngle || type == Type::GravityStrength || type == Type::ShadeAngle || type == Type::ShadeStrength);
 	std::vector<uint32_t> values(list.size());
 
 	bool unique = true;
@@ -454,6 +463,49 @@ std::unique_ptr<CommandInterface> DifferentialSetCommmand::GravityCommand(Docume
 	return std::unique_ptr<CommandInterface>(new DifferentialSetCommmand(document, std::move(list), std::move(values), Type::Gravity));
 }
 
+std::unique_ptr<CommandInterface> DifferentialSetCommmand::ShadeCommand(Document * document, std::vector<int> && list, float value, Type type)
+{
+	assert(type == Type::ShadeAngle || type == Type::ShadeStrength);
+	std::vector<uint32_t> values(list.size());
+
+	bool unique = true;
+	glm::vec2 first;
+
+	if(type == Type::GravityAngle)
+	{
+		glm::vec2 direction(std::cos(value), std::sin(value));
+
+		for(size_t i = 0; i < list.size(); ++i)
+		{
+			glm::vec2 grav = glm::unpackHalf2x16(document->m_metaroom.m_directionalShade[list[i]]);
+			grav = direction * glm::length(grav);
+			values[i] = glm::packHalf2x16(grav);
+
+			if(i == 0) first = grav;
+			else		unique &= (glm::dot(grav, -first) < .004);
+		}
+	}
+	else if(type == Type::GravityStrength)
+	{
+		for(size_t i = 0; i < list.size(); ++i)
+		{
+			glm::vec2 grav = glm::unpackHalf2x16(document->m_metaroom.m_directionalShade[list[i]]);
+			grav = value * glm::normalize(grav);
+			values[i] = glm::packHalf2x16(grav);
+
+			if(i == 0) first = grav;
+			else		unique &= (glm::dot(grav, -first) < .004);
+		}
+	}
+
+	if(unique == true)
+	{
+		return std::unique_ptr<CommandInterface>(new SettingCommand(document, std::move(list), values[0], SettingCommand::Type::Shade));
+	}
+
+	return std::unique_ptr<CommandInterface>(new DifferentialSetCommmand(document, std::move(list), std::move(values), Type::Shade));
+}
+
 
 DifferentialSetCommmand::DifferentialSetCommmand(Document * document, std::vector<int> && list, std::vector<uint32_t> && value, Type type) :
 	metaroom(&document->m_metaroom),
@@ -477,13 +529,17 @@ DifferentialSetCommmand::DifferentialSetCommmand(Document * document, std::vecto
 		for(size_t i = 0; i < indices.size(); ++i)
 			prev_values[i] = metaroom->m_roomType[indices[i]];
 		break;
-	case Type::DrawDistance:
+	case Type::Shade:
 		for(size_t i = 0; i < indices.size(); ++i)
-			prev_values[i] = metaroom->m_drawDistance[indices[i]];
+			prev_values[i] = metaroom->m_directionalShade[indices[i]];
 		break;
-	case Type::DoorType:
+	case Type::AmbientShade:
 		for(size_t i = 0; i < indices.size(); ++i)
-			prev_values[i] = metaroom->m_doorType[indices[i]];
+			memcpy(&prev_values[i], &metaroom->m_ambientShade[indices[i]], 4);
+		break;
+	case Type::Audio:
+		for(size_t i = 0; i < indices.size(); ++i)
+			memcpy(&prev_values[i], &metaroom->m_audio[indices[i]], 4);
 		break;
 	default:
 		break;
@@ -510,14 +566,17 @@ void DifferentialSetCommmand::RollForward()
 		for(size_t i = 0; i < indices.size(); ++i)
 			metaroom->m_roomType[indices[i]] = new_values[i];
 		break;
-	case Type::DrawDistance:
+	case Type::Shade:
 		for(size_t i = 0; i < indices.size(); ++i)
-			metaroom->m_drawDistance[indices[i]]  = new_values[i];
+			metaroom->m_directionalShade[indices[i]] = new_values[i];
 		break;
-	case Type::DoorType:
+	case Type::AmbientShade:
 		for(size_t i = 0; i < indices.size(); ++i)
-			metaroom->m_doorType[indices[i]] = new_values[i];
-		metaroom->m_tree.SetVBODirty();
+			memcpy(&metaroom->m_ambientShade[indices[i]], &new_values[i], 4);
+		break;
+	case Type::Audio:
+		for(size_t i = 0; i < indices.size(); ++i)
+			memcpy(&metaroom->m_audio[indices[i]], &new_values[i], 4);
 		break;
 	default:
 		break;
@@ -542,14 +601,17 @@ void DifferentialSetCommmand::RollBack()
 		for(size_t i = 0; i < indices.size(); ++i)
 			metaroom->m_roomType[indices[i]] = prev_values[i];
 		break;
-	case Type::DrawDistance:
+	case Type::Shade:
 		for(size_t i = 0; i < indices.size(); ++i)
-			metaroom->m_drawDistance[indices[i]]  = prev_values[i];
+			metaroom->m_directionalShade[indices[i]]  = prev_values[i];
 		break;
-	case Type::DoorType:
+	case Type::AmbientShade:
 		for(size_t i = 0; i < indices.size(); ++i)
-			metaroom->m_doorType[indices[i]] = prev_values[i];
-		metaroom->m_tree.SetVBODirty();
+			memcpy(&metaroom->m_ambientShade[indices[i]], &prev_values[i], 4);
+		break;
+	case Type::Audio:
+		for(size_t i = 0; i < indices.size(); ++i)
+			memcpy(&metaroom->m_audio[indices[i]], &prev_values[i], 4);
 		break;
 	default:
 		break;
