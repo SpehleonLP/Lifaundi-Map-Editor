@@ -178,7 +178,7 @@ public:
 #endif
 
 	std::unique_ptr<uint32_t[]>   m_directionalShade;  // 2 half floats
-	std::unique_ptr<float   []>   m_ambientShade;  // 2 half floats
+	std::unique_ptr<uint8_t []>   m_ambientShade;
 	std::unique_ptr<glm::u8vec4[]>m_audio;  // 2 half floats
 
 	enum Buffers

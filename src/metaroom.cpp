@@ -166,7 +166,7 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 	if(version >= 5)
 	{
 		fp.read((char*)&m_directionalShade[0], 4 * size());
-		fp.read((char*)&m_ambientShade[0], 4 * size());
+		fp.read((char*)&m_ambientShade[0], size());
 		fp.read((char*)&m_audio[0], 4 * size());
 	}
 	else
@@ -264,7 +264,7 @@ uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 	fp.write((char*)&m_music[0],    1 * size());
 
 	fp.write((char*)&m_directionalShade[0], 4 * size());
-	fp.write((char*)&m_ambientShade[0], 4 * size());
+	fp.write((char*)&m_ambientShade[0], size());
 	fp.write((char*)&m_audio[0], 4 * size());
 
 	for(uint32_t i = 0; i < tracks.size();++i)
