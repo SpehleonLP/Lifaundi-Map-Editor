@@ -134,18 +134,21 @@ void  ExportOptions::save(Metaroom* mta, std::string const& path, const std::vec
 
 void ExportOptions::configure(BackgroundImage* img)
 {
-	QFileInfo path(img->GetFilename().c_str());
+	if(img != nullptr)
+	{
+		QFileInfo path(img->GetFilename().c_str());
 
-	ui->background->setText(path.fileName());
+		ui->background->setText(path.fileName());
 
-	ui->width->setMinimum(img->width() - 128);
-	ui->width->setMaximum(img->width());
+		ui->width->setMinimum(img->width() - 128);
+		ui->width->setMaximum(img->width());
 
-	ui->height->setMinimum(img->height() - 128);
-	ui->height->setMaximum(img->height());
+		ui->height->setMinimum(img->height() - 128);
+		ui->height->setMaximum(img->height());
 
-	center.x = img->width()/2;
-	center.y = img->height()/2;
+		center.x = img->width()/2;
+		center.y = img->height()/2;
+	}
 }
 
 std::string ExportOptions::filename() const

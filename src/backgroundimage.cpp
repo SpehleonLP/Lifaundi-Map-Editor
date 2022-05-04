@@ -45,8 +45,10 @@ BackgroundImage::Type BackgroundImage::GetType(std::string const& filename)
 		return Type::Creatures2;
 	if(extension == "blk")
 		return Type::Creatures3;
+	if(extension == "lf_Bck")
+		return Type::Lifaundi;
 
-	return Type::Lifaundi;
+	return Type::Image;
 }
 
 
@@ -73,6 +75,9 @@ BackgroundImage::BackgroundImage(GLViewWidget * gl, std::string const& filename)
 		break;
 	case Type::Lifaundi:
 		LoadLifaundi(gl, std::move(file));
+	case Type::Image:
+		file.close();
+		LoadImage(gl, filename);
 		break;
 	}
 }
@@ -655,5 +660,42 @@ void BackgroundImage::ImportS16Frames(GLViewWidget * gl, std::ifstream file, uin
 	}
 
 	file.close();
+}
+
+#include <QImage>
+#include <QImageReader>
+
+void BackgroundImage::LoadImage(GLViewWidget * gl, std::string const& filename)
+{/*
+	QImageReader reader(QString::fromStdString(filename));
+	QImage image = reader.read();
+
+	tiles = (glm::ivec2(image.width(), image.height()) + 255) / 256;
+
+	gl->glGenTextures(size(), &m_textures[0]);
+
+	std::vector<glm::vec3> RGB(256*256);
+
+	for(uint32_t i = 0; i < size(); ++i)
+	{
+		int x = i / tiles.y;
+		int y = i % tiles.y;
+
+		int j = ((tiles.y-1) - y) * tiles.x + x;
+
+		gl->glBindTexture(GL_TEXTURE_2D, m_textures[j]);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+
+
+		gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tile_size.x, tile_size.y, 0, GL_RGB, gl_type, buffer);
+	}
+
+	file.close();
+
+	*/
 }
 

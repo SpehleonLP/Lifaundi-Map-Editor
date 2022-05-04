@@ -576,7 +576,7 @@ bool MainWindow::fileOpen(bool load_rooms, bool load_background)
 
 	ui->viewWidget->need_repaint();
 
-	ui->fileCAOS->setEnabled(document->isCreaturesBackground());
+	//ui->fileCAOS->setEnabled(document->isCreaturesBackground());
 	return true;
 }
 

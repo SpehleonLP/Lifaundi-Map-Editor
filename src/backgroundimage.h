@@ -23,6 +23,7 @@ public:
 		Creatures2,
 		Creatures3,
 		Lifaundi,
+		Image,
 	};
 
 	static Type GetType(std::string const& filename);
@@ -60,6 +61,7 @@ private:
 	void LoadSpr(GLViewWidget * gl, std::ifstream file);
 	void LoadBlk(GLViewWidget * gl, std::ifstream file);
 	void LoadS16(GLViewWidget * gl, std::ifstream file);
+	void LoadImage(GLViewWidget * gl, std::string const& filename);
 	void ImportS16Frames(GLViewWidget * gl, std::ifstream file, uint32_t no_tiles, uint32_t gl_type);
 
     std::string m_filename;
