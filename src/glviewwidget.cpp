@@ -342,8 +342,10 @@ void GLViewWidget::paintGL()
 
 	auto window_pos = mapToGlobal(QPoint());
 
-    mat.u_camera = glm::scale(glm::mat4(1), glm::vec3(w->GetZoom()));
-    mat.u_camera = glm::translate(mat.u_camera, glm::vec3(-w->document->GetScreenCenter(), 0));
+	mat.u_camera = glm::mat4(1);
+	mat.u_camera = glm::translate(mat.u_camera, glm::vec3(-w->document->GetScreenCenter(), 0));
+    mat.u_camera = glm::scale(mat.u_camera, glm::vec3(w->GetZoom()));
+
 	mat.u_screenSize = glm::ivec4(width, height, window_pos.x(), window_pos.y());
 
 	long long time =
