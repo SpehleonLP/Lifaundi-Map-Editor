@@ -759,11 +759,22 @@
     <addaction name="debugSelectRoom"/>
     <addaction name="debugDumpPermTable"/>
    </widget>
+   <widget class="QMenu" name="menuBackground_Layer">
+    <property name="title">
+     <string>Background Layer</string>
+    </property>
+    <addaction name="layerBaseColor"/>
+    <addaction name="layerNormals"/>
+    <addaction name="layerOcclusion"/>
+    <addaction name="layerRoughness"/>
+    <addaction name="layerDepth"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuTools"/>
    <addaction name="menuLinks"/>
    <addaction name="menuView"/>
+   <addaction name="menuBackground_Layer"/>
    <addaction name="menuDebug"/>
    <addaction name="menuAbout"/>
   </widget>
@@ -1268,6 +1279,76 @@
   <action name="toolAutoReseat">
    <property name="text">
     <string>Auto Reseat</string>
+   </property>
+  </action>
+  <action name="layerBaseColor">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Base Color</string>
+   </property>
+  </action>
+  <action name="layerNormals">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Normals</string>
+   </property>
+  </action>
+  <action name="layerOcclusion">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Ambient Occlusion</string>
+   </property>
+  </action>
+  <action name="layerRoughness">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Metallic Roughness</string>
+   </property>
+  </action>
+  <action name="layerDepth">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Depth</string>
    </property>
   </action>
  </widget>

@@ -7,11 +7,46 @@
 #include <glm/vec2.hpp>
 #include <glm/gtc/type_precision.hpp>
 #include <cassert>
-#include <zlib.h>
 #include <fstream>
 #include <sstream>
 #include <iostream>
 #include <iomanip>
+
+#include <lz4/lib/lz4.h>
+
+const uint32_t BackgroundImage::g_ImageFormat[NoLayers] =
+{
+	GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT,	//basecolor
+	GL_COMPRESSED_RG_RGTC2,	//roughness
+	GL_COMPRESSED_RG_RGTC2,	//normal
+	GL_COMPRESSED_RED_RGTC1,//occlusion
+	GL_R16, //depth
+};
+
+const uint8_t BackgroundImage::g_BytesPerBlock[NoLayers] =
+{
+	8,	//basecolor
+	16,	//roughness
+	16,	//normal
+	8, //occlusion
+	2, //depth
+};
+
+static const unsigned int texture_offset[(int)BackgroundLayer::Total] =
+{
+	Background::Blocks * BaseColorOffset,
+	Background::Blocks * RoughOffset,
+	Background::Blocks * NormalOffset,
+	Background::Blocks * OcclusionOffset,
+	Background::Blocks * DepthOffset,
+};
+
+
+#if defined(__GNUC__) || defined(__clang__)
+#define __unused __attribute__((unused))
+#else
+#define __unused
+#endif
 
 std::string ToHex(const uint8_t * s, int length, bool upper_case  = true)
 {
@@ -45,7 +80,7 @@ BackgroundImage::Type BackgroundImage::GetType(std::string const& filename)
 		return Type::Creatures2;
 	if(extension == "blk")
 		return Type::Creatures3;
-	if(extension == "lf_Bck")
+	if(extension == "lf_bck")
 		return Type::Lifaundi;
 
 	return Type::Image;
@@ -74,7 +109,8 @@ BackgroundImage::BackgroundImage(GLViewWidget * gl, std::string const& filename)
 		LoadBlk(gl, std::move(file));
 		break;
 	case Type::Lifaundi:
-		LoadLifaundi(gl, std::move(file));
+		//LoadLifaundi(gl, std::move(file));
+		break;
 	case Type::Image:
 		file.close();
 		LoadImage(gl, filename);
@@ -100,14 +136,14 @@ void BackgroundImage::Render(GLViewWidget* gl)
 //	m_transparencyShader.bind(gl);
 //	gl->glDrawArrays(GL_TRIANGLES, size()*6, 6); gl->glAssert();
 
-    BlitShader::Shader.bind(gl); gl->glAssert();
+    BlitShader::Shader.bind(gl, m_layer); gl->glAssert();
 
     gl->glBindVertexArray(m_vao); gl->glAssert();
     gl->glActiveTexture(GL_TEXTURE0);
 
 	for(int i = 0; i < size(); ++i)
 	{
-		if(m_dimensions[i].x0 == m_dimensions[i].x1)
+		if(m_flags[i] == 0)
 			continue;
 
         gl->glBindTexture(GL_TEXTURE_2D, m_textures[i]); gl->glAssert();
@@ -189,16 +225,11 @@ void BackgroundImage::CreateVBO(GLViewWidget* gl)
 		for(uint8_t x = 0; x < tiles.x; ++x)
 		{
 			auto i          = (int) y * tiles.x + x;
-			auto info      = m_dimensions[i];
+		//	auto info      = m_flags[i];
 			vertex * corner = &buffer[i * 6];
 
 			if(tile_size.x == 256)
 			{
-				info.x0 *= 8;
-				info.y0 *= 8;
-				info.y1 *= 8;
-				info.x1 *= 8;
-
 				corner[0].texCoord = glm::u16vec2(0, 0);
 				corner[1].texCoord = glm::u16vec2(1, 0);
 				corner[2].texCoord = glm::u16vec2(0, 1);
@@ -206,10 +237,6 @@ void BackgroundImage::CreateVBO(GLViewWidget* gl)
 			}
 			else
 			{
-				info.x0 = info.y0 = 0;
-				info.x1 = tile_size.x/2;
-				info.y1 = tile_size.y/2;
-
 				corner[0].texCoord = glm::u16vec2(0, 1);
 				corner[1].texCoord = glm::u16vec2(1, 1);
 				corner[2].texCoord = glm::u16vec2(0, 0);
@@ -218,10 +245,10 @@ void BackgroundImage::CreateVBO(GLViewWidget* gl)
 
 			glm::ivec3 offset(x * tile_size.x - pixels.x/2, y * tile_size.y - pixels.y/2, 0);
 
-			corner[0].position = offset + glm::ivec3(info.x0*2, info.y0*2, 0);
-			corner[1].position = offset + glm::ivec3(info.x1*2, info.y0*2, 0);
-			corner[2].position = offset + glm::ivec3(info.x0*2, info.y1*2, 0);
-			corner[5].position = offset + glm::ivec3(info.x1*2, info.y1*2, 0);
+			corner[0].position = offset + glm::ivec3(0, 0, 0);
+			corner[1].position = offset + glm::ivec3(tile_size.x, 0, 0);
+			corner[2].position = offset + glm::ivec3(0, tile_size.y, 0);
+			corner[5].position = offset + glm::ivec3(tile_size.x, tile_size.y, 0);
 
 			corner[3] = corner[2];
 			corner[4] = corner[1];
@@ -304,7 +331,7 @@ static uint8_t * interleave_BC4(uint8_t * dst, uint8_t * src, int blocks)
 	return src;
 }
 
-static uint8_t * interleave_DXT5(uint8_t * dst, uint8_t * src, int blocks)
+static __unused uint8_t * interleave_DXT5(uint8_t * dst, uint8_t * src, int blocks)
 {
 	src = interleave_BC4 <16>(dst  , src, blocks);
 	src = interleave_DXT1<16>(dst+8, src, blocks);
@@ -317,7 +344,7 @@ static uint8_t * _interleave_DXT1(uint8_t * dst, uint8_t * src, int blocks)
 	return interleave_DXT1<8>(dst, src, blocks);
 }
 
-static uint8_t * interleave_BC5(uint8_t * dst, uint8_t * src, int blocks)
+static __unused uint8_t * interleave_BC5(uint8_t * dst, uint8_t * src, int blocks)
 {
 	src = interleave_BC4<16>(dst  , src, blocks);
 	src = interleave_BC4<16>(dst+8, src, blocks);
@@ -325,13 +352,28 @@ static uint8_t * interleave_BC5(uint8_t * dst, uint8_t * src, int blocks)
 	return src;
 }
 
-
-void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file)
+void BackgroundImage::SetBackgroundLayer(GLViewWidget * gl, BackgroundLayer layer)
 {
-	z_stream zlib;
-	memset(&zlib, 0, sizeof(zlib));
-	inflateInit(&zlib);
+//don't try to load something we already have.
+	if(m_layer == layer || m_type != Type::Lifaundi)
+		return;
 
+	std::ifstream file(m_filename, std::ios::binary);
+
+	if(!file.is_open())
+		throw std::system_error(errno, std::system_category(), m_filename);
+
+    file.exceptions ( std::ifstream::failbit | std::ifstream::badbit );
+
+	m_layer = layer;
+	LoadLifaundi(gl, std::move(file), layer);
+}
+
+struct mip_offsets { uint32_t mip0, mip1, mip2; };
+static_assert(sizeof(mip_offsets) == sizeof(uint32_t)*3);
+
+void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file, BackgroundLayer layer)
+{
 	char title[4];
 
 	file.read(&title[0], sizeof(title));
@@ -349,109 +391,142 @@ void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file)
 	if(memcmp(title, "lbck", 4))
 		throw std::runtime_error("Bad File");
 
-	m_dimensions  = std::unique_ptr<TileInfo[]> (new TileInfo[size()]);
-	m_textures    = std::unique_ptr<uint32_t[]> (new uint32_t[size()]);
-	auto offsets  = std::unique_ptr<uint32_t[]>(new uint32_t[size()*3+1]);
+	if(m_textures == nullptr)
+	{
+		m_flags		= std::unique_ptr<uint16_t[]> (new uint16_t[size()]);
+		m_textures  = std::unique_ptr<uint32_t[]> (new uint32_t[size()]);
 
-	memset(&m_textures[0], 0, sizeof(uint32_t) * size());
-	file.read((char*)&m_dimensions[0], size() * sizeof(m_dimensions[0]));
+		memset(&m_textures[0], 0, sizeof(uint32_t) * size());
+		gl->glGenTextures(size(), &m_textures[0]);
+
+		for(int i = 0; i < size(); ++i)
+		{
+			gl->glBindTexture(GL_TEXTURE_2D, m_textures[i]);
+			gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 1);
+		}
+
+		gl->glAssert();
+	}
+
+	auto offsets		 = std::vector<mip_offsets>(size()+1);
+
+	file.read((char*)&m_flags[0], size() * sizeof(m_flags[0]));
 	file.read((char*)&offsets[0], (size()*3 + 1) * sizeof(uint32_t));
-
-    gl->glGenTextures(size(), &m_textures[0]);
 
 	std::unique_ptr<uint8_t[]> buffer(new uint8_t[TILE_BYTES]);
 	std::unique_ptr<uint8_t[]> buffer2(new uint8_t[TILE_BYTES]);
 
 	for(int i = 0; i < size(); ++i)
 	{
-		if(m_dimensions[i].x0 == m_dimensions[i].x1)
+		if(m_flags[i] == 0)
 			continue;
 
-        gl->glBindTexture(GL_TEXTURE_2D, m_textures[i]);
-        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 1);
+		gl->glBindTexture(GL_TEXTURE_2D, m_textures[i]);
 
-		uint32_t * mip = &offsets[i*3];
-		auto dscr = m_dimensions[i];
+		uint32_t * mip = (uint32_t*)&offsets[i];
 
-		int x_offset = dscr.x0 * 16;
-		int y_offset = dscr.y0 * 16;
-		int width    = (dscr.x1 - dscr.x0) * 16;
-		int height   = (dscr.y1 - dscr.y0) * 16;
+		int x_offset = 0;
+		int y_offset = 0;
+		int width    = 256; //(dscr.x1 - dscr.x0) * 16;
+		int height   = 256; //(dscr.y1 - dscr.y0) * 16;
 		auto area    = width * height;
 
 // deinterleave data
-		uint32_t blocks_x = (dscr.x1 - dscr.x0) * 4;
-		uint32_t blocks_y = (dscr.y1 - dscr.y0) * 4;
+		uint32_t blocks_x = (width) / 4;
+		uint32_t blocks_y = (height) / 4;
 
-		for(int j = 1; j <= 2; ++j)
+		for(int mipLevel = 1; mipLevel <= 2; ++mipLevel)
 		{
 			blocks_x >>= 1;
 			blocks_y >>= 1;
-			auto bytes  = mip[j+1] - mip[j];
+			auto bytes  = mip[mipLevel+1] - mip[mipLevel];
 
 			if(bytes == 0)
 				continue;
 
 			assert(bytes <= TILE_BYTES);
 
-			file.seekg(mip[j], std::ios_base::beg);
+			file.seekg(mip[mipLevel], std::ios_base::beg);
 			file.read((char*) &buffer[0], bytes);
 
 			if(version >= 3)
 			{
-				if(i == 0 && j == 1)
+				if(i == 0 && mipLevel == 1)
 				{
-					std::cerr << "offset " << std::hex << std::setfill('0') << mip[j] << std::endl;
+					std::cerr << "offset " << std::hex << std::setfill('0') << mip[mipLevel] << std::endl;
 					std::cerr << ToHex(&buffer[0], 32) << std::endl;
 				}
 
+				auto total_out = LZ4_decompress_safe(
+					(const char *)&buffer[0], /* src */
+					(char*)&buffer2[0], /* dst */
+					bytes,			/* compressed size */
+					TILE_BYTES) ;   /* decompressed capacity */
 
-				zlib.next_in  = &buffer[0];
-				zlib.avail_in = bytes;
-				zlib.total_in = 0;
-
-				zlib.next_out  = &buffer2[0];
-				zlib.avail_out = TILE_BYTES;
-				zlib.total_out = 0;
-
-				::inflate(&zlib, Z_FINISH);
-
-				if(zlib.msg != nullptr)
-					throw std::runtime_error(zlib.msg);
-
-				if(zlib.total_in != bytes)
+				if(total_out < 0)
 					throw std::runtime_error("failed to decompress all data");
 
 				std::swap(buffer, buffer2);
 			//	bytes = zlib.total_out;
-
-				inflateReset(&zlib);
 			}
 
-			const int d0 = 1 << j;
+			const int d0 = 1 << mipLevel;
 			const int d1 = d0*d0;
 
-			_interleave_DXT1(&buffer2[0], &buffer[0], blocks_x * blocks_y);
+			switch(layer)
+			{
+			case BackgroundLayer::BaseColor:
+				_interleave_DXT1(&buffer2[0], &buffer[0], blocks_x * blocks_y);
+				break;
+			case BackgroundLayer::Normals:
+				interleave_BC5(&buffer2[0], &buffer[texture_offset[(int)BackgroundLayer::Normals] / d1], blocks_x * blocks_y);
+				break;
+			case BackgroundLayer::MetallicRoughness:
+				interleave_BC5(&buffer2[0], &buffer[texture_offset[(int)BackgroundLayer::MetallicRoughness] / d1], blocks_x * blocks_y);
+				break;
+			case BackgroundLayer::AmbientOcclusion:
+				interleave_BC4(&buffer2[0], &buffer[texture_offset[(int)BackgroundLayer::AmbientOcclusion] / d1], blocks_x * blocks_y);
+				break;
+			case BackgroundLayer::Depth:
+				std::swap(buffer, buffer2);
+				break;
+			default:
+				throw std::logic_error("unhandled image format case");
+			}
 
-            gl->glCompressedTexImage2D(GL_TEXTURE_2D,
-				j-1,
-				GL_COMPRESSED_RGBA_S3TC_DXT1_EXT,
-				width    / d0,
-				height   / d0,
-				0,
-				area     / d1 / 2,
-				&buffer2[0]);
+
+			if(g_ImageFormat[(int)layer] != GL_R16)
+			{
+				gl->glCompressedTexImage2D(GL_TEXTURE_2D,
+					mipLevel-1,
+					g_ImageFormat[(int)layer],
+					width    / d0,
+					height   / d0,
+					0,
+					area / d1 / 16 * g_BytesPerBlock[(int)layer],		//no bytes
+					&buffer2[0]);
+			}
+			else
+			{
+				gl->glTexImage2D(GL_TEXTURE_2D,
+					mipLevel-1,
+					g_ImageFormat[(int)layer],
+					width    / d0,
+					height   / d0,
+					0,
+					GL_RED,
+					GL_UNSIGNED_SHORT,	// type
+					&buffer2[0]);
+			}
 
             gl->glAssert();
 		}
 	}
 
-
-	inflateEnd(&zlib);
 	file.close();
 }
 
@@ -534,9 +609,10 @@ void BackgroundImage::LoadSpr(GLViewWidget * gl, std::ifstream file)
 	tile_size     = glm::u16vec2(144, 150);
 	pixels        = glm::u16vec2(tiles) * tile_size;
 
-	m_dimensions  = std::unique_ptr<TileInfo[]> (new TileInfo[size()]);
-	m_textures    = std::unique_ptr<uint32_t[]> (new uint32_t[size()]);
+	m_flags		  = std::unique_ptr<uint16_t[]> (new uint16_t[size()]);
+	memset(&m_flags[0], 0xFF, sizeof(m_flags[0]) * size());
 
+	m_textures    = std::unique_ptr<uint32_t[]> (new uint32_t[size()]);
 	memset(&m_textures[0], 0, sizeof(uint32_t) * size());
 
 	gl->glGenTextures(size(), &m_textures[0]);
@@ -634,8 +710,11 @@ void BackgroundImage::ImportS16Frames(GLViewWidget * gl, std::ifstream file, uin
 	gl_type = gl_type? GL_UNSIGNED_SHORT_5_6_5 :  GL_UNSIGNED_SHORT_5_5_5_1;
 	uint8_t buffer[144*150*2];
 
-	m_dimensions  = std::unique_ptr<TileInfo[]> (new TileInfo[size()]);
+	m_flags		  = std::unique_ptr<uint16_t[]> (new uint16_t[size()]);
+	memset(&m_flags[0], 0xFF, sizeof(m_flags[0]) * size());
+
 	m_textures    = std::unique_ptr<uint32_t[]> (new uint32_t[size()]);
+	memset(&m_textures[0], 0, sizeof(uint32_t) * size());
 
 	gl->glGenTextures(size(), &m_textures[0]);
 
@@ -666,7 +745,8 @@ void BackgroundImage::ImportS16Frames(GLViewWidget * gl, std::ifstream file, uin
 #include <QImageReader>
 
 void BackgroundImage::LoadImage(GLViewWidget * gl, std::string const& filename)
-{/*
+{
+	/*
 	QImageReader reader(QString::fromStdString(filename));
 	QImage image = reader.read();
 
@@ -676,7 +756,7 @@ void BackgroundImage::LoadImage(GLViewWidget * gl, std::string const& filename)
 
 	std::vector<glm::vec3> RGB(256*256);
 
-	for(uint32_t i = 0; i < size(); ++i)
+	for(int i = 0; i < size(); ++i)
 	{
 		int x = i / tiles.y;
 		int y = i % tiles.y;
@@ -691,11 +771,9 @@ void BackgroundImage::LoadImage(GLViewWidget * gl, std::string const& filename)
         gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 
 
+
+
 		gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tile_size.x, tile_size.y, 0, GL_RGB, gl_type, buffer);
-	}
-
-	file.close();
-
-	*/
+	}*/
 }
 

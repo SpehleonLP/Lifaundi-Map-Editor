@@ -3,7 +3,7 @@
 
 enum
 {
-	TILE_BYTES = 500000,
+	TILE_BYTES = 550000,
 };
 
 enum class Tool : int
@@ -94,5 +94,84 @@ enum class Bitwise
 	NOT = 16,
 };
 
+enum class BackgroundLayer : char
+{
+	None = -1,
+	BaseColor,
+	MetallicRoughness,
+	Normals,
+	AmbientOcclusion,
+	Depth,
+	Total
+};
+
+extern "C"
+{
+
+struct BC4_Block
+{
+	unsigned char c[2];
+	unsigned char i[6];
+};
+
+struct DXT1_Block
+{
+	unsigned short c[2];
+	unsigned char  i[4];
+};
+
+struct DXT5_Block
+{
+	BC4_Block  alpha;
+	DXT1_Block color;
+};
+
+struct BC5_Block
+{
+	BC4_Block  R;
+	BC4_Block  G;
+};
+
+struct DepthBlock
+{
+	unsigned short depth[16];
+};
+
+}
+
+
+enum {
+	BaseColorBlockSize = sizeof(DXT1_Block),
+	RoughBlockSize		= sizeof(BC5_Block),
+	NormalBlockSize		= sizeof(BC5_Block),
+	OcclusionBlockSize = sizeof(BC4_Block),
+	DepthBlockSize     = 2*16,
+};
+
+enum
+{
+	BaseColorOffset   = 0,
+	RoughOffset       = BaseColorOffset + BaseColorBlockSize,
+	NormalOffset      = RoughOffset     + RoughBlockSize,
+	OcclusionOffset   = NormalOffset    + NormalBlockSize,
+	DepthOffset       = OcclusionOffset + OcclusionBlockSize,
+	DeinterlacedBytes = DepthOffset     + DepthBlockSize,
+};
+
+namespace Background
+{
+	enum
+	{
+		FileMipLayers = (int)BackgroundLayer::Total,
+
+		Width = 256,
+		Height = 256,
+
+		Area = Width * Height,
+		Blocks = Width * Height / 16,
+
+		BYTES_PER_BLOCK = DeinterlacedBytes,
+	};
+}
 
 #endif // ENUMS_HPP

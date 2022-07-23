@@ -532,7 +532,7 @@ bool Document::SaveFile(QFileInfo const& Path)
 #endif
 }
 
-bool Document::LoadFile(GLViewWidget * gl, QFileInfo const& Path, bool load_rooms, bool load_background)
+bool Document::LoadFile(GLViewWidget * gl, QFileInfo const& Path, bool load_rooms, bool load_background, BackgroundLayer layer)
 {
 	std::string str = Path.filePath().toStdString();
 
@@ -564,8 +564,14 @@ bool Document::LoadFile(GLViewWidget * gl, QFileInfo const& Path, bool load_room
 		m_background.reset();
 
         m_background = std::make_unique<BackgroundImage>(gl, str);
+		m_background->SetBackgroundLayer(gl, layer);
 	}
 
-
 	return true;
+}
+
+void Document::SetBackgroundLayer(GLViewWidget * gl, BackgroundLayer layer)
+{
+	if(m_background)
+		m_background->SetBackgroundLayer(gl, layer);
 }

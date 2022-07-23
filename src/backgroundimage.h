@@ -1,5 +1,6 @@
 #ifndef BACKGROUNDIMAGE_H
 #define BACKGROUNDIMAGE_H
+#include "enums.hpp"
 #include <glm/mat4x4.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
@@ -14,10 +15,17 @@
 class QWidget;
 class GLViewWidget;
 
+//TODO: atlas textures with GL_TEXTURE_2D_ARRAY
+
 class BackgroundImage
 {
 public:
-	enum class Type
+	enum { NoLayers = 5 };
+
+	const static uint32_t g_ImageFormat[NoLayers];
+	const static uint8_t g_BytesPerBlock[NoLayers];
+
+	enum class Type : unsigned char
 	{
 		Creatures1,
 		Creatures2,
@@ -32,18 +40,7 @@ public:
     BackgroundImage(GLViewWidget * gl, std::string const& filename);
 	~BackgroundImage();
 
-
-
     void Release(GLViewWidget * gl);
-
-	struct TileInfo
-	{
-		uint8_t  x0{0};
-		uint8_t  y0{0};
-		uint8_t  x1{16};
-		uint8_t  y1{16};
-	};
-
     void Render(GLViewWidget* gl);
 
 	glm::ivec2 dimensions() const { return pixels.x == 0? glm::ivec2(SHRT_MAX, SHRT_MAX) : glm::ivec2(pixels); }
@@ -56,23 +53,26 @@ public:
 	std::string const& GetFilename() const { return m_filename; }
 	Type               GetType()     const { return m_type; }
 
+	void SetBackgroundLayer(GLViewWidget * gl, BackgroundLayer);
+
 private:
-	void LoadLifaundi(GLViewWidget * gl, std::ifstream file);
+	void LoadLifaundi(GLViewWidget * gl, std::ifstream file, BackgroundLayer layer);
 	void LoadSpr(GLViewWidget * gl, std::ifstream file);
 	void LoadBlk(GLViewWidget * gl, std::ifstream file);
 	void LoadS16(GLViewWidget * gl, std::ifstream file);
 	void LoadImage(GLViewWidget * gl, std::string const& filename);
 	void ImportS16Frames(GLViewWidget * gl, std::ifstream file, uint32_t no_tiles, uint32_t gl_type);
 
-    std::string m_filename;
-	Type        m_type;
+    std::string		m_filename;
+	Type			m_type;
+	BackgroundLayer m_layer{BackgroundLayer::None};
 
-	short   version{};
-	glm::u8vec2 tiles{0, 0};
-	glm::u16vec2 pixels{0, 0};
-	glm::u16vec2 tile_size{256, 256};
+	short			version{};
+	glm::u8vec2		tiles{0, 0};
+	glm::u16vec2	pixels{0, 0};
+	glm::u16vec2	tile_size{256, 256};
 
-	std::unique_ptr<TileInfo[]> m_dimensions;
+	std::unique_ptr<uint16_t[]> m_flags;
 	std::unique_ptr<uint32_t[]> m_textures;
 
 	size_t m_texels{};

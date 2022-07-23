@@ -86,6 +86,8 @@ public:
 	ControllerFSM toolbox{this};
 	std::unique_ptr<Document>  document;
 
+	BackgroundLayer GetBackgroundLayer();
+
 private:
 friend class ui_BackgroundsWindow;
 friend class GLViewWidget;

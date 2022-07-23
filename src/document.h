@@ -37,7 +37,8 @@ public:
 	QString Name() const { return m_title; };
 
 	bool SaveFile(QFileInfo const& path);
-    bool LoadFile(GLViewWidget *gl, QFileInfo const& path, bool load_rooms, bool load_background);
+    bool LoadFile(GLViewWidget *gl, QFileInfo const& path, bool load_rooms, bool load_background, BackgroundLayer);
+	void SetBackgroundLayer(GLViewWidget * gl, BackgroundLayer);
 
 	bool Undo();
 	bool Redo();

@@ -143,7 +143,7 @@ void GLViewWidget::mouseMoveEvent(QMouseEvent * event)
 		auto delta    = m_screenPos - screenPos;
 
 		glm::vec2 dimensions         = w->document->GetDimensions();
-		glm::vec2 world_position     = m_scrollPos * dimensions + delta / w->GetZoom();
+		glm::vec2 world_position     = m_scrollPos * dimensions +  delta;// / w->GetZoom();
 		glm::vec2 scroll_destination = world_position / dimensions;
 
 		w->SetScroll(scroll_destination);

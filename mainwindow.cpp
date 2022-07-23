@@ -16,6 +16,7 @@
 #include <glm/glm.hpp>
 #include <QStatusBar>
 #include <QInputDialog>
+#include <QActionGroup>
 
 static QString g_imagePath;
 static QDir g_blkPath = QDir::home();
@@ -219,6 +220,20 @@ enter(Qt::Key_Z, this)
 	connect(ui->horizontalScrollBar, &QScrollBar::valueChanged, ui->viewWidget, &GLViewWidget::need_repaint);
 	connect(ui->verticalScrollBar, &QScrollBar::valueChanged, ui->viewWidget, &GLViewWidget::need_repaint);
 
+	QActionGroup* group = new QActionGroup( this );
+
+	ui->layerBaseColor->setActionGroup(group);
+	ui->layerOcclusion->setActionGroup(group);
+	ui->layerNormals->setActionGroup(group);
+	ui->layerRoughness->setActionGroup(group);
+	ui->layerDepth->setActionGroup(group);
+
+	connect(ui->layerBaseColor,  &QAction::toggled,		 [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget, BackgroundLayer::BaseColor); } );
+	connect(ui->layerOcclusion,  &QAction::toggled,		 [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget, BackgroundLayer::AmbientOcclusion); } );
+	connect(ui->layerNormals,    &QAction::toggled,		 [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget, BackgroundLayer::Normals); } );
+	connect(ui->layerRoughness,  &QAction::toggled,		 [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget, BackgroundLayer::MetallicRoughness); } );
+	connect(ui->layerDepth,      &QAction::toggled,		 [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget, BackgroundLayer::Depth); } );
+
 /*
 
 
@@ -271,6 +286,22 @@ void MainWindow::closeEvent(QCloseEvent *event)
 			did_release = true;
 		}
 	}
+}
+
+BackgroundLayer MainWindow::GetBackgroundLayer()
+{
+	if(ui->layerBaseColor->isChecked())
+		return BackgroundLayer::BaseColor;
+	if(ui->layerNormals->isChecked())
+		return BackgroundLayer::Normals;
+	if(ui->layerDepth->isChecked())
+		return BackgroundLayer::Depth;
+	if(ui->layerRoughness->isChecked())
+		return BackgroundLayer::MetallicRoughness;
+	if(ui->layerOcclusion->isChecked())
+		return BackgroundLayer::AmbientOcclusion;
+
+	return BackgroundLayer::BaseColor;
 }
 
 static int convertDialValue(float value)
@@ -557,7 +588,7 @@ bool MainWindow::fileOpen(bool load_rooms, bool load_background)
 	{
 		try
 		{
-            if(document->LoadFile(ui->viewWidget, QFileInfo(dialog.selectedFiles().first()), load_rooms, load_background))
+            if(document->LoadFile(ui->viewWidget, QFileInfo(dialog.selectedFiles().first()), load_rooms, load_background, GetBackgroundLayer()))
 				break;
 		}
 		catch(std::exception & e)
