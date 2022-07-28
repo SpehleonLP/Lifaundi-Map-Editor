@@ -365,8 +365,8 @@ void BackgroundImage::SetBackgroundLayer(GLViewWidget * gl, BackgroundLayer laye
 
     file.exceptions ( std::ifstream::failbit | std::ifstream::badbit );
 
-	m_layer = layer;
 	LoadLifaundi(gl, std::move(file), layer);
+	m_layer = layer;
 }
 
 struct mip_offsets { uint32_t mip0, mip1, mip2; };
@@ -379,6 +379,15 @@ void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file, Backgr
 	file.read(&title[0], sizeof(title));
 	file.read((char*)&version, sizeof(version));
 	file.read((char*)&tiles, sizeof(tiles));
+
+	bool is_unlit = !!(version & 0x8000);
+	version &= 0x7FFF;
+
+	if(is_unlit)
+		layer = BackgroundLayer::BaseColor;
+
+	if(layer == m_layer)
+		return;
 
 	if(version == 1)
 		pixels = glm::u16vec2(tiles) * (uint16_t) 256;
@@ -455,12 +464,6 @@ void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file, Backgr
 
 			if(version >= 3)
 			{
-				if(i == 0 && mipLevel == 1)
-				{
-					std::cerr << "offset " << std::hex << std::setfill('0') << mip[mipLevel] << std::endl;
-					std::cerr << ToHex(&buffer[0], 32) << std::endl;
-				}
-
 				auto total_out = LZ4_decompress_safe(
 					(const char *)&buffer[0], /* src */
 					(char*)&buffer2[0], /* dst */
