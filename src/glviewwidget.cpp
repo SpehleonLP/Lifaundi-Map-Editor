@@ -37,8 +37,6 @@ GLViewWidget::GLViewWidget(QWidget * p) :
 	timer.setSingleShot(false);
 	timer.setInterval(20);
 	connect(&timer, &QTimer::timeout, this, [this]() { repaint(); } );
-
-	current_time = std::chrono::high_resolution_clock::now();
 }
 
 GLViewWidget::~GLViewWidget()
