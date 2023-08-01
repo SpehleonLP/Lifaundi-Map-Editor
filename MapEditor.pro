@@ -5,6 +5,7 @@
 #-------------------------------------------------
 
 QT       += core gui openglwidgets
+CONFIG += c++2a
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -28,8 +29,6 @@ INCLUDEPATH += \
 LIBS += -lGLEW -lGL -lGLU -ldrm -lz \
 	-L\"/mnt/Passport/Libraries/lz4/build/cmake\" -llz4
 
-CONFIG += c++14
-
 DEFINES += GLM_EXT_INCLUDED GLM_FORCE_INLINE GLM_ENABLE_EXPERIMENTAL
 
 SOURCES += \
@@ -37,6 +36,7 @@ SOURCES += \
         main.cpp \
         mainwindow.cpp \
 	src/Shaders/arrowshader.cpp \
+    src/Shaders/mouseshader.cpp \
 	src/color_rooms.cpp \
     src/document.cpp \
     src/commandlist.cpp \
@@ -73,6 +73,7 @@ HEADERS += \
         mainwindow.h \
 	nlohmann/json_detail.hpp \
 	src/Shaders/arrowshader.h \
+    src/Shaders/mouseshader.h \
 	src/color_rooms.h \
 	src/counted_ptr.hpp \
     src/document.h \

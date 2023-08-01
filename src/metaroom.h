@@ -57,6 +57,8 @@ public:
 	void CopyRoom(int dst, int src);
 	uint64_t GetDoorKey(uint32_t a, uint32_t b) const;
 
+	glm::vec4 GetDimensions() const { return m_tree.GetDimensions(); };
+	
 
 	glm::vec2 GetGravity(int room) const;
 	glm::vec2 GetCenter(int room) const;

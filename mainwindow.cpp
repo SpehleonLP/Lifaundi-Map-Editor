@@ -19,7 +19,8 @@
 #include <QActionGroup>
 
 static QString g_imagePath;
-static QDir g_blkPath = QDir::home();
+//static QDir g_blkPath = QDir::home();
+static QDir g_blkPath = QString("/mnt/Passport/Background_Art/Quadruped Test Background");
 
 extern const char * lf_BackgroundLayers[];
 
@@ -62,22 +63,22 @@ enter(Qt::Key_Z, this)
     connect(ui->aboutHelp,       &QAction::triggered, this, &MainWindow::aboutHelp);
 	connect(ui->aboutQt,         &QAction::triggered, &QApplication::aboutQt);
 	connect(ui->appExit,         &QAction::triggered, &QApplication::closeAllWindows);
-	connect(ui->editCopy,        &QAction::triggered, [this]() { document->Copy(); } );
-	connect(ui->editCut,         &QAction::triggered, [this]() { document->Copy(); document->Delete(); });
-    connect(ui->editDelete,      &QAction::triggered, [this]() { document->Delete(); } );
-    connect(ui->editPaste,       &QAction::triggered, [this]() {
+	connect(ui->editCopy,        &QAction::triggered,  this, [this]() { document->Copy(); } );
+	connect(ui->editCut,         &QAction::triggered,  this, [this]() { document->Copy(); document->Delete(); });
+    connect(ui->editDelete,      &QAction::triggered,  this, [this]() { document->Delete(); } );
+    connect(ui->editPaste,       &QAction::triggered,  this, [this]() {
 
 		document->Paste(ui->viewWidget->GetWorldPosition());
 
 	});
-    connect(ui->editRedo,        &QAction::triggered, [this]() {
+    connect(ui->editRedo,        &QAction::triggered,  this, [this]() {
 		document->Redo();
 		ui->editUndo->setEnabled(document->CanUndo());
 		ui->editRedo->setEnabled(document->CanRedo());
 		ui->viewWidget->need_repaint();
 	});
-//    connect(ui->editSelectNone,  &QAction::triggered, [this]() { document->SelectNone(); });
-    connect(ui->editUndo,        &QAction::triggered, [this]()
+//    connect(ui->editSelectNone,  &QAction::triggered,  this, [this]() { document->SelectNone(); });
+    connect(ui->editUndo,        &QAction::triggered,  this, [this]()
 	{
 		document->Undo();
 		ui->editUndo->setEnabled(document->CanUndo());
@@ -85,79 +86,79 @@ enter(Qt::Key_Z, this)
 		ui->viewWidget->need_repaint();
 	});
 
-	connect(ui->selectAll,        &QAction::triggered, [this]() { document->SelectAll(); ui->viewWidget->need_repaint(); });
-	connect(ui->selectNone,       &QAction::triggered, [this]() { document->SelectNone(); ui->viewWidget->need_repaint(); });
-	connect(ui->selectInvert,     &QAction::triggered, [this]() { document->InvertSelection(); ui->viewWidget->need_repaint(); });
-	connect(ui->selectRoomType,   &QAction::triggered, [this]() { document->SelectByType(); ui->viewWidget->need_repaint(); });
-	connect(ui->selectRoomMusic,  &QAction::triggered, [this]() { document->SelectByMusic(); ui->viewWidget->need_repaint(); });
-	connect(ui->selectOverlap,    &QAction::triggered, [this]() { document->SelectOverlapping(); ui->viewWidget->need_repaint(); });
-	connect(ui->selectConnected,  &QAction::triggered, [this]() { document->SelectLinked(); ui->viewWidget->need_repaint(); });
+	connect(ui->selectAll,        &QAction::triggered,  this, [this]() { document->SelectAll(); ui->viewWidget->need_repaint(); });
+	connect(ui->selectNone,       &QAction::triggered,  this, [this]() { document->SelectNone(); ui->viewWidget->need_repaint(); });
+	connect(ui->selectInvert,     &QAction::triggered,  this, [this]() { document->InvertSelection(); ui->viewWidget->need_repaint(); });
+	connect(ui->selectRoomType,   &QAction::triggered,  this, [this]() { document->SelectByType(); ui->viewWidget->need_repaint(); });
+	connect(ui->selectRoomMusic,  &QAction::triggered,  this, [this]() { document->SelectByMusic(); ui->viewWidget->need_repaint(); });
+	connect(ui->selectOverlap,    &QAction::triggered,  this, [this]() { document->SelectOverlapping(); ui->viewWidget->need_repaint(); });
+	connect(ui->selectConnected,  &QAction::triggered,  this, [this]() { document->SelectLinked(); ui->viewWidget->need_repaint(); });
 
-	connect(ui->fileLoadBackground,   &QAction::triggered, [this]() { fileOpen(false, true); });
-    connect(ui->fileOpen,           &QAction::triggered, [this]() { fileOpen(true, false); });
+	connect(ui->fileLoadBackground,   &QAction::triggered,  this, [this]() { fileOpen(false, true); });
+    connect(ui->fileOpen,           &QAction::triggered,  this, [this]() { fileOpen(true, false); });
 	connect(ui->fileCAOS,           &QAction::triggered, this, &MainWindow::fileCAOS );
     connect(ui->fileImportWalls,   &QAction::triggered, this, &MainWindow::fileLoadWalls);
 	connect(ui->fileNew,         &QAction::triggered, this, &MainWindow::fileNew);
     connect(ui->fileSave,        &QAction::triggered, this, &MainWindow::fileSave);
     connect(ui->fileSaveAs,      &QAction::triggered, this, &MainWindow::fileSaveAs);
-//    connect(ui->linkAdd,         &QAction::triggered, [this]() { document->SetTool(Tool::AddLink); });
-    connect(ui->linkRemove,      &QAction::triggered, [this]() { document->RemoveLinks(); });
+//    connect(ui->linkAdd,         &QAction::triggered,  this, [this]() { document->SetTool(Tool::AddLink); });
+    connect(ui->linkRemove,      &QAction::triggered,  this, [this]() { document->RemoveLinks(); });
    // connect(ui->musicLoad,       &QAction::triggered, this, &MainWindow::musicLoad);
   //  connect(ui->musicMute,       &QAction::toggled, this, &MainWindow::musicMute);
 
-	connect(ui->toolNew,         &QAction::triggered,[this]() { toolbox.SetTool(Tool::Create); } );
-	connect(ui->toolDuplicate,   &QAction::triggered,[this]() { document->Duplicate(ui->viewWidget->GetWorldPosition()); } );
-	connect(ui->toolFace,	     &QAction::triggered,[this]() { toolbox.SetTool(Tool::Face); } );
-    connect(ui->toolTranslate,   &QAction::triggered,[this]() { toolbox.SetTool(Tool::Translate); } );
-    connect(ui->toolRotate,      &QAction::triggered,[this]() { toolbox.SetTool(Tool::Rotate); } );
-	connect(ui->toolScale,       &QAction::triggered,[this]() { toolbox.SetTool(Tool::Scale); } );
-	connect(ui->toolExtrude,     &QAction::triggered,[this]() { toolbox.SetTool(Tool::Extrude); } );
-	connect(ui->toolSlice,       &QAction::triggered,[this]() { toolbox.SetTool(Tool::Slice); } );
-	connect(ui->toolReseat,      &QAction::triggered,[this]() { toolbox.SetTool(Tool::Order); } );
-	connect(ui->toolAutoReseat,  &QAction::triggered,[this]() { toolbox.AutoReseat(); } );
+	connect(ui->toolNew,         &QAction::triggered, this, [this]() { toolbox.SetTool(Tool::Create); } );
+	connect(ui->toolDuplicate,   &QAction::triggered, this, [this]() { document->Duplicate(ui->viewWidget->GetWorldPosition()); } );
+	connect(ui->toolFace,	     &QAction::triggered, this, [this]() { toolbox.SetTool(Tool::Face); } );
+    connect(ui->toolTranslate,   &QAction::triggered, this, [this]() { toolbox.SetTool(Tool::Translate); } );
+    connect(ui->toolRotate,      &QAction::triggered, this, [this]() { toolbox.SetTool(Tool::Rotate); } );
+	connect(ui->toolScale,       &QAction::triggered, this, [this]() { toolbox.SetTool(Tool::Scale); } );
+	connect(ui->toolExtrude,     &QAction::triggered, this, [this]() { toolbox.SetTool(Tool::Extrude); } );
+	connect(ui->toolSlice,       &QAction::triggered, this, [this]() { toolbox.SetTool(Tool::Slice); } );
+	connect(ui->toolReseat,      &QAction::triggered, this, [this]() { toolbox.SetTool(Tool::Order); } );
+	connect(ui->toolAutoReseat,  &QAction::triggered, this, [this]() { toolbox.AutoReseat(); } );
 
-	connect(ui->toolRealign,       &QAction::triggered,[this]() { toolbox.SetTool(Tool::SliceGravity); } );
-	connect(ui->toolPropagate,     &QAction::triggered,[this]() { toolbox.SetTool(Tool::PropagateGravity); } );
+	connect(ui->toolRealign,       &QAction::triggered, this, [this]() { toolbox.SetTool(Tool::SliceGravity); } );
+	connect(ui->toolPropagate,     &QAction::triggered, this, [this]() { toolbox.SetTool(Tool::PropagateGravity); } );
 
-	connect(&escape,             &QShortcut::activated, [this]() { toolbox.SetTool(Tool::None); } );
-	connect(&face,				 &QShortcut::activated,[this]() { toolbox.SetTool(Tool::Face); } );
-	connect(&create,             &QShortcut::activated, [this]() { toolbox.SetTool(Tool::Create); } );
-//	connect(&duplicate,          &QShortcut::activated, [this]() { document->Duplicate(ui->viewWidget->GetWorldPosition()); } );
-	connect(&translate,          &QShortcut::activated, [this]() { toolbox.SetTool(Tool::Translate); } );
-	connect(&rotate,             &QShortcut::activated, [this]() { toolbox.SetTool(Tool::Rotate); } );
-	connect(&scale,              &QShortcut::activated, [this]() { toolbox.SetTool(Tool::Scale); } );
-	connect(&extrude,            &QShortcut::activated, [this]() { toolbox.SetTool(Tool::Extrude); } );
-	connect(&slice,              &QShortcut::activated, [this]() { toolbox.SetTool(Tool::Slice); } );
-	connect(&lockX,              &QShortcut::activated, [this]() { toolbox.lock(1, 0); } );
-	connect(&lockY,              &QShortcut::activated, [this]() { toolbox.lock(0, 1); } );
-	connect(&enter,              &QShortcut::activated, [this]() {
+	connect(&escape,             &QShortcut::activated,  this, [this]() { toolbox.SetTool(Tool::None); } );
+	connect(&face,				 &QShortcut::activated, this, [this]() { toolbox.SetTool(Tool::Face); } );
+	connect(&create,             &QShortcut::activated,  this, [this]() { toolbox.SetTool(Tool::Create); } );
+//	connect(&duplicate,          &QShortcut::activated,  this, [this]() { document->Duplicate(ui->viewWidget->GetWorldPosition()); } );
+	connect(&translate,          &QShortcut::activated,  this, [this]() { toolbox.SetTool(Tool::Translate); } );
+	connect(&rotate,             &QShortcut::activated,  this, [this]() { toolbox.SetTool(Tool::Rotate); } );
+	connect(&scale,              &QShortcut::activated,  this, [this]() { toolbox.SetTool(Tool::Scale); } );
+	connect(&extrude,            &QShortcut::activated,  this, [this]() { toolbox.SetTool(Tool::Extrude); } );
+	connect(&slice,              &QShortcut::activated,  this, [this]() { toolbox.SetTool(Tool::Slice); } );
+	connect(&lockX,              &QShortcut::activated,  this, [this]() { toolbox.lock(1, 0); } );
+	connect(&lockY,              &QShortcut::activated,  this, [this]() { toolbox.lock(0, 1); } );
+	connect(&enter,              &QShortcut::activated,  this, [this]() {
 		toolbox.SetTool(Tool::Finish);
 	} );
 
-	connect(ui->debugTreeSymmetry,     &QAction::triggered, [this]() { DisplayString(document->m_metaroom.TestTreeSymmetry()); });
-	connect(ui->debugDoorSymmetry,     &QAction::triggered, [this]() { DisplayString(document->m_metaroom.TestDoorSymmetry()); });
-	connect(ui->debugSelectRoom,     &QAction::triggered, [this]() {
+	connect(ui->debugTreeSymmetry,     &QAction::triggered,  this, [this]() { DisplayString(document->m_metaroom.TestTreeSymmetry()); });
+	connect(ui->debugDoorSymmetry,     &QAction::triggered,  this, [this]() { DisplayString(document->m_metaroom.TestDoorSymmetry()); });
+	connect(ui->debugSelectRoom,     &QAction::triggered,  this, [this]() {
 		bool ok;
 		int text = QInputDialog::getInt(this, tr("Select Room By ID"),
 												tr("Room ID:"), 0, 0, document->m_metaroom.size(), 1, &ok);
 		if (ok)
 			document->m_metaroom.m_selection.select_face(text, Bitwise::SET);
 	});
-	connect(ui->debugDumpPermTable,  &QAction::triggered, [this]() { document->m_metaroom.DumpPermeabilityTable(); });
+	connect(ui->debugDumpPermTable,  &QAction::triggered,  this, [this]() { document->m_metaroom.DumpPermeabilityTable(); });
 
     connect(ui->viewChecker,     &QAction::triggered, ui->viewWidget, &GLViewWidget::need_repaint);
     connect(ui->viewHalls,       &QAction::triggered, ui->viewWidget, &GLViewWidget::need_repaint);
     connect(ui->viewLinks,       &QAction::triggered, ui->viewWidget, &GLViewWidget::need_repaint);
     connect(ui->viewRooms,       &QAction::triggered, ui->viewWidget, &GLViewWidget::need_repaint);
-    connect(ui->zoomActual,      &QAction::triggered, [this]()
+    connect(ui->zoomActual,      &QAction::triggered,  this, [this]()
 	{
 		SetZoom(.5f);
 	});
-    connect(ui->zoomIn,          &QAction::triggered, [this]()
+    connect(ui->zoomIn,          &QAction::triggered,  this, [this]()
 	{
 		SetZoom(m_zoom * 9.f/8.f);
 	});
-    connect(ui->zoomOut,         &QAction::triggered, [this]()
+    connect(ui->zoomOut,         &QAction::triggered,  this, [this]()
 	{
 		SetZoom(m_zoom * 7.f/8);
 	});
@@ -167,45 +168,45 @@ enter(Qt::Key_Z, this)
 #define QComboBoxChanged()  (void (QComboBox::*)(int)) &QComboBox::currentIndexChanged
 #define QSpinDialChanged()  (void (QDial::*)(double)) &QDial::valueChanged
 
-	connect(ui->room_music,         QComboBoxChanged(),      [this](int   value) { if(!updating_fields && value >= 0) document->SetRoomMusic(value); });
+	connect(ui->room_music,         QComboBoxChanged(),       this, [this](int   value) { if(!updating_fields && value >= 0) document->SetRoomMusic(value); });
 //	connect(ui->room_music->lineEdit(), &QLineEdit::editingFinished, this, &MainWindow::musicSet);
 
 	ui->room_music->lineEdit()->setMaxLength(24);
 
 #if HAVE_WALL_TYPE
-	connect(ui->door_type,          QComboBoxChanged(),      [this](int   value) { if(!updating_fields && value >= 0) document->SetDoorType(value); });
+	connect(ui->door_type,          QComboBoxChanged(),       this, [this](int   value) { if(!updating_fields && value >= 0) document->SetDoorType(value); });
 #endif
-	connect(ui->room_type,          QComboBoxChanged(),      [this](int   value) { if(!updating_fields && value >= 0) document->SetRoomType(value); });
+	connect(ui->room_type,          QComboBoxChanged(),       this, [this](int   value) { if(!updating_fields && value >= 0) document->SetRoomType(value); });
 
-    connect(ui->gravityStrength,    QDoubleSpinBoxChanged(), [this]() { if(!updating_fields) document->SetGravity((ui->gravityDir->value() + 900) * M_PI / 1800.f, ui->gravityStrength->value()); } );
-    connect(ui->gravityDir,         QSpinDialChanged(),		 [this]() { if(!updating_fields) document->SetGravity((ui->gravityDir->value() + 900) * M_PI / 1800.f, ui->gravityStrength->value()); } );
-	connect(ui->permeability,       QSpinBoxChanged(),       [this]() { if(!updating_fields) document->SetPermeability(ui->permeability->value()); } );
+    connect(ui->gravityStrength,    QDoubleSpinBoxChanged(),  this, [this]() { if(!updating_fields) document->SetGravity((ui->gravityDir->value() + 900) * M_PI / 1800.f, ui->gravityStrength->value()); } );
+    connect(ui->gravityDir,         QSpinDialChanged(),		  this, [this]() { if(!updating_fields) document->SetGravity((ui->gravityDir->value() + 900) * M_PI / 1800.f, ui->gravityStrength->value()); } );
+	connect(ui->permeability,       QSpinBoxChanged(),        this, [this]() { if(!updating_fields) document->SetPermeability(ui->permeability->value()); } );
 
-	connect(ui->shadeStrength,    QDoubleSpinBoxChanged(), [this]() { if(!updating_fields) document->SetShade((ui->shadeDir->value() + 900) * M_PI / 1800.f, ui->shadeStrength->value()); } );
-    connect(ui->shadeDir,         QSpinDialChanged(),		 [this]() { if(!updating_fields) document->SetShade((ui->shadeDir->value() + 900) * M_PI / 1800.f, ui->shadeStrength->value()); } );
-	connect(ui->ambientShade,    &QSlider::valueChanged, [this]() { if(!updating_fields) document->SetAmbientShade(ui->ambientShade->value()); } );
+	connect(ui->shadeStrength,    QDoubleSpinBoxChanged(),  this, [this]() { if(!updating_fields) document->SetShade((ui->shadeDir->value() + 900) * M_PI / 1800.f, ui->shadeStrength->value()); } );
+    connect(ui->shadeDir,         QSpinDialChanged(),		  this, [this]() { if(!updating_fields) document->SetShade((ui->shadeDir->value() + 900) * M_PI / 1800.f, ui->shadeStrength->value()); } );
+	connect(ui->ambientShade,    &QSlider::valueChanged,  this, [this]() { if(!updating_fields) document->SetAmbientShade(ui->ambientShade->value()); } );
 
-    connect(ui->audio0,         &QSlider::valueChanged,		 [this]() { if(!updating_fields) document->SetAudio(glm::u8vec4(ui->audio0->value(), ui->audio1->value(),ui->audio2->value(), ui->audio3->value())); } );
-	connect(ui->audio1,         &QSlider::valueChanged,		 [this]() { if(!updating_fields) document->SetAudio(glm::u8vec4(ui->audio0->value(), ui->audio1->value(),ui->audio2->value(), ui->audio3->value())); } );
-	connect(ui->audio2,         &QSlider::valueChanged,		 [this]() { if(!updating_fields) document->SetAudio(glm::u8vec4(ui->audio0->value(), ui->audio1->value(),ui->audio2->value(), ui->audio3->value())); } );
-	connect(ui->audio3,         &QSlider::valueChanged,		 [this]() { if(!updating_fields) document->SetAudio(glm::u8vec4(ui->audio0->value(), ui->audio1->value(),ui->audio2->value(), ui->audio3->value())); } );
+    connect(ui->audio0,         &QSlider::valueChanged,		  this, [this]() { if(!updating_fields) document->SetAudio(glm::u8vec4(ui->audio0->value(), ui->audio1->value(),ui->audio2->value(), ui->audio3->value())); } );
+	connect(ui->audio1,         &QSlider::valueChanged,		  this, [this]() { if(!updating_fields) document->SetAudio(glm::u8vec4(ui->audio0->value(), ui->audio1->value(),ui->audio2->value(), ui->audio3->value())); } );
+	connect(ui->audio2,         &QSlider::valueChanged,		  this, [this]() { if(!updating_fields) document->SetAudio(glm::u8vec4(ui->audio0->value(), ui->audio1->value(),ui->audio2->value(), ui->audio3->value())); } );
+	connect(ui->audio3,         &QSlider::valueChanged,		  this, [this]() { if(!updating_fields) document->SetAudio(glm::u8vec4(ui->audio0->value(), ui->audio1->value(),ui->audio2->value(), ui->audio3->value())); } );
 
 
 	/*
-	connect(ui->permeability,       QSpinBoxChanged(),       [this](int   value) { document->SetDoorValue(&DoorTypes::permeability, value); } );
-	connect(ui->friction,           QDoubleSpinBoxChanged(), [this](float value) { document->SetDoorValue(&DoorTypes::friction, value); } );
-	connect(ui->elasticity,         QDoubleSpinBoxChanged(), [this](float value) { document->SetDoorValue(&DoorTypes::elasticity, value); } );
-	connect(ui->dampening,          QDoubleSpinBoxChanged(), [this](float value) { document->SetDoorValue(&DoorTypes::dampening, value); } );
+	connect(ui->permeability,       QSpinBoxChanged(),        this, [this](int   value) { document->SetDoorValue(&DoorTypes::permeability, value); } );
+	connect(ui->friction,           QDoubleSpinBoxChanged(),  this, [this](float value) { document->SetDoorValue(&DoorTypes::friction, value); } );
+	connect(ui->elasticity,         QDoubleSpinBoxChanged(),  this, [this](float value) { document->SetDoorValue(&DoorTypes::elasticity, value); } );
+	connect(ui->dampening,          QDoubleSpinBoxChanged(),  this, [this](float value) { document->SetDoorValue(&DoorTypes::dampening, value); } );
 
-    connect(ui->thermal_baseline,   QDoubleSpinBoxChanged(), [this](float value) { document->SetDoorValue(&DoorTypes::thermal_baseline, value); } );
-	connect(ui->thermal_absorbtion, QDoubleSpinBoxChanged(), [this](float value) { document->SetDoorValue(&DoorTypes::thermal_absorbtion, value); } );
-	connect(ui->thermal_capacity,   QDoubleSpinBoxChanged(), [this](float value) { document->SetDoorValue(&DoorTypes::thermal_capacity, value); } );
-	connect(ui->thermal_loss_rate,  QDoubleSpinBoxChanged(), [this](float value) { document->SetDoorValue(&DoorTypes::thermal_loss_rate, value); } );
+    connect(ui->thermal_baseline,   QDoubleSpinBoxChanged(),  this, [this](float value) { document->SetDoorValue(&DoorTypes::thermal_baseline, value); } );
+	connect(ui->thermal_absorbtion, QDoubleSpinBoxChanged(),  this, [this](float value) { document->SetDoorValue(&DoorTypes::thermal_absorbtion, value); } );
+	connect(ui->thermal_capacity,   QDoubleSpinBoxChanged(),  this, [this](float value) { document->SetDoorValue(&DoorTypes::thermal_capacity, value); } );
+	connect(ui->thermal_loss_rate,  QDoubleSpinBoxChanged(),  this, [this](float value) { document->SetDoorValue(&DoorTypes::thermal_loss_rate, value); } );
 
-	connect(ui->water_baseline,     QDoubleSpinBoxChanged(), [this](float value) { document->SetDoorValue(&DoorTypes::water_baseline, value); } );
-	connect(ui->water_absorbtion,   QDoubleSpinBoxChanged(), [this](float value) { document->SetDoorValue(&DoorTypes::water_absorbtion, value); } );
-    connect(ui->water_capacity,     QDoubleSpinBoxChanged(), [this](float value) { document->SetDoorValue(&DoorTypes::water_capacity, value); } );
-    connect(ui->water_loss_rate,    QDoubleSpinBoxChanged(), [this](float value) { document->SetDoorValue(&DoorTypes::water_loss_rate, value); } );
+	connect(ui->water_baseline,     QDoubleSpinBoxChanged(),  this, [this](float value) { document->SetDoorValue(&DoorTypes::water_baseline, value); } );
+	connect(ui->water_absorbtion,   QDoubleSpinBoxChanged(),  this, [this](float value) { document->SetDoorValue(&DoorTypes::water_absorbtion, value); } );
+    connect(ui->water_capacity,     QDoubleSpinBoxChanged(),  this, [this](float value) { document->SetDoorValue(&DoorTypes::water_capacity, value); } );
+    connect(ui->water_loss_rate,    QDoubleSpinBoxChanged(),  this, [this](float value) { document->SetDoorValue(&DoorTypes::water_loss_rate, value); } );
 	*/
 
 /*
@@ -228,12 +229,14 @@ enter(Qt::Key_Z, this)
 	ui->layerRoughness->setActionGroup(group);
 	ui->layerDepth->setActionGroup(group);
 
-	connect(ui->layerBaseColor,  &QAction::toggled,		 [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget, BackgroundLayer::BaseColor); } );
-	connect(ui->layerOcclusion,  &QAction::toggled,		 [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget, BackgroundLayer::AmbientOcclusion); } );
-	connect(ui->layerNormals,    &QAction::toggled,		 [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget, BackgroundLayer::Normals); } );
-	connect(ui->layerRoughness,  &QAction::toggled,		 [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget, BackgroundLayer::MetallicRoughness); } );
-	connect(ui->layerDepth,      &QAction::toggled,		 [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget, BackgroundLayer::Depth); } );
+	connect(ui->layerBaseColor,  &QAction::toggled,		  this, [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget, BackgroundLayer::BaseColor); } );
+	connect(ui->layerOcclusion,  &QAction::toggled,		  this, [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget, BackgroundLayer::AmbientOcclusion); } );
+	connect(ui->layerNormals,    &QAction::toggled,		  this, [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget, BackgroundLayer::Normals); } );
+	connect(ui->layerRoughness,  &QAction::toggled,		  this, [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget, BackgroundLayer::MetallicRoughness); } );
+	connect(ui->layerDepth,      &QAction::toggled,		  this, [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget, BackgroundLayer::Depth); } );
 
+	default_page_step = ui->horizontalScrollBar->pageStep();
+	
 /*
 
 
@@ -638,8 +641,8 @@ const float g_MaxZoom = 2.f;
 	ui->zoomIn->setEnabled(m_zoom < g_MaxZoom);
 	ui->zoomOut->setEnabled(m_zoom > g_MinZoom);
 
-	ui->horizontalScrollBar->setPageStep(m_zoom*64);
-	ui->verticalScrollBar->setPageStep(m_zoom*64);
+	ui->horizontalScrollBar->setPageStep(default_page_step / m_zoom);
+	ui->verticalScrollBar->setPageStep(default_page_step /m_zoom);
 
 	ui->viewWidget->need_repaint();
 

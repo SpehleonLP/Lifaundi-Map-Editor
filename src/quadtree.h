@@ -75,6 +75,7 @@ public:
 
 	static std::vector<Node> CreateNodes(glm::i16vec4 bounds, glm::i16vec4 const* boxes, uint32_t size);
 
+	glm::vec4 GetDimensions() const { return m_nodes? glm::vec4(m_nodes[0].min,m_nodes[0].max) : glm::vec4(0); }
 	void ReadTree(std::ifstream & fp);
 	void WriteTree(std::ofstream & fp);
 

@@ -56,6 +56,7 @@ private:
 	bool       m_canvasDrag{false};
 	glm::vec2  m_scrollPos{0,0};
 	glm::vec2  m_screenPos{0,0};
+	glm::vec2  m_mouseWorldPosition;
 };
 
 #define glAssert() displayOpenGlError(__FILE__, __FUNCTION__, __LINE__);

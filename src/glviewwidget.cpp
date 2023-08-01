@@ -3,6 +3,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "Shaders/defaultvaos.h"
+#include "Shaders/mouseshader.h"
 #include "Shaders/transparencyshader.h"
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -33,6 +34,7 @@ GLViewWidget::GLViewWidget(QWidget * p) :
 	timer(this)
 {
 	TransparencyShader::Shader.AddRef();
+	MouseShader::Shader.AddRef();
 
 	timer.setSingleShot(false);
 	timer.setInterval(20);
@@ -44,6 +46,7 @@ GLViewWidget::~GLViewWidget()
 	glAssert();
 	glDeleteTextures(1, &permeabilities);
     TransparencyShader::Shader.Release(this);
+	MouseShader::Shader.Release(this);
 }
 
 glm::vec2 GLViewWidget::GetScreenPosition(QMouseEvent * event)
@@ -133,7 +136,9 @@ void GLViewWidget::initializeGL()
 
 void GLViewWidget::mouseMoveEvent(QMouseEvent * event)
 {
-	w->SetStatusBarMessage(GetWorldPosition(event));
+	m_mouseWorldPosition = GetWorldPosition(event);
+	
+	w->SetStatusBarMessage(m_mouseWorldPosition);
 
 	if(m_canvasDrag && w && w->document)
 	{
@@ -149,13 +154,15 @@ void GLViewWidget::mouseMoveEvent(QMouseEvent * event)
 
 	super::mouseMoveEvent(event);
 
-    if(w->toolbox.OnMouseMove(GetWorldPosition(event), GetFlags(event)))
+    if(w->toolbox.OnMouseMove(m_mouseWorldPosition, GetFlags(event)))
 		need_repaint();
 }
 
 
 void GLViewWidget::mousePressEvent(QMouseEvent * event)
 {
+	m_mouseWorldPosition = GetWorldPosition(event);
+	
 	if((event->button() & Qt::MiddleButton)
 	&& w->document != nullptr)
 	{
@@ -168,7 +175,7 @@ void GLViewWidget::mousePressEvent(QMouseEvent * event)
 		super::mousePressEvent(event);
 	else
 	{
-        if(w->toolbox.OnLeftDown(GetWorldPosition(event), GetFlags(event), (event->modifiers() & Qt::AltModifier)))
+        if(w->toolbox.OnLeftDown(m_mouseWorldPosition, GetFlags(event), (event->modifiers() & Qt::AltModifier)))
 			need_repaint();
 
 		if(w->toolbox.HaveTool() == false)
@@ -181,6 +188,8 @@ void GLViewWidget::mousePressEvent(QMouseEvent * event)
 
 void GLViewWidget::mouseReleaseEvent(QMouseEvent * event)
 {
+	m_mouseWorldPosition = GetWorldPosition(event);
+	
 	if((event->button() & Qt::MiddleButton))
 	{
 		m_canvasDrag  = false;
@@ -190,7 +199,7 @@ void GLViewWidget::mouseReleaseEvent(QMouseEvent * event)
 		super::mouseReleaseEvent(event);
 	else
 	{
-        if(w->toolbox.OnLeftUp(GetWorldPosition(event), GetFlags(event), (event->modifiers() & Qt::AltModifier)))
+        if(w->toolbox.OnLeftUp(m_mouseWorldPosition, GetFlags(event), (event->modifiers() & Qt::AltModifier)))
 			need_repaint();
 
         if(w->toolbox.HaveTool() == false)
@@ -203,11 +212,13 @@ void GLViewWidget::mouseReleaseEvent(QMouseEvent * event)
 
 void GLViewWidget::mouseDoubleClickEvent(QMouseEvent * event)
 {
+	m_mouseWorldPosition = GetWorldPosition(event);
+	
 	if((event->button() & Qt::LeftButton) == false)
 		super::mouseDoubleClickEvent(event);
 	else
 	{
-        if(w->toolbox.OnDoubleClick(GetWorldPosition(event), GetFlags(event)))
+        if(w->toolbox.OnDoubleClick(m_mouseWorldPosition, GetFlags(event)))
 			need_repaint();
 
 		if(w->toolbox.HaveTool() == false)
@@ -339,10 +350,10 @@ void GLViewWidget::paintGL()
 		(float)+1);
 
 	auto window_pos = mapToGlobal(QPoint());
-
+	
 	mat.u_camera = glm::mat4(1);
-	mat.u_camera = glm::translate(mat.u_camera, glm::vec3(-w->document->GetScreenCenter(), 0));
     mat.u_camera = glm::scale(mat.u_camera, glm::vec3(w->GetZoom()));
+	mat.u_camera[3] =   mat.u_camera * glm::vec4(-w->document->GetScreenCenter(), 0, 1);
 
 	mat.u_screenSize = glm::ivec4(width, height, window_pos.x(), window_pos.y());
 
@@ -362,11 +373,17 @@ void GLViewWidget::paintGL()
 	glDefaultVAOs::BindVAO(this);
 	glDefaultVAOs::RenderSquare(this);
 
-
     w->document->RenderBackground(this);
     w->document->m_metaroom.Render(this, -1);
 
     w->toolbox.Render(this);
+	
+//	auto center = glm::vec4(w->document->GetScreenCenter(), 0, 1);
+//	auto transformed = mat.u_camera * center;
+	
+	MouseShader::Shader.Render(this, GetWorldPosition());
+	MouseShader::Shader.Render(this, w->document->GetScreenCenter(), 5, glm::vec4(0, 1, 0, 1));
+	
     glAssert();
 }
 

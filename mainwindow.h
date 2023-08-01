@@ -124,6 +124,8 @@ friend class Document;
 	bool updating_fields{false};
 	bool m_asterisk{false};
 	bool m_haveMessage{false};
+	
+	float default_page_step{64};
 
 	QShortcut escape;
 
