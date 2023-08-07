@@ -238,6 +238,12 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 
 uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 {
+	std::vector<QuadTree::DoorList> door_indices;
+	std::vector<QuadTree::Door>     door_list;
+
+    m_tree.GetWriteDoors(door_list, door_indices);
+	assert(door_indices.size() == size()*4);
+	
 	uint32_t offset = fp.tellp();
 
 	auto tracks = window->GetTrackList(&m_music[0], size());
@@ -273,12 +279,6 @@ uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 		fp.write((char*)&length, 1);
 		fp.write((char*)&tracks[i][0], length);
 	}
-
-	std::vector<QuadTree::DoorList> door_indices;
-	std::vector<QuadTree::Door>     door_list;
-
-    m_tree.GetWriteDoors(door_list, door_indices);
-	assert(door_indices.size() == size()*4);
 
 	fp.write((char*)&door_indices[0], sizeof(QuadTree::DoorList) * door_indices.size());
 	fp.write((char*)&door_list[0], sizeof(QuadTree::Door) * door_list.size());
@@ -862,7 +862,7 @@ void Metaroom::Prepare(GLViewWidget* gl)
 
 			std::pair<float, int> begin, end;
 
-			if(math::GetOverlap(a0, a1-a0, b0, b1, &begin, &end))
+			if(math::GetOverlap(a0, a1, b0, b1, &begin, &end))
 			{
 				float avg = (begin.first + end.first) * .5f;
 

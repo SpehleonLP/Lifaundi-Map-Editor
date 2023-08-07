@@ -59,35 +59,27 @@ namespace math
 	}
 
 	template<typename T, glm::qualifier Q=glm::highp>
-	bool GetOverlap(glm::vec<2, T, Q> a0, glm::vec<2, T, Q> vec_a, glm::vec<2, T, Q> b0, glm::vec<2, T, Q> b1, std::pair<float, int> * begin, std::pair<float, int> * end)
+	bool GetOverlap(glm::vec<2, T, Q> a0, glm::vec<2, T, Q> a1, glm::vec<2, T, Q> b0, glm::vec<2, T, Q> b1, std::pair<float, int> * begin, std::pair<float, int> * end)
 	{
-		std::pair<float, int> t[4];
-
-		t[0] = std::make_pair(0.f, 0);
-		t[1] = std::make_pair(1.f, 1);
-
-		if(std::fabs(vec_a.x) < std::fabs(vec_a.y))
-		{
-			t[2] = std::make_pair((b0.y - a0.y) / (float) vec_a.y, 2);
-			t[3] = std::make_pair((b1.y - a0.y) / (float) vec_a.y, 3);
-		}
-		else
-		{
-			t[2] = std::make_pair((b0.x  - a0.x) / (float) vec_a.x, 2);
-			t[3] = std::make_pair((b1.x  - a0.x) / (float) vec_a.x, 3);
-		}
-
-		//check that we really overlap...
-		if((t[2].first >= 1.f && t[3].first >= 1.f)
-		|| (t[2].first <= 0.f && t[3].first <= 0.f))
+		glm::vec2 ray = a1 - a0;
+		auto length = glm::length(ray);
+		
+		if(length == 0)
 			return false;
+		
+		ray = ray / length;
+		
+		float b_0 = glm::dot(glm::vec2(b0 - a0), ray) / length;
+		float b_1 = glm::dot(glm::vec2(b1 - a0), ray) / length;
 
-		std::sort(&t[0], &t[4], [](std::pair<float, int> const& b0, std::pair<float, int> const& b1) { return b0.first < b1.first; } );
-
-		*begin = t[1];
-		*end   = t[2];
-
-		return true;
+		if(b_0 < b_1) 
+			throw std::runtime_error("room winding order wrong");
+		
+		*begin = b_1 < 0? std::make_pair(0.f, 0) : std::make_pair(b_1, 2);		
+		*end   = b_0 > 1? std::make_pair(1.f, 1) : std::make_pair(b_0, 3);
+		
+		//check that we really overlap...
+		return (0.0f <= b_0 && b_1 <= 1.0f) && begin->first != end->first;
 	}
 
 	template<typename T, glm::qualifier Q=glm::highp>

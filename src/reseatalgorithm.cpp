@@ -56,7 +56,7 @@ std::vector<int> Reseat(Metaroom * metaroom, std::vector<int> && selection)
 
 				if(math::IsOpposite(a1-a0, v1-v0) == false
 				|| math::IsColinear(v0, v1, a0, a1) == false
-				|| math::GetOverlap(v0, v1-v0, a0, a1, &begin, &end) == false)
+				|| math::GetOverlap(v0, v1, a0, a1, &begin, &end) == false)
 					continue;
 
 				const auto vec     = glm::vec2(v1 - v0) * (begin.first - end.first);

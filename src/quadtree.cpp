@@ -252,7 +252,7 @@ bool QuadTree::HasFullOverlap(int v)
 
 	while(range.popFront())
 	{
-		if(math::GetOverlap(range.v0, range.v1-range.v0, range.a0, range.a1, &begin, &end))
+		if(math::GetOverlap(range.v0, range.v1, range.a0, range.a1, &begin, &end))
 		{
 			coverage += (end.first - begin.first);
 		}
@@ -395,7 +395,7 @@ void QuadTree::GetWriteDoors(std::vector<Door> & doors, std::vector<DoorList> & 
 				solid = false;
 			}
 		}
-
+		
 		indices[i].min_perm = min_perm;
 		indices[i].max_perm = max_perm;
 		indices[i].length = info.size();
@@ -486,7 +486,7 @@ std::vector<uint8_t> QuadTree::GetEdgeFlags()
 }
 
 void QuadTree::GetWriteDoors(int edge, std::stack<int> & stack, std::vector<DoorInfo> & edges, int typeId)
-{
+{	
 	if(IsDirty()) Rebuild();
 
 	//if(typeId >= 0 && m_metaroom->m_doorType[edge] != typeId) return;
@@ -501,9 +501,10 @@ void QuadTree::GetWriteDoors(int edge, std::stack<int> & stack, std::vector<Door
 
 //determine how far each thing is from an axis or whatever.
 		std::pair<float, int> begin, end;
-
-		if(math::GetOverlap(range.v0, range.vec(), range.a0, range.a1, &begin, &end))
+		
+		if(math::GetOverlap(range.v0, range.v1, range.a0, range.a1, &begin, &end))
 		{
+			
 //convert into an edge struct
 			DoorInfo info;
 			info.begin = begin.first;
@@ -514,8 +515,22 @@ void QuadTree::GetWriteDoors(int edge, std::stack<int> & stack, std::vector<Door
 			edges.push_back(info);
 		}
 	}
-
-	std::sort(edges.begin(), edges.end(), [](DoorInfo const& b0, DoorInfo const& b1) { return b0.end < b1.end; } );
+	
+	if(edges.size() > 1)
+	{
+		std::sort(edges.begin(), edges.end(), [](DoorInfo const& b0, DoorInfo const& b1) { return b0.end < b1.end; } );
+		
+		for(auto i = 0u; i < edges.size(); ++i)
+		{
+			assert(edges[i].begin != edges[i].end);	
+		}
+		
+// check not <=		
+		for(auto i = 1u; i < edges.size(); ++i)
+		{
+			assert(edges[i-1].end < edges[i].end);	
+		}
+	}
 }
 
 std::vector<QuadTree::EdgeVertex> QuadTree::GetRenderWalls()
@@ -549,7 +564,7 @@ void QuadTree::GetRenderWalls(int edge, std::vector<EdgeVertex> & edges) const
 //determine how far each thing is from an axis or whatever.
 		std::pair<float, int> begin, end;
 
-		if(math::GetOverlap(range.v0, range.vec(), range.a0, range.a1, &begin, &end))
+		if(math::GetOverlap(range.v0, range.v1, range.a0, range.a1, &begin, &end))
 		{
 			e.permeability = m_metaroom->GetPermeability(edge/4, range.face());
 
