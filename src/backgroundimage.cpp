@@ -16,7 +16,7 @@
 
 const uint32_t BackgroundImage::g_ImageFormat[NoLayers] =
 {
-	GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT,	//basecolor
+	GL_COMPRESSED_RGBA_S3TC_DXT1_EXT,	//basecolor
 	GL_COMPRESSED_RG_RGTC2,	//roughness
 	GL_COMPRESSED_RG_RGTC2,	//normal
 	GL_COMPRESSED_RED_RGTC1,//occlusion
