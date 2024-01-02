@@ -1,5 +1,6 @@
 #ifndef COMMANDLIST_H
 #define COMMANDLIST_H
+#include "Spehleon/lib/Support/shared_array.hpp"
 #include "clipboard.h"
 #include <glm/vec2.hpp>
 #include <vector>
@@ -30,14 +31,16 @@ public:
 
 private:
 	Metaroom                    * metaroom;
-	std::unique_ptr<glm::ivec2[]> verts;
-	std::vector<int>              indices;
+	shared_array<glm::ivec2>	verts;
+	std::vector<uint32_t>              indices;
+
+	std::vector<std::pair<uint64_t, float>> _permDelta;
 };
 
 class DeleteCommand : public CommandInterface
 {
 public:
-	DeleteCommand(Document * document, std::vector<int> && selection);
+	DeleteCommand(Document * document, std::vector<uint32_t> && selection);
 	virtual ~DeleteCommand() = default;
 
 	void RollForward();
@@ -46,7 +49,9 @@ public:
 private:
 	Metaroom          * metaroom;
 	std::vector<Room>   rooms;
-	std::vector<int>    indices;
+	std::vector<uint32_t>    indices;
+
+	std::vector<std::pair<uint64_t, float>> _permDelta;
 };
 
 class InsertCommand : public CommandInterface
@@ -61,7 +66,7 @@ public:
 private:
 	Metaroom          * metaroom;
 	std::vector<Room>   rooms;
-	int                 first;
+	std::vector<uint32_t>    indices;
 };
 
 class SliceCommand : public CommandInterface
@@ -76,22 +81,24 @@ public:
 private:
 	Metaroom *                    metaroom;
 	std::vector<SliceInfo>        slice;
-	uint32_t                      first{};
+	std::vector<uint32_t>		  indices;
 };
 
 class ReorderCommand : public CommandInterface
 {
 public:
-	ReorderCommand(Document * document, std::vector<int> && ordering);
+	ReorderCommand(Document * document, std::vector<uint32_t> && ordering);
 	virtual ~ReorderCommand() = default;
 
 	void RollForward();
 	void RollBack();
 
 private:
-	Metaroom *                    metaroom;
-	std::vector<int>              indices;
-	uint32_t                      first{};
+	Metaroom *                   metaroom;
+	std::vector<uint32_t>        indices;
+	std::vector<uint32_t>		 new_indices;
+
+	std::vector<Room>			original_rooms;
 };
 
 class PermeabilityCommand : public CommandInterface
@@ -107,10 +114,6 @@ public:
 	void SetValue(int);
 
 private:
-	void InsertOriginalValues();
-	void InsertNewValues();
-	void RemoveDoubles();
-
 	Metaroom *                                 metaroom;
 	uint32_t                                   length;
 	uint8_t                                    permeability;
@@ -132,13 +135,13 @@ public:
 		Audio,
 	};
 
-	SettingCommand(Document * document, std::vector<int> && list, uint32_t value, Type type);
+	SettingCommand(Document * document, std::vector<uint32_t> && list, uint32_t value, Type type);
 	virtual ~SettingCommand() = default;
 
 	void RollForward();
 	void RollBack();
 
-	bool IsSelection(std::vector<int> const& list) const { return list == indices; }
+	bool IsSelection(std::vector<uint32_t> const& list) const { return list == indices; }
 	bool IsType(Type value) const { return type == value; }
 	void SetValue(uint32_t it)
 	{
@@ -150,7 +153,7 @@ private:
 
 	Metaroom                  * metaroom;
 	std::unique_ptr<uint32_t[]> prev_values;
-	std::vector<int>            indices;
+	std::vector<uint32_t>       indices;
 
 	uint32_t                value;
 	Type                    type;
@@ -173,22 +176,22 @@ public:
 		Audio,
 	};
 
-	static std::unique_ptr<CommandInterface> GravityCommand(Document * document, std::vector<int> && list, float value, Type type);
-	static std::unique_ptr<CommandInterface> ShadeCommand(Document * document, std::vector<int> && list, float value, Type type);
-	DifferentialSetCommmand(Document * document, std::vector<int> && list, std::vector<uint32_t> && value, Type type);
+	static std::unique_ptr<CommandInterface> GravityCommand(Document * document, std::vector<uint32_t> && list, float value, Type type);
+	static std::unique_ptr<CommandInterface> ShadeCommand(Document * document, std::vector<uint32_t> && list, float value, Type type);
+	DifferentialSetCommmand(Document * document, std::vector<uint32_t> && list, std::vector<uint32_t> && value, Type type);
 	virtual ~DifferentialSetCommmand() = default;
 
 	void RollForward();
 	void RollBack();
 
-	bool IsSelection(std::vector<int> const& list) const { return list == indices; }
+	bool IsSelection(std::vector<uint32_t> const& list) const { return list == indices; }
 	bool IsType(Type value) const { return type == value; }
 
 private:
 	Metaroom                  * metaroom;
 	std::unique_ptr<uint32_t[]> prev_values;
 	std::vector<uint32_t>		new_values;
-	std::vector<int>            indices;
+	std::vector<uint32_t>            indices;
 
 	Type                    type;
 };

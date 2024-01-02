@@ -33,13 +33,13 @@ m_pixels(new Pixel[size()])
 std::vector<int> MVSF_sampler::GetSamplingRooms(Metaroom * metaroom)
 {
 	std::vector<int> r;
-	r.reserve(metaroom->size()/4);
+	r.reserve(metaroom->noFaces());
 
-	for(uint32_t i = 0; i < metaroom->size(); ++i)
+	for(auto i : metaroom->range())
 	{
 		for(uint32_t j = 0; j < 4; ++j)
 		{
-			if(!metaroom->m_tree.HasFullOverlap(i*4 + j))
+			if(!metaroom->_tree.HasFullOverlap(i*4 + j))
 			{
 				r.push_back(i);
 				break;
@@ -56,7 +56,7 @@ void MVSF_sampler::AssignInternalRoomIds()
 	glm::i16vec2 min, max;
 	glm::i16vec2 offset(m_bounds.x, m_bounds.y);
 
-	for(uint32_t i = 0; i < m_metaroom->size(); ++i)
+	for(auto i : m_metaroom->range())
 	{
 		m_metaroom->GetFaceAABB(i, min, max);
 
@@ -83,7 +83,7 @@ void MVSF_sampler::AssignInternalRoomIds()
 
 std::vector<glm::i16vec4> MVSF_sampler::GetBoundingBoxes() const
 {
-	std::vector<glm::i16vec4> r(m_metaroom->size());
+	std::vector<glm::i16vec4> r(m_metaroom->noFaces());
 
 	for(uint32_t i = 0; i < r.size(); ++i)
 		r[i] = GetBoundingBox(i);
@@ -178,7 +178,7 @@ void MVSF_sampler::PerformSampling()
 
 				int i = rooms[j];
 
-				uint32_t distance2 = GetDistanceSquaredToRoom(point, &m_metaroom->m_verts[i*4]);
+				uint32_t distance2 = GetDistanceSquaredToRoom(point, &m_metaroom->_verts[i][0]);
 
 				if(distance2 < m_pixels[y*m_size.x + x].length2)
 				{

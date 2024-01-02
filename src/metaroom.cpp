@@ -5,105 +5,29 @@
 #include "glviewwidget.h"
 #include "roomrange.h"
 #include "edgerange.h"
-#include "Shaders/roomoutlineshader.h"
-#include "Shaders/selectedroomshader.h"
-#include "Shaders/arrowshader.h"
 #include "color_rooms.h"
 #include "clipboard.h"
 #include <glm/glm.hpp>
 #include <iostream>
 #include <fstream>
 #include <cstring>
+#include <loguru.hpp>
 
 template<typename T>
-static std::unique_ptr<T[]> Realloc(std::unique_ptr<T[]> const& array, uint32_t size, uint32_t new_size, int mul)
+void * memcpy_s(T * dst, T const* src, size_t items = 1)
 {
-	std::unique_ptr<T[]> r(new T[new_size*mul]);
-	memcpy(&r[0], &array[0], mul * size * sizeof(T));
-	return r;
-}
-
-template<typename T>
-static void MemMove(std::unique_ptr<T[]> & array, uint32_t i, uint32_t size, int mul)
-{
-	memmove(&array[mul*i], &array[mul*(i+1)], mul * (size-(i+1)) * sizeof(T));
-}
-
-template<typename T>
-static void RemoveStuff(std::unique_ptr<T[]> & array, uint32_t size, std::vector<int> const& vec, int mul)
-{
-	uint32_t read = 0, write = 0;
-
-	for(int i : vec)
-	{
-		assert(read < size);
-
-		uint32_t copy_length = i - read;
-
-		if(copy_length == 0)
-		{
-			++read;
-			continue;
-		}
-
-		memmove(&array[mul*write], &array[mul*read], mul * copy_length * sizeof(T));
-
-		read  += copy_length+1;
-		write += copy_length;
-	}
-
-	assert((read - write) == vec.size());
-
-	uint32_t copy_length = size - read;
-
-	if(copy_length > 0)
-	{
-		memmove(&array[mul*write], &array[mul*read], mul * copy_length * sizeof(T));
-	}
-
-}
-
-template<typename T>
-static void ExpandStuff(std::unique_ptr<T[]> & array, int size, std::vector<int> const& vec, int mul)
-{
-	for(int i = vec.size()-1; i >= 0; --i)
-	{
-		int src = vec[i] - i;
-		int dst = vec[i] + 1;
-
-		if(size - dst > 0)
-		{
-			memmove(&array[mul*dst], &array[mul*src], mul * (size - dst) * sizeof(T));
-		}
-
-		size = dst;
-	}
+	return memcpy(dst, src, sizeof(*src)*items);
 }
 
 Metaroom::Metaroom(Document * document) :
 	document(document)
 {
-	RoomOutlineShader::Shader.AddRef();
-	SelectedRoomShader::Shader.AddRef();
-	ArrowShader::Shader.AddRef();
 }
 
 Metaroom::~Metaroom()
 {
 }
 
-void Metaroom::Release(GLViewWidget *gl)
-{
-	gl->glAssert();
-    m_indices.Release(gl);
-    m_selection.Release(gl);
-    RoomOutlineShader::Shader.Release(gl);
-    SelectedRoomShader::Shader.Release(gl);
-    ArrowShader::Shader.Release(gl);
-
-    gl->glDeleteVertexArrays(NoArrays, m_vao);
-    gl->glDeleteBuffers(NoBuffers, m_buffers);
-}
 void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 {
 	char buffer[4];
@@ -135,52 +59,46 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 
 	AddFaces(no_faces);
 
-	if(size() == 0)
+	if(_entitySystem.used() == 0)
 		return;
 
-	assert(faces == no_faces);
+	assert(_entitySystem.used() == no_faces);
 
-	std::vector<glm::i16vec2> vec(size()*4);
+	std::vector<glm::i16vec2> vec(no_faces*4);
 
 	fp.read((char*)&vec[0], sizeof(vec[0]) * vec.size());
 
 	if(version <= 2)
 	{
-        for(uint32_t i = 0; i <	vec.size(); ++i)
+		for(uint32_t i = 0; i <	vec.size(); ++i)
 		{
 			vec[i] = glm::ivec2((glm::u16vec2&)vec[i]) - glm::ivec2(width, height)/2;
 		}
 	}
 
 
-	fp.read((char*)&m_gravity[0],  4* size());
-	fp.read((char*)&m_roomType[0], 1* size());
+	fp.read((char*)&_gravity[0],  4* no_faces);
+	fp.read((char*)&_roomType[0], 1* no_faces);
 
 	if(version < 5)
 	{
-		fp.seekg(4 * size(), std::ios_base::cur);
+		fp.seekg(4 * no_faces, std::ios_base::cur);
 	}
 
-	fp.read((char*)&m_music[0], 1* size());
+	fp.read((char*)&_music[0], 1* no_faces);
 
 	if(version >= 5)
 	{
-		fp.read((char*)&m_directionalShade[0], 4 * size());
-		fp.read((char*)&m_ambientShade[0], size());
-		fp.read((char*)&m_audio[0], 4 * size());
+		fp.read((char*)&_directionalShade[0], 4 * no_faces);
+		fp.read((char*)&_ambientShade[0], no_faces);
+		fp.read((char*)&_audio[0], 4 * no_faces);
 	}
 	else
 	{
-		memset(&m_directionalShade[0], 0, 4 * size());
-		memset(&m_ambientShade[0], 0, 4 * size());
-		memset(&m_audio[0], 0, 4 * size());
+		memset(&_directionalShade[0], 0, 4 * no_faces);
+		memset(&_ambientShade[0], 0, 4 * no_faces);
+		memset(&_audio[0], 0, 4 * no_faces);
 	}
-
-#if HAVE_UUID
-	for(uint i = 0; i < size(); ++i)
-		m_uuid[i] = m_uuid_counter + i;
-	m_uuid_counter += size();
-#endif
 
 	if(version <= 3)
 	{
@@ -203,12 +121,12 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 	}
 
 	RestoreVerts(vec);
-	m_selection.clear();
+	_selection.clear();
 
 	std::vector<QuadTree::DoorList> door_indices;
 	std::vector<QuadTree::Door>     door_list;
 //read permeability info
-	door_indices.resize(size()*4);
+	door_indices.resize(no_faces*4);
 	fp.read((char*)&door_indices[0], sizeof(QuadTree::DoorList) * door_indices.size());
 
 	door_list.resize(door_indices.back().index + door_indices.back().length);
@@ -222,16 +140,15 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 
 		for(auto i = begin; i < end; ++i)
 		{
-			if(0 <= i->perm && i->perm < 100 && index < i->face && i->face < (int)size())
+			if(0 <= i->perm && i->perm < 100 && index < i->face && i->face < (int)no_faces)
 			{
-				m_permeabilities.push_back(std::make_pair<uint64_t, uint8_t>
-					(GetDoorKey(index, i->face), i->perm));
+				_permeabilities[GetDoorKey(index, i->face)] = i->perm;
 			}
 		}
 	}
 
 	if(version >= 4)
-		m_tree.ReadTree(fp);
+		_tree.ReadTree(fp);
 
 	PruneDegenerate();
 }
@@ -241,12 +158,16 @@ uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 	std::vector<QuadTree::DoorList> door_indices;
 	std::vector<QuadTree::Door>     door_list;
 
-    m_tree.GetWriteDoors(door_list, door_indices);
-	assert(door_indices.size() == size()*4);
+	auto mta = CRUSH();
+
+	auto no_faces = _entitySystem.used();
+
+	mta._tree.GetWriteDoors(door_list, door_indices);
+	assert(door_indices.size() == no_faces*4);
 	
 	uint32_t offset = fp.tellp();
 
-	auto tracks = window->GetTrackList(&m_music[0], size());
+	auto tracks = window->GetTrackList(&_music[0], no_faces);
 
 	const char * title = "lfmp";
 
@@ -256,22 +177,33 @@ uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 	fp.write(title, 4);
 	fp.write((char*)&version, 2);
 	fp.write((char*)&no_tracks, 2);
-	fp.write((char*)&faces, 4);
+	fp.write((char*)&no_faces, 4);
 
 	glm::i16vec4 bounds = GetBoundingBox();
 
 	fp.write((char*)&bounds, sizeof(bounds));
 
-	auto verts = SaveVerts();
+	auto verts = [&mta]()
+	{
+		std::vector<glm::i16vec2> r(mta.noEdges());
 
-	fp.write((char*)&verts[0], sizeof(verts[0]) * verts.size());
-	fp.write((char*)&m_gravity[0],  4 * size());
-	fp.write((char*)&m_roomType[0], 1 * size());
-	fp.write((char*)&m_music[0],    1 * size());
+		for(auto i : mta.edgeRange())
+		{
+			r[i] = mta.verts(i);
+		}
 
-	fp.write((char*)&m_directionalShade[0], 4 * size());
-	fp.write((char*)&m_ambientShade[0], size());
-	fp.write((char*)&m_audio[0], 4 * size());
+		return r;
+	}();
+
+	fp.write((char*)&mta.verts[0], sizeof(verts[0]) * verts.size());
+	fp.write((char*)&mta._gravity[0],  4 * no_faces);
+	fp.write((char*)&mta._roomType[0], 1 * no_faces);
+	fp.write((char*)&mta._music[0],    1 * no_faces);
+
+	fp.write((char*)&mta._directionalShade[0], 4 * no_faces);
+	fp.write((char*)&mta._ambientShade[0], no_faces);
+	fp.write((char*)&mta._audio[0], 4 * no_faces);
+
 
 	for(uint32_t i = 0; i < tracks.size();++i)
 	{
@@ -283,9 +215,9 @@ uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 	fp.write((char*)&door_indices[0], sizeof(QuadTree::DoorList) * door_indices.size());
 	fp.write((char*)&door_list[0], sizeof(QuadTree::Door) * door_list.size());
 
-	m_tree.WriteTree(fp);
+	mta._tree.WriteTree(fp);
 
-	ColorRooms color(door_list, door_indices, m_tree.GetEdgeFlags());
+	ColorRooms color(door_list, door_indices, mta._tree.GetEdgeFlags());
 	color.DoColoring();
 
 	auto const& coloring = color.GetColoring();
@@ -297,122 +229,69 @@ uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 	return offset;
 }
 
-int Metaroom::Insert(std::vector<Room> const& list)
+std::vector<uint32_t> Metaroom::Insert(std::vector<Room> const& list)
 {
-	int first = AddFaces(list.size());
+	auto faces = AddFaces(list.size());
 
-	for(size_t i = 0; i < list.size(); ++i)
-		SetRoom(first+i, list[i]);
+	for(auto i : faces)
+		SetRoom(i, list[i]);
 
-	m_selection.clear();
+	_selection.clear();
 
-	for(uint32_t i = first; i < faces; ++i)
+	for(auto i : faces)
 	{
-		m_selection.select_face(i, Bitwise::SET);
+		_selection.select_face(i, Bitwise::SET);
 	}
 
 	CommitMove();
 
-	return first;
-}
-
-void Metaroom::SetRoom(int index, Room const& room)
-{
-	m_roomType[index]		= room.type;
-	m_gravity[index]		= room.gravity;
-	m_music[index]			= room.music_track;
-
-	m_directionalShade[index]	= room.directionalShade;
-	m_ambientShade[index]		= room.ambientShade;
-	m_audio[index]				= room.audio;
-
-	for(int j = 0; j < 4; ++j)
-		m_verts[index*4+j] = room.verts[j];
+	return faces;
 }
 
 
-void  Metaroom::CopyRoom(int dst, int src)
+void Metaroom::Insert(std::vector<Room> const& list, std::vector<uint32_t> const& indices)
 {
-	if(dst == src) return;
-
-	m_roomType[dst]		= m_roomType[src];
-	m_gravity[dst]		= m_gravity[src];
-	m_music[dst]		= m_music[src];
-
-	m_directionalShade[dst] = m_directionalShade[src];
-	m_ambientShade[dst] = m_ambientShade[src];
-	m_audio[dst] = m_audio[src];
-
-	for(int j = 0; j < 4; ++j)
-		m_verts[dst*4 + j] = m_verts[src*4 + j];
-}
-
-void Metaroom::Insert(std::vector<Room> const& list, std::vector<int> const& indices)
-{
-	Expand(indices);
+	for(auto i : indices)
+		_entitySystem.GetEntity(i);
 
     for(uint32_t i = 0; i < list.size(); ++i)
 		SetRoom(indices[i], list[i]);
 
-	m_selection.clear();
+	_selection.clear();
 
 	for(int i : indices)
-		m_selection.select_face(i, Bitwise::SET);
+		_selection.select_face(i, Bitwise::SET);
 
 	CommitMove();
 }
 
-
-
-glm::i16vec4 Metaroom::GetBoundingBox() const
+std::vector<uint32_t> Metaroom::Slice(std::vector<SliceInfo> & slice)
 {
-	if(faces == 0)
-		return glm::i16vec4(0, 0, 0, 0);
-
-	glm::ivec2 min{m_verts[0]};
-	glm::ivec2 max{m_verts[0]};
-
-	for(uint32_t i = 1; i < faces*4; ++i)
-	{
-		min = glm::min(min, m_verts[i]);
-		max = glm::max(max, m_verts[i]);
-	}
-
-	return glm::i16vec4(min, max);
-}
-
-int Metaroom::Slice(std::vector<SliceInfo> & slice)
-{
-	std::vector<int> face_list;
+	std::vector<uint32_t> face_list;
 	face_list.reserve(slice.size()/2);
 
 	for(size_t i = 0; i < slice.size(); i += 2)
 		face_list.push_back(slice[i].edge / 4);
 
-	int first = Duplicate(face_list);
+	auto result = Duplicate(face_list);
 
-	for(size_t i = 0; i < slice.size(); i += 2)
+	for(auto  i = 0u; i < slice.size(); i += 2)
 	{
-		int j = first + i/2;
-
+		int j = result[i];
 		int e = slice[i].edge % 4;
-		m_verts[j*4 + e]         = slice[i  ].vertex;
-		m_verts[j*4 + (e+3) % 4] = slice[i+1].vertex;
 
-		if(slice[i].uuid < 0)
-			slice[i].uuid = ++m_uuid_counter;
-
-		m_uuid[j] = slice[i].uuid;
+		_verts[j][e]         = slice[i  ].vertex;
+		_verts[j][(e+3) % 4] = slice[i+1].vertex;
 	}
 
 	for(size_t i = 0; i < slice.size(); i += 2)
 	{
-		std::swap(m_verts[NextInEdge(slice[i].edge)], slice[i  ].vertex);
-		std::swap(m_verts[slice[i+1].edge], slice[i+1].vertex);
+		std::swap(raw()[NextInEdge(slice[i].edge)], slice[i  ].vertex);
+		std::swap(raw()[slice[i+1].edge], slice[i+1].vertex);
 	}
 
 
-	return first;
+	return result;
 }
 
 glm::vec2 Metaroom::GetGravity() const
@@ -421,12 +300,12 @@ glm::vec2 Metaroom::GetGravity() const
 	float angle{};
 	int   count{};
 
-	for(uint32_t i = 0; i < size(); ++i)
+	for(auto i : range())
 	{
-		if(!m_selection.IsFaceSelected(i))
+		if(!_selection.IsFaceSelected(i))
 			continue;
 
-		glm::vec2 vec = glm::unpackHalf2x16(m_gravity[i]);
+		glm::vec2 vec = glm::unpackHalf2x16(_gravity[i]);
 
 		float len = glm::length(vec);
 		length += len;
@@ -450,13 +329,13 @@ glm::vec3 Metaroom::GetShade() const
 	float ambient{};
 	int   count{};
 
-	for(uint32_t i = 0; i < size(); ++i)
+	for(auto i : range())
 	{
-		if(!m_selection.IsFaceSelected(i))
+		if(!_selection.IsFaceSelected(i))
 			continue;
 
-		glm::vec2 vec = glm::unpackHalf2x16(m_directionalShade[i]);
-		ambient += m_ambientShade[i];
+		glm::vec2 vec = glm::unpackHalf2x16(_directionalShade[i]);
+		ambient += _ambientShade[i];
 
 		float len = glm::length(vec);
 		length += len;
@@ -478,12 +357,12 @@ glm::vec4 Metaroom::GetAudio() const
 	glm::vec4 audio{0};
 	int   count{};
 
-	for(uint32_t i = 0; i < size(); ++i)
+	for(auto i : range())
 	{
-		if(!m_selection.IsFaceSelected(i))
+		if(!_selection.IsFaceSelected(i))
 			continue;
 
-		audio += m_audio[i];
+		audio += _audio[i];
 		++count;
 	}
 
@@ -497,39 +376,20 @@ glm::vec4 Metaroom::GetAudio() const
 
 
 
-glm::vec2 Metaroom::GetGravity(int room) const
-{
-    if(room < 0 || (uint32_t)room >= faces)
-		throw std::runtime_error("tried to get gravity of room which doesn't exist");
-
-	return glm::unpackHalf2x16(m_gravity[room]);
-}
-
-glm::vec2 Metaroom::GetCenter(int room) const
-{
-    if(room < 0 || (uint32_t)room >= faces)
-		throw std::runtime_error("tried to get center of room which doesn't exist");
-
-	return glm::vec2(
-			m_verts[room*4 + 0] +
-			m_verts[room*4 + 1] +
-			m_verts[room*4 + 2] +
-			m_verts[room*4 + 3]) / 4.f;
-}
 
 int Metaroom::GetMusicTrack() const
 {
 	bool     match = false;
 	int      track = 0;
 
-	for(uint32_t i = 0; i < size(); ++i)
+	for(auto i : range())
 	{
-		if(m_selection.IsFaceSelected(i))
+		if(_selection.IsFaceSelected(i))
 		{
-			if(match == true && track != m_music[i])
+			if(match == true && track != _music[i])
 				return false;
 
-			track = m_music[i];
+			track = _music[i];
 			match = true;
 		}
 	}
@@ -542,47 +402,20 @@ int Metaroom::GetRoomType() const
 	bool match = false;
 	int   r_type = -1;
 
-	for(uint32_t i = 0; i < size(); ++i)
+	for(auto i : range())
 	{
-		if(m_selection.IsFaceSelected(i))
+		if(_selection.IsFaceSelected(i))
 		{
-			if(match == true && r_type != m_roomType[i])
+			if(match == true && r_type != _roomType[i])
 				return -1;
 
-			r_type = m_roomType[i];
+			r_type = _roomType[i];
 			match = true;
 		}
 	}
 
 	return r_type;
 }
-
-uint64_t Metaroom::GetDoorKey(uint32_t a, uint32_t b) const
-{
-	a = m_uuid[a];
-	b = m_uuid[b];
-
-	return a < b? ((uint64_t)a << 32) | b : ((uint64_t)b << 32) | a;
-}
-
-int Metaroom::GetPermeability(int a, int b) const
-{
-	if(a < 0 || b < 0)
-		return -1;
-
-	uint64_t key = GetDoorKey(a, b);
-
-	for(uint32_t i = 0; i < m_permeabilities.size(); ++i)
-	{
-		if(key == m_permeabilities[i].first)
-			return m_permeabilities[i].second;
-		else if(key < m_permeabilities[i].first)
-			break;
-	}
-
-	return 100;
-}
-
 
 int Metaroom::GetPermeability() const
 {
@@ -596,26 +429,19 @@ int Metaroom::GetPermeability() const
 
 	uint64_t door = GetDoorKey(doors[0].first, doors[0].second);
 
-	uint32_t i{}, j{};
-	while(i < doors.size() && j < m_permeabilities.size())
+	for(auto pair : doors)
 	{
-		if(m_permeabilities[j].first > door)
+		auto key = GetDoorKey(pair.first, pair.second);
+
+		auto itr = _permeabilities.find(key);
+
+		if(itr != _permeabilities.end())
 		{
-			if(++i < doors.size())
-				door = GetDoorKey(doors[i].first, doors[i].second);
-		}
-		else if(m_permeabilities[j].first < door)
-		{
-			++j;
-		}
-		else
-		{
-			if(match == true && w_perm != m_permeabilities[j].second)
+			if(match == true && w_perm != itr->second)
 				return -1;
 
-			w_perm = m_permeabilities[j].second;
+			w_perm = itr->second;
 			match  = true;
-			++i, ++j;
 		}
 	}
 
@@ -627,18 +453,18 @@ std::vector<std::pair<int, int>> Metaroom::GetSelectedDoors() const
 {
 	std::vector<std::pair<int, int>> r;
 
-	for(uint32_t i = 0; i < faces*4; ++i)
+	for(auto i : edgeRange())
 	{
-		if(!m_selection.IsEdgeSelected(i))
+		if(!_selection.IsEdgeSelected(i))
 			continue;
 
-		auto edges = m_tree.GetOverlappingEdges(GetVertex(i), GetNextVertex(i));
+		auto edges = _tree.GetOverlappingEdges(GetVertex(i), GetNextVertex(i));
 
 		std::sort(edges.begin(), edges.end());
 
 		for(auto j : edges)
 		{
-			if(m_selection.IsEdgeSelected(j) &&	i < j)
+			if(_selection.IsEdgeSelected(j) &&	i < j)
 				r.push_back({i/4, j/4});
 		}
 	}
@@ -650,306 +476,32 @@ std::vector<int> Metaroom::GetExtrudableEdges() const
 {
 	std::vector<int> r;
 
-	for(uint32_t i = 0; i < faces*4; ++i)
+	for(auto i : edgeRange())
 	{
-		if( m_selection.IsEdgeSelected(i)
-		&& !m_tree.HasOverlappingEdges(i))
+		if( _selection.IsEdgeSelected(i)
+		&& !_tree.HasOverlappingEdges(i))
 			r.push_back(i);
 	}
 
 	return r;
 }
 
-int Metaroom::Duplicate(std::vector<int> const& faces)
-{
-	int first = AddFaces(faces.size());
 
-	for(size_t i = 0; i < faces.size(); ++i)
-		memcpy(&m_verts[(first+i)*4],      &m_verts[faces[i]*4],       sizeof(m_verts[0])*4);
-
-	for(size_t i = 0; i < faces.size(); ++i)
-		memcpy(&m_gravity[(first+i)],      &m_gravity[faces[i]],       sizeof(m_gravity[0]));
-
-	for(size_t i = 0; i < faces.size(); ++i)
-		memcpy(&m_music[(first+i)],        &m_music[faces[i]],         sizeof(m_music[0]));
-
-	for(size_t i = 0; i < faces.size(); ++i)
-		memcpy(&m_directionalShade[(first+i)], &m_directionalShade[faces[i]],  sizeof(m_directionalShade[0]));
-
-	for(size_t i = 0; i < faces.size(); ++i)
-		memcpy(&m_ambientShade[(first+i)], &m_ambientShade[faces[i]],  sizeof(m_ambientShade[0]));
-
-	for(size_t i = 0; i < faces.size(); ++i)
-		memcpy(&m_audio[(first+i)], &m_audio[faces[i]],  sizeof(m_audio[0]));
-
-	for(size_t i = 0; i < faces.size(); ++i)
-		memcpy(&m_roomType[(first+i)],     &m_roomType[faces[i]],      sizeof(m_roomType[0]));
-
-
-	return first;
-}
-
-void Metaroom::Expand(std::vector<int> const& indices)
-{
-	AddFaces(indices.size());
-
-	ExpandStuff(m_verts,    faces, indices, 4);
-	ExpandStuff(m_gravity,  faces, indices, 1);
-	ExpandStuff(m_music,    faces, indices, 1);
-	ExpandStuff(m_roomType, faces, indices, 1);
-
-#if HAVE_UUID
-	ExpandStuff(m_uuid    , faces, indices, 1);
-#endif
-
-	ExpandStuff(m_directionalShade,	faces, indices, 1);
-	ExpandStuff(m_ambientShade,		faces, indices, 1);
-	ExpandStuff(m_audio,			faces, indices, 1);
-}
-
-int        Metaroom::GetSliceEdge(glm::ivec2 p) const
-{
-    int face = GetFace(p);
-
-	if(face == -1)
-		return -1;
-
-	int best_edge      = -1;
-	float min_distance = FLT_MAX;
-
-	for(int i = 0; i < 4; ++i)
-	{
-		float distance2 = math::LineDistanceSquared(m_verts[face*4+i], m_verts[face*4+(i+1)%4], p);
-
-		if(distance2 < min_distance)
-		{
-			best_edge    = i;
-			min_distance = distance2;
-		}
-	}
-
-	if(best_edge >= 0)
-		return face*4 + best_edge;
-
-	return -1;
-}
-
-glm::ivec2 Metaroom::GetPointOnEdge(int v0, float p) const
-{
-	glm::vec2 vec(m_verts[NextInEdge(v0)] - m_verts[v0]);
-
-	 glm::ivec2 offset = glm::vec2(
-		vec.x < 0? ceil(vec.x * p) : floor(vec.x * p),
-		vec.y < 0? ceil(vec.y * p) : floor(vec.y * p));
-
-	if((v0 & 0x03) < 2)
-		return m_verts[NextInEdge(v0)] - offset;
-
-	return offset + m_verts[v0];
-}
-
-
-float     Metaroom::GetPercentOfEdge(int v0, glm::ivec2 pos) const
-{
-	glm::vec2 a(m_verts[NextInEdge(v0)] - m_verts[v0]);
-	glm::vec2 b(pos - m_verts[v0]);
-
-	float value = std::max(0.f, std::min(1.f, glm::length(b) / glm::length(a)));
-
-	if((v0 & 0x03) < 2)
-		return 1.f - value;
-
-	return value;
-}
-
-float     Metaroom::ProjectOntoEdge(int v0, glm::ivec2 pos) const
-{
-	glm::vec2 a(pos - m_verts[v0]);
-	glm::vec2 b(m_verts[NextInEdge(v0)] - m_verts[v0]);
-	float length = math::length2(b);
-
-	float value = glm::dot(a, b) / length;
-	value = std::max(0.f, std::min(1.f, value));
-
-	if((v0 & 0x03) < 2)
-		return 1.f - value;
-
-	return value;
-}
-
-void Metaroom::Prepare(GLViewWidget* gl)
-{
-    m_selection.Prepare(gl);
-
-	if(m_dirty == false || size() == 0)
-		return;
-
-	m_dirty = false;
-	bool initialized_vaos = (m_vao[0] != 0L);
-
-    m_indices.Prepare(gl, allocated);
-
-	if(initialized_vaos == false)
-	{
-        gl->glGenVertexArrays(NoArrays, m_vao);
-        gl->glGenBuffers(NoBuffers, m_buffers);
-
-        gl->glBindVertexArray(m_vao[0]);
-        gl->glBindBuffer(GL_ARRAY_BUFFER, m_buffers[bVertices]);
-        gl->glVertexAttribIPointer(0, 2, GL_INT, sizeof(glm::ivec2), 0);
-        gl->glEnableVertexAttribArray(0);
-
-        gl->glBindBuffer(GL_ARRAY_BUFFER, m_selection.GetBuffer());
-        gl->glVertexAttribIPointer(1, 1, GL_UNSIGNED_BYTE, sizeof(uint8_t), 0);
-        gl->glEnableVertexAttribArray(1);
-
-        gl->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indices.EdgeVBO());
-
-// create selected face shader
-        gl->glBindVertexArray(m_vao[1]);
-        gl->glBindBuffer(GL_ARRAY_BUFFER, m_buffers[bVertices]);
-        gl->glVertexAttribIPointer(0, 2, GL_INT, sizeof(glm::ivec2), 0);
-        gl->glEnableVertexAttribArray(0);
-
-        gl->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_selection.GetIndices());
-
-        gl->glBindVertexArray(m_vao[aHalls]);
-        gl->glBindBuffer(GL_ARRAY_BUFFER, m_buffers[bHalls]);
-        gl->glVertexAttribIPointer(0, 2, GL_INT, sizeof(ArrowShader::Vertex), (void*) offsetof(ArrowShader::Vertex, position));
-        gl->glVertexAttribPointer(1, 2, GL_SHORT, GL_TRUE, sizeof(ArrowShader::Vertex), (void*) offsetof(ArrowShader::Vertex, rotation));
-
-        gl->glEnableVertexAttribArray(0);
-        gl->glEnableVertexAttribArray(1);
-
-		gl->glBindVertexArray(m_vao[aGravity]);
-        gl->glBindBuffer(GL_ARRAY_BUFFER, m_buffers[bGravity]);
-        gl->glVertexAttribIPointer(0, 2, GL_INT, sizeof(ArrowShader::Vertex), (void*) offsetof(ArrowShader::Vertex, position));
-        gl->glVertexAttribPointer(1, 2, GL_SHORT, GL_TRUE, sizeof(ArrowShader::Vertex), (void*) offsetof(ArrowShader::Vertex, rotation));
-
-        gl->glEnableVertexAttribArray(0);
-        gl->glEnableVertexAttribArray(1);
-	}
-
-    gl->glBindVertexArray(0);
-    gl->glBindBuffer(GL_ARRAY_BUFFER, m_buffers[bVertices]);
-    gl->glBufferData(GL_ARRAY_BUFFER, sizeof(glm::ivec2)*allocated*4, &m_verts[0], GL_DYNAMIC_DRAW);
-    gl->glAssert();
-
-//prepare hall transitions
-	std::vector<ArrowShader::Vertex> halls;
-	halls.reserve(faces);
-
-	ArrowShader::Vertex buffer;
-	for(uint32_t i = 1; i < faces; ++i)
-	{
-		for(int j = 0; j < 16; ++j)
-		{
-			const int a = (j % 4);
-			const int b = (j / 4);
-
-			const auto a0 = GetVertex(i-1, a);
-			const auto a1 = GetVertex(i-1, a+1);
-			const auto b0 = GetVertex(i, b);
-			const auto b1 = GetVertex(i, b+1);
-
-			if(a0 == a1
-			|| b0 == b1
-//			|| GetDoorType(i-1, a) != 0
-//			|| GetDoorType(i  , b) != 0
-			|| math::IsOpposite(a1 - a0, b1 - b0) == false
-			|| math::IsColinear(a0, a1, b0, b1) == false)
-				continue;
-
-			std::pair<float, int> begin, end;
-
-			if(math::GetOverlap(a0, a1, b0, b1, &begin, &end))
-			{
-				float avg = (begin.first + end.first) * .5f;
-
-				glm::vec2 vec = a1 - a0;
-
-				buffer.position = a0 + glm::ivec2(vec * avg);
-
-				vec = glm::normalize(vec);
-				buffer.rotation.x = -SHRT_MAX * vec.y;
-				buffer.rotation.y = -SHRT_MAX * vec.x;
-
-				halls.push_back(buffer);
-			}
-		}
-	}
-
-    gl->glBindBuffer(GL_ARRAY_BUFFER, m_buffers[bHalls]);
-    gl->glAssert();
-
-    gl->glBufferData(GL_ARRAY_BUFFER, sizeof(halls[0])*halls.capacity(), &halls[0], GL_DYNAMIC_DRAW);
-    m_noHalls = halls.size();
-    gl->glAssert();
-
-//prepare gravity arrows
-	halls.resize(faces);
-
-	for(uint32_t i = 0; i < faces; ++i)
-	{
-		halls[i].position = (GetVertex(i, 0) + GetVertex(i, 1) + GetVertex(i, 2) + GetVertex(i, 3))/4;
-		halls[i].rotation = (float)SHRT_MAX * glm::normalize(glm::unpackHalf2x16(m_gravity[i]));
-	}
-
-    gl->glBindBuffer(GL_ARRAY_BUFFER, m_buffers[bGravity]);
-    gl->glAssert();
-
-    gl->glBufferData(GL_ARRAY_BUFFER, sizeof(halls[0])*faces, &halls[0], GL_DYNAMIC_DRAW);
-    gl->glAssert();
-}
-
-void Metaroom::Render(GLViewWidget *gl, int selected_door_type)
-{
-	if(faces == 0)
-		return;
-
-    Prepare(gl);
-
-	if(m_selection.NoSelectedFaces() > 0)
-	{
-        gl->glBindVertexArray(m_vao[1]);
-        SelectedRoomShader::Shader.Render(gl, m_selection.NoSelectedFaces());
-	}
-
-    gl->glBindVertexArray(m_vao[0]);
-    gl->glLineWidth(3);
-    RoomOutlineShader::Shader.Render(gl, faces, true);
-    gl->glLineWidth(1);
-    RoomOutlineShader::Shader.Render(gl, faces, false);
-
-    m_tree.Render(gl, selected_door_type);
-
-	if(m_noHalls && document->m_window->viewHalls())
-	{
-        gl->glBindVertexArray(m_vao[aHalls]);
-        ArrowShader::Shader.Render(gl, m_noHalls, glm::vec4(1, 0, 0, 1));
-	}
-
-	if(size() && document->m_window->viewGravity())
-	{
-        gl->glBindVertexArray(m_vao[aGravity]);
-        ArrowShader::Shader.Render(gl, size(), glm::vec4(0, 0, 1, 1));
-	}
-}
 
 bool Metaroom::CanAddFace(glm::ivec2 * verts)
 {
 	glm::ivec2 min = glm::min(glm::min(verts[0], verts[1]), glm::min(verts[2], verts[3]));
 	glm::ivec2 max = glm::max(glm::max(verts[0], verts[1]), glm::max(verts[2], verts[3]));
 
-	RoomRange range(&m_tree, min, max);
+	RoomRange range(&_tree, min, max);
 
 	while(range.popFront())
 	{
 		int N = (range.face()+1)*4;
 
 //if the first point is not contained then if we intersect there must be a line crossing boundary...
-	/*	if(math::IsPointContained(&m_verts[range.face()*4], verts[0])
-		|| math::IsPointContained(verts, m_verts[range.face()*4]))
+	/*	if(math::IsPointContained(&raw()[range.face()*4], verts[0])
+		|| math::IsPointContained(verts, raw()[range.face()*4]))
 			return false;*/
 
 		for(int i = range.face()*4; i < N; ++i)
@@ -972,230 +524,141 @@ void Metaroom::AddFace(glm::ivec2 min, glm::ivec2 max)
     if(CanAddFace(verts))
 		return;
 
-	int face = AddFaces();
+	int face = AddFaces(1)[0];
 
-	memcpy(&m_verts[face*4], verts, sizeof(verts));
+	memcpy(&raw()[face*4], verts, sizeof(verts));
 
-	m_gravity[face]   = glm::packHalf2x16(glm::vec2(0, 9.81));
-	m_music[face]     = -1;
-	m_roomType[face]  = 0;
+	_gravity[face]   = glm::packHalf2x16(glm::vec2(0, 9.81));
+	_music[face]     = -1;
+	_roomType[face]  = 0;
 
-#if HAVE_UUID
-	m_uuid[face]      = m_uuid_counter++;
-#endif
+	_directionalShade[0]	= 0;
+	_ambientShade[0]		= 0;
+	_audio[0]				= glm::vec4(0);
 
-	m_directionalShade[0]	= 0;
-	m_ambientShade[0]		= 0;
-	m_audio[0]				= glm::vec4(0);
+	memcpy_s(&_prev[face], &_verts[face]);
 
-	memcpy(&m_prev_verts[face*4], &m_verts[face*4], sizeof(m_verts[0]) * 4);
-
-	m_selection.select_face(face, Bitwise::SET);
-
-	m_dirty = true;
+	_selection.select_face(face, Bitwise::SET);
+	gl.SetDirty();
 }
 
-int Metaroom::AddFaces(int no_faces)
+std::vector<uint32_t> Metaroom::AddFaces(uint32_t no_faces)
 {
-	m_dirty = true;
-    m_tree.SetDirty();
+	gl.SetDirty();
+	_tree.SetDirty();
 
-	if(faces+no_faces >= allocated)
+	std::vector<uint32_t> x;
+	x.resize(no_faces);
+
+	for(auto i = 0u; i < no_faces; ++i)
 	{
-		auto new_size = ((faces+no_faces) + 15) & 0xFFFFFFF0;
-
-		m_verts          = Realloc(m_verts,          allocated, new_size, 4);
-		m_prev_verts     = Realloc(m_prev_verts,     allocated, new_size, 4);
-		m_scratch_verts  = std::unique_ptr<glm::ivec2[]>(new glm::ivec2[new_size*4]);
-
-		m_gravity        = Realloc(m_gravity,        allocated, new_size, 1);
-		m_music          = Realloc(m_music,          allocated, new_size, 1);
-		m_roomType       = Realloc(m_roomType,       allocated, new_size, 1);
-#if HAVE_UUID
-		m_uuid           = Realloc(m_uuid    ,       allocated, new_size, 1);
-#endif
-
-		m_directionalShade   = Realloc(m_directionalShade,   allocated, new_size, 1);
-		m_ambientShade   = Realloc(m_ambientShade,   allocated, new_size, 1);
-		m_audio   = Realloc(m_audio,   allocated, new_size, 1);
-
-		m_selection.resize(new_size);
-		allocated = new_size;
+		x[i] = _entitySystem.GetEntity();
 	}
 
-	int new_face = faces;
-	faces += no_faces;
-	return new_face;
+	return x;
+
+	AddFaces();
 }
 
 void Metaroom::RemoveFace(int id)
 {
-	m_dirty = true;
+	gl.SetDirty();
 
-	MemMove(m_verts,          id, allocated, 4);
-	MemMove(m_prev_verts,     id, allocated, 4);
-	MemMove(m_music,          id, allocated, 1);
-	MemMove(m_gravity,        id, allocated, 1);
-	MemMove(m_roomType,       id, allocated, 1);
+	_entitySystem.ReleaseEntity(id);
 
-#if HAVE_UUID
-	MemMove(m_uuid    ,       id, allocated, 1);
-#endif
-
-	MemMove(m_directionalShade, id, allocated, 1);
-	MemMove(m_ambientShade,		id, allocated, 1);
-	MemMove(m_audio,			id, allocated, 1);
-
-	m_selection.erase(id);
-
-	--faces;
-
-    m_tree.SetDirty();
+	_selection.erase(id);
+	_tree.SetDirty();
 }
 
-void Metaroom::RemoveFaces(std::vector<int> const& vec)
+void Metaroom::RemoveFaces(std::vector<uint32_t> const& vec)
 {
-	if(vec.empty())
-		return;
+	gl.SetDirty();
+	_selection.clear();
+	_tree.SetDirty();
 
-	if(vec.size() == 1)
+	for(auto item : vec)
 	{
-		RemoveFace(vec[0]);
-		return;
+		_entitySystem.ReleaseEntity(item);
 	}
-
-	m_dirty = true;
-
-	RemoveStuff(m_verts,          allocated, vec, 4);
-	RemoveStuff(m_prev_verts,     allocated, vec, 4);
-	RemoveStuff(m_music,          allocated, vec, 1);
-	RemoveStuff(m_gravity,        allocated, vec, 1);
-	RemoveStuff(m_roomType,       allocated, vec, 1);
-#if HAVE_UUID
-	RemoveStuff(m_uuid    ,       allocated, vec, 1);
-#endif
-
-	RemoveStuff(m_directionalShade, allocated, vec, 1);
-	RemoveStuff(m_ambientShade,		allocated, vec, 1);
-	RemoveStuff(m_audio,			allocated, vec, 1);
-
-	m_selection.clear();
-
-	faces -= vec.size();
-
-    m_tree.SetDirty();
 }
 
 void Metaroom::CancelMove()
 {
-	memcpy(&m_verts[0], &m_prev_verts[0], sizeof(glm::ivec2) * faces*4);
-	m_dirty = true;
+	_verts = _prev.clone();
+	gl.SetDirty();
 }
 
 void Metaroom::CommitMove(bool update_mvsf)
 {
-	memcpy(&m_prev_verts[0], &m_verts[0], sizeof(glm::ivec2) * faces*4);
-    m_tree.SetDirty(update_mvsf);
-	m_dirty = true;
+	_prev = _verts.clone();
+	_tree.SetDirty(update_mvsf);
+	gl.SetDirty();
 }
 
 void Metaroom::Translate(glm::ivec2 translation, glm::ivec2 half_dimensions)
 {
-	m_dirty = true;
+	gl.SetDirty();
 
-	for(uint32_t i = 0; i < faces*4; ++i)
+	for(auto i : edgeRange())
 	{
-		m_scratch_verts[i] = m_prev_verts[i] + translation * (int) m_selection.IsVertSelected(i);
-		m_scratch_verts[i] = glm::max(-half_dimensions, glm::min(m_scratch_verts[i], half_dimensions));
+		scratch(i) = prev(i) + translation * (int) _selection.IsVertSelected(i);
+		scratch(i) = glm::max(-half_dimensions, glm::min(scratch(i), half_dimensions));
 	}
 
 	solve_constraints();
-	std::swap(m_scratch_verts, m_verts);
+	std::swap(_scratch, _verts);
 }
 
 void Metaroom::Rotate(glm::ivec2 center, glm::vec2 complex)
 {
-	m_dirty = true;
+	gl.SetDirty();
 
-	memcpy(&m_scratch_verts[0], &m_prev_verts[0], sizeof(glm::ivec2) * faces*4);
+	_scratch = _prev.clone();
 
-	for(uint32_t i = 0; i < faces*4; ++i)
+	for(auto i : edgeRange())
 	{
-		if(m_selection.IsVertSelected(i))
+		if(_selection.IsVertSelected(i))
 		{
-			glm::ivec2 p = m_scratch_verts[i] - center;
+			glm::ivec2 p = scratch(i)  - center;
 
 			p = glm::ivec2(
 					p.x * complex.x - p.y * complex.y,
 					p.x * complex.y + p.y * complex.x);
 
-			m_scratch_verts[i] = p + center;
+			scratch(i) = p + center;
 		}
 	}
 
 	solve_constraints();
-	std::swap(m_scratch_verts, m_verts);
+	std::swap(_scratch, _verts);
 }
 
 void Metaroom::Scale(glm::ivec2 center, glm::vec2 scale)
 {
-	m_dirty = true;
+	gl.SetDirty();
 
-	memcpy(&m_scratch_verts[0], &m_prev_verts[0], sizeof(glm::ivec2) * faces*4);
+	_scratch = _prev.clone();
 
-	for(uint32_t i = 0; i < faces*4; ++i)
+	for(auto i : edgeRange())
 	{
-		if(m_selection.IsVertSelected(i))
-			m_scratch_verts[i] = glm::ivec2(glm::vec2(m_scratch_verts[i] - center) * scale) + center;
+		if(_selection.IsVertSelected(i))
+			scratch(i) = glm::ivec2(glm::vec2(scratch(i) - center) * scale) + center;
 	}
 
 	solve_constraints();
-	std::swap(m_scratch_verts, m_verts);
-}
-
-std::vector<glm::i16vec2> Metaroom::SaveVerts()
-{
-	std::vector<glm::i16vec2> r(faces*4);
-
-	for(uint32_t i = 0; i < faces*4; ++i)
-	{
-		r[i] = m_verts[i];
-	}
-
-	return r;
+	std::swap(_scratch, _verts);
 }
 
 void Metaroom::RestoreVerts(const std::vector<glm::i16vec2> & vec)
 {
-	m_dirty = true;
+	gl.SetDirty();
 
-	assert(faces*4 == vec.size());
-
-	for(uint32_t i = 0; i < faces*4; ++i)
+	for(auto i : edgeRange())
 	{
-		m_verts[i] = vec[i];
+		raw()[i] = vec[i];
 	}
 
-	memcpy(&m_prev_verts[0], &m_verts[0], sizeof(m_verts[0]) * faces*4);
-}
-
-void Metaroom::GetFaceAABB(int id, glm::i16vec2 & tl, glm::i16vec2 & br) const
-{
-	tl.x = std::min(
-		std::min(m_verts[id*4+0].x, m_verts[id*4+1].x),
-		std::min(m_verts[id*4+2].x, m_verts[id*4+3].x));
-
-	tl.y = std::min(
-		std::min(m_verts[id*4+0].y, m_verts[id*4+1].y),
-		std::min(m_verts[id*4+2].y, m_verts[id*4+3].y));
-
-	br.x = std::max(
-		std::max(m_verts[id*4+0].x, m_verts[id*4+1].x),
-		std::max(m_verts[id*4+2].x, m_verts[id*4+3].x));
-
-	br.y = std::max(
-		std::max(m_verts[id*4+0].y, m_verts[id*4+1].y),
-		std::max(m_verts[id*4+2].y, m_verts[id*4+3].y));
+	_prev = _verts.clone();
 }
 
 glm::ivec2 Metaroom::GetSelectionCenter() const
@@ -1203,11 +666,11 @@ glm::ivec2 Metaroom::GetSelectionCenter() const
 	glm::ivec2 accumulator(0, 0);
 	int32_t   size{};
 
-	for(uint32_t i = 0; i < faces*4; ++i)
+	for(auto i : edgeRange())
 	{
-		int is_selected = m_selection.IsVertSelected(i);
+		int is_selected = _selection.IsVertSelected(i);
 
-		accumulator += m_verts[i] * is_selected;
+		accumulator += raw()[i] * is_selected;
 		size        += is_selected;
 	}
 
@@ -1217,19 +680,19 @@ glm::ivec2 Metaroom::GetSelectionCenter() const
 void Metaroom::BoxSelect(glm::ivec2 tl, glm::ivec2 br, Bitwise flags)
 {
 	if(flags == Bitwise::SET)
-		m_selection.clear();
+		_selection.clear();
 	if(flags == Bitwise::AND)
-		m_selection.begin_and();
+		_selection.begin_and();
 
-	for(size_t i = 0; i < faces*4; ++i)
+	for(auto i : edgeRange())
 	{
-		if(tl.x < m_verts[i].x && m_verts[i].x < br.x
-		&& tl.y < m_verts[i].y && m_verts[i].y < br.y)
-			m_selection.select_vertex(i, flags);
+		if(tl.x < raw()[i].x && raw()[i].x < br.x
+		&& tl.y < raw()[i].y && raw()[i].y < br.y)
+			_selection.select_vertex(i, flags);
 	}
 
 	if(flags == Bitwise::AND)
-		m_selection.end_and();
+		_selection.end_and();
 
 	update_selections();
 	return;
@@ -1238,34 +701,34 @@ void Metaroom::BoxSelect(glm::ivec2 tl, glm::ivec2 br, Bitwise flags)
 void Metaroom::ClickSelect(glm::ivec2 pos, Bitwise flags, bool alt, float zoom)
 {
 	if(flags == Bitwise::SET)
-		m_selection.clear();
+		_selection.clear();
 	if(flags == Bitwise::AND)
-		m_selection.begin_and();
+		_selection.begin_and();
 
 	float radius = 36 / zoom;
 
 	bool selected = false;
 
-	for(uint32_t i = 0; i < 4*faces; ++i)
+	for(auto i : edgeRange())
 	{
-		if(math::length2(m_verts[i] - pos) < radius)
+		if(math::length2(raw()[i] - pos) < radius)
 		{
-			m_selection.select_vertex(i, flags);
+			_selection.select_vertex(i, flags);
 			selected = true;
 		}
 	}
 
 	if(selected == false)
 	{
-		for(uint32_t i = 0; i < 4*faces; ++i)
+		for(auto i : edgeRange())
 		{
 			int j = NextInEdge(i);
 
-			float distance2 = math::SemgentDistanceSquared(m_verts[i], m_verts[j], pos);
+			float distance2 = math::SemgentDistanceSquared(raw()[i], raw()[j], pos);
 
 			if(0 <= distance2 && distance2 < radius)
 			{
-				m_selection.select_edge(i, flags);
+				_selection.select_edge(i, flags);
 				selected = true;
 
 				if(alt)
@@ -1282,20 +745,15 @@ void Metaroom::ClickSelect(glm::ivec2 pos, Bitwise flags, bool alt, float zoom)
 
 		if(face != -1)
 		{
-			m_selection.select_face(face, flags);
+			_selection.select_face(face, flags);
 			if(alt)	RingSelectFace(face, pos, flags);
 		}
 	}
 
 	if(flags == Bitwise::AND)
-		m_selection.end_and();
+		_selection.end_and();
 
 	update_selections();
-}
-
-bool Metaroom::IsPointContained(int i, glm::ivec2 pos)
-{
-	return math::IsPointContained(&m_verts[i*4], pos);
 }
 
 void Metaroom::RingSelectFace(int face, glm::ivec2 mouse, Bitwise flags)
@@ -1307,7 +765,7 @@ void Metaroom::RingSelectFace(int face, glm::ivec2 mouse, Bitwise flags)
 	{
 		int j = NextInEdge(i);
 
-		float distance2 = math::SemgentDistanceSquared(m_verts[i], m_verts[j], mouse);
+		float distance2 = math::SemgentDistanceSquared(raw()[i], raw()[j], mouse);
 
 		if(0 <= distance2 && distance2 < best_distance)
 		{
@@ -1321,28 +779,28 @@ void Metaroom::RingSelectFace(int face, glm::ivec2 mouse, Bitwise flags)
 	if(flags == Bitwise::SET)
 		flags = Bitwise::OR;
 
-	m_selection.MarkFace(face);
+	_selection.MarkFace(face);
 	RingSelectFaceInternal(best_edge, GetPointOnEdge(best_edge, percentage), flags);
 	best_edge = Metaroom::GetOppositeEdge(best_edge);
 	RingSelectFaceInternal(best_edge, GetPointOnEdge(best_edge, percentage), flags);
-	m_selection.ClearMarks();
+	_selection.ClearMarks();
 }
 
 void Metaroom::RingSelectFaceInternal(int edge, glm::ivec2 position, Bitwise flags)
 {
 	float mid;
 
-	while(m_tree.GetSliceFace(
+	while(_tree.GetSliceFace(
 		GetVertex(edge),
 		GetVertex(Metaroom::NextInEdge(edge)),
 		position,
 		edge,
 		mid))
 	{
-		if(m_selection.MarkFace(edge/4) == false)
+		if(_selection.MarkFace(edge/4) == false)
 			return;
 
-		m_selection.select_face(edge/4, flags);
+		_selection.select_face(edge/4, flags);
 
 		edge     = Metaroom::GetOppositeEdge(edge);
 		position = GetPointOnEdge(edge, mid);
@@ -1360,11 +818,11 @@ std::string Metaroom::TestTreeSymmetry()
 {
 	std::string r;
 
-	for(uint32_t i = 0; i < size(); ++i)
+	for(auto i : range())
 	{
 		glm::i16vec2 tl, br;
 		GetFaceAABB(i, tl, br);
-		RoomRange range(&m_tree, tl, br);
+		RoomRange range(&_tree, tl, br);
 
 		while(range.popFront())
 		{
@@ -1373,7 +831,7 @@ std::string Metaroom::TestTreeSymmetry()
 
 			bool match_found = false;
 
-			RoomRange r2(&m_tree, range.face());
+			RoomRange r2(&_tree, range.face());
 			while(r2.popFront())
 			{
 				if(r2.face() == (int)i)
@@ -1399,9 +857,9 @@ std::string Metaroom::TestDoorSymmetry()
 {
 	std::string r;
 
-	for(uint32_t i = 0; i < size()*4; ++i)
+	for(auto i : edgeRange())
 	{
-		EdgeRange range(&m_tree, i);
+		EdgeRange range(&_tree, i);
 
 		while(range.popFront())
 		{
@@ -1410,7 +868,7 @@ std::string Metaroom::TestDoorSymmetry()
 
 			bool match_found = false;
 
-			EdgeRange r2(&m_tree, range.edge());
+			EdgeRange r2(&_tree, range.edge());
 			while(r2.popFront())
 			{
 				if(r2.edge() == (int)i)
@@ -1432,36 +890,12 @@ std::string Metaroom::TestDoorSymmetry()
 	return {};
 }
 
-void Metaroom::PruneDegenerate()
-{
-	std::vector<int> degenerate_faces;
-
-	for(uint32_t i = 0; i < size(); ++i)
-	{
-		int sum = 0;
-
-		for(int j = 0; j < 4; ++j)
-		{
-			for(int k = j+1; k < 4; ++k)
-			{
-				sum += (GetVertex(i*4 + j) == GetVertex(i*4 + k));
-			}
-		}
-
-		if(sum > 1)
-			degenerate_faces.push_back(i);
-	}
-
-	RemoveFaces(degenerate_faces);
-	fprintf(stderr, "pruned %i degenerate faces\n", (int)degenerate_faces.size());
-}
-
 /*
 #include "edgerange.h"
 
 void Metaroom::RingSelectEdgeInternal(int edge, Bitwise flags)
 {
-	EdgeRange range(&m_tree, edge);
+	EdgeRange range(&_tree, edge);
 
 	int bestEdge = -1;
 	float highestDot = FLT_MIN;
@@ -1494,3 +928,57 @@ void Metaroom::RingSelectEdgeInternal(int edge, Bitwise flags)
 
 }
 */
+
+std::vector<uint32_t> Metaroom::Duplicate(std::vector<uint32_t> const& faces)
+{
+	auto indices = AddFaces(faces.size());
+	auto first = indices.data();
+
+	for(size_t i = 0; i < faces.size(); ++i)
+		memcpy_s(&raw()[indices[i]*4],      &raw()[faces[i]*4], 4);
+
+	for(size_t i = 0; i < faces.size(); ++i)
+		memcpy_s(&_gravity[*(first+i)],      &_gravity[faces[i]]);
+
+	for(size_t i = 0; i < faces.size(); ++i)
+		memcpy_s(&_music[*(first+i)],        &_music[faces[i]]);
+
+	for(size_t i = 0; i < faces.size(); ++i)
+		memcpy_s(&_directionalShade[*(first+i)], &_directionalShade[faces[i]]);
+
+	for(size_t i = 0; i < faces.size(); ++i)
+		memcpy_s(&_ambientShade[*(first+i)], &_ambientShade[faces[i]]);
+
+	for(size_t i = 0; i < faces.size(); ++i)
+		memcpy_s(&_audio[*(first+i)], &_audio[faces[i]]);
+
+	for(size_t i = 0; i < faces.size(); ++i)
+		memcpy_s(&_roomType[*(first+i)],     &_roomType[faces[i]]);
+
+
+	return indices;
+}
+
+void Metaroom::PruneDegenerate()
+{
+	std::vector<uint32_t> degenerate_faces;
+
+	for(auto i : range())
+	{
+		int sum = 0;
+
+		for(int j = 0; j < 4; ++j)
+		{
+			for(int k = j+1; k < 4; ++k)
+			{
+				sum += (GetVertex(i*4 + j) == GetVertex(i*4 + k));
+			}
+		}
+
+		if(sum > 1)
+			degenerate_faces.push_back(i);
+	}
+
+	RemoveFaces(degenerate_faces);
+	LOG_F(INFO, "pruned %i degenerate faces\n", (int)degenerate_faces.size());
+}

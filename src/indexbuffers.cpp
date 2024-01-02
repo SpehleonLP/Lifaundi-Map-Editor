@@ -12,26 +12,23 @@ void IndexBuffers::Release(GLViewWidget*gl)
 }
 
 
-void IndexBuffers::Prepare(GLViewWidget*gl, uint32_t size)
+void IndexBuffers::Prepare(GLViewWidget*gl, EntitySystem::Range range)
 {
-	if(size < m_allocated)
-		return;
-
-	m_allocated = (size+32) & 0xFFFFFFE0;
+	m_allocated = std::max<uint32_t>((range.size()+32) & 0xFFFFFFE0, m_allocated);
 
 	std::vector<uint32_t> data(m_allocated*8);
-
+	auto * dst = data.data();
 	//fill with edge data
-	for(uint32_t i = 0; i < m_allocated; ++i)
+	for(auto i : range)
 	{
-		data[i*8+0] = i*4+0;
-		data[i*8+1] = i*4+1;
-		data[i*8+2] = i*4+1;
-		data[i*8+3] = i*4+2;
-		data[i*8+4] = i*4+2;
-		data[i*8+5] = i*4+3;
-		data[i*8+6] = i*4+3;
-		data[i*8+7] = i*4+0;
+		*(dst++) = i*4+0;
+		*(dst++) = i*4+1;
+		*(dst++) = i*4+1;
+		*(dst++) = i*4+2;
+		*(dst++) = i*4+2;
+		*(dst++) = i*4+3;
+		*(dst++) = i*4+3;
+		*(dst++) = i*4+0;
 	}
 
 	if(m_vbo[0] == 0)
@@ -46,14 +43,14 @@ void IndexBuffers::Prepare(GLViewWidget*gl, uint32_t size)
     gl->glAssert();
 
 //fill with edge data
-	for(uint32_t i = 0; i < m_allocated; ++i)
+	for(auto i : range)
 	{
-		data[i*6+0] = i*4+0;
-		data[i*6+1] = i*4+1;
-		data[i*6+2] = i*4+2;
-		data[i*6+3] = i*4+2;
-		data[i*6+4] = i*4+1;
-		data[i*6+5] = i*4+3;
+		*(dst++) = i*4+0;
+		*(dst++) = i*4+1;
+		*(dst++) = i*4+2;
+		*(dst++) = i*4+2;
+		*(dst++) = i*4+1;
+		*(dst++) = i*4+3;
 	}
 
     gl->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_vbo[1]);

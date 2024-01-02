@@ -24,7 +24,9 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 INCLUDEPATH += \
-	../../Libraries/
+	../../Libraries/ \
+	../../Libraries/loguru \
+	../../Libraries/Spehleon/lib
 
 LIBS += -lGLEW -lGL -lGLU -ldrm -lz \
 	-L\"/mnt/Passport/Libraries/lz4/build/cmake\" -llz4
@@ -32,6 +34,7 @@ LIBS += -lGLEW -lGL -lGLU -ldrm -lz \
 DEFINES += GLM_EXT_INCLUDED GLM_FORCE_INLINE GLM_ENABLE_EXPERIMENTAL
 
 SOURCES += \
+../../Libraries/loguru/loguru.cpp \
 	exportoptions.cpp \
         main.cpp \
         mainwindow.cpp \
@@ -41,6 +44,7 @@ SOURCES += \
     src/document.cpp \
     src/commandlist.cpp \
 	src/edgerange.cpp \
+	src/entitysystem.cpp \
 	src/fluidlinks.cpp \
 	src/glm_iostream.cpp \
     src/glviewwidget.cpp \
@@ -52,6 +56,8 @@ SOURCES += \
     src/Shaders/blitshader.cpp \
     src/metaroom.cpp \
     src/lf_math.cpp \
+	src/metaroom_gl.cpp \
+	src/metaroom_memory.cpp \
     src/metaroomselection.cpp \
 	src/mvsf_sampler.cpp \
     src/quadtree.cpp \
@@ -69,6 +75,11 @@ SOURCES += \
 	src/walltype_db.cpp
 
 HEADERS += \
+	../../Libraries/Spehleon/lib/Support/counted_ptr.hpp \
+	../../Libraries/Spehleon/lib/Support/shared_array.hpp \
+	../../Libraries/Spehleon/lib/Support/lockfreequeue.hpp \
+	../../Libraries/Spehleon/lib/Support/numeric_range.hpp \
+	../../Libraries/Spehleon/lib/Support/unsafe_view.hpp \
 	exportoptions.h \
         mainwindow.h \
 	nlohmann/json_detail.hpp \
@@ -79,6 +90,7 @@ HEADERS += \
     src/document.h \
     src/commandlist.h \
 	src/edgerange.h \
+	src/entitysystem.h \
 	src/enums.hpp \
 	src/fluidlinks.h \
 	src/glm_iostream.h \
@@ -94,6 +106,8 @@ HEADERS += \
     src/Shaders/blitshader.h \
     src/metaroom.h \
     src/lf_math.h \
+	src/metaroom_gl.h \
+	src/metaroom_memory.h \
     src/metaroomselection.h \
 	src/mvsf_sampler.h \
     src/quadtree.h \

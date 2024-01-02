@@ -18,12 +18,12 @@ Document::Document(MainWindow * window) :
 	m_metaroom(this)
 {
 	BlitShader::Shader.AddRef();
-
 }
 
 
 Document::~Document()
 {
+
 }
 
 void Document::Release(GLViewWidget * gl)
@@ -40,7 +40,7 @@ void Document::Release(GLViewWidget * gl)
 
 void Document::Delete()
 {
-	std::vector<int> selection = m_metaroom.m_selection.GetFaceSelection();
+	std::vector<uint32_t> selection = m_metaroom._selection.GetFaceSelection();
 
 	if(selection.size())
 		PushCommand(new DeleteCommand(this, std::move(selection)));
@@ -89,58 +89,58 @@ void Document::OnSelectionChanged(GLViewWidget *gl)
 //	wall_type    = m_metaroom.GetWallType();
 	permeability = m_metaroom.GetPermeability();
 
-    m_metaroom.m_selection.Prepare(gl);
+	m_metaroom._selection.Prepare(gl);
 }
 
 uint32_t Document::noFacesSelected() const
 {
-	return m_metaroom.m_selection.NoSelectedFaces();
+	return m_metaroom._selection.NoSelectedFaces();
 }
 
 uint32_t Document::noEdgesSelected() const
 {
-	return m_metaroom.m_selection.NoSelectedEdges();
+	return m_metaroom._selection.NoSelectedEdges();
 }
 
 void Document::SelectAll()
 {
-	m_metaroom.m_selection.ToggleSelectAll(m_metaroom.faces, Bitwise::SET);
+	m_metaroom._selection.ToggleSelectAll(m_metaroom.range(), Bitwise::SET);
 }
 
 void Document::SelectNone()
 {
-	m_metaroom.m_selection.ToggleSelectAll(m_metaroom.faces, Bitwise::NOT);
+	m_metaroom._selection.ToggleSelectAll(m_metaroom.range(), Bitwise::NOT);
 }
 
 void Document::InvertSelection()
 {
-	m_metaroom.m_selection.ToggleSelectAll(m_metaroom.faces, Bitwise::XOR);
+	m_metaroom._selection.ToggleSelectAll(m_metaroom.range(), Bitwise::XOR);
 }
 
 void Document::SelectByType()
 {
-	auto selection = m_metaroom.m_selection.GetFaceSelection();
+	auto selection = m_metaroom._selection.GetFaceSelection();
 
 	uint32_t types = 0;
 
 	for(auto i : selection)
 	{
-		types |= 1 << (m_metaroom.m_roomType[i] + 1);
+		types |= 1 << (m_metaroom._roomType[i] + 1);
 	}
 
 	if(types == 0)
 		types = 1;
 
-	for(uint32_t i = 0; i < m_metaroom.size(); ++i)
+	for(auto i : m_metaroom.range())
 	{
-		if(types & (1 << (m_metaroom.m_roomType[i] + 1)))
-			m_metaroom.m_selection.select_face(i, Bitwise::SET);
+		if(types & (1 << (m_metaroom._roomType[i] + 1)))
+			m_metaroom._selection.select_face(i, Bitwise::SET);
 	}
 }
 
 void Document::SelectByMusic()
 {
-	auto selection = m_metaroom.m_selection.GetFaceSelection();
+	auto selection = m_metaroom._selection.GetFaceSelection();
 
 	std::unique_ptr<uint8_t[]> music_flags(new uint8_t[128]);
 	memset(&music_flags[0], 0, 128);
@@ -149,27 +149,27 @@ void Document::SelectByMusic()
 
 	for(auto i : selection)
 	{
-		music_flags[std::max(0, m_metaroom.m_music[i]+1)] = 1;
+		music_flags[std::max(0, m_metaroom._music[i]+1)] = 1;
 		++set_flags;
 	}
 
 	if(!set_flags)
 		music_flags[0] = 0;
 
-	for(uint32_t i = 0; i < m_metaroom.size(); ++i)
+	for(auto i : m_metaroom.range())
 	{
-		if(music_flags[std::max(0, m_metaroom.m_music[i]+1)])
-			m_metaroom.m_selection.select_face(i, Bitwise::SET);
+		if(music_flags[std::max(0, m_metaroom._music[i]+1)])
+			m_metaroom._selection.select_face(i, Bitwise::SET);
 	}
 }
 
 void Document::SelectOverlapping()
 {
-	auto verts = m_metaroom.m_selection.GetVertSelection();
+	auto verts = m_metaroom._selection.GetVertSelection();
 
 	for(auto i : verts)
 	{
-		RoomRange range(&m_metaroom.m_tree, m_metaroom.GetVertex(i),  m_metaroom.GetVertex(i));
+		RoomRange range(&m_metaroom._tree, m_metaroom.GetVertex(i),  m_metaroom.GetVertex(i));
 
 		while(range.popFront())
 		{
@@ -178,7 +178,7 @@ void Document::SelectOverlapping()
 			{
 				if(m_metaroom.GetVertex(i) == range.min)
 				{
-					m_metaroom.m_selection.select_vertex(i, Bitwise::SET);
+					m_metaroom._selection.select_vertex(i, Bitwise::SET);
 				}
 			}
 		}
@@ -187,14 +187,14 @@ void Document::SelectOverlapping()
 
 void Document::SelectLinked()
 {
-	auto verts = m_metaroom.m_selection.GetVertSelection();
+	auto verts = m_metaroom._selection.GetVertSelection();
 	std::vector<int> stack;
 
 	for(auto i : verts)
 	{
-		if(m_metaroom.m_selection.MarkFace(i/4))
+		if(m_metaroom._selection.MarkFace(i/4))
 		{
-			m_metaroom.m_selection.select_face(i/4, Bitwise::OR);
+			m_metaroom._selection.select_face(i/4, Bitwise::OR);
 			stack.push_back(i/4);
 		}
 	}
@@ -205,7 +205,7 @@ void Document::SelectLinked()
 
 		for(int j = 0; j < 4; ++j)
 		{
-			RoomRange range(&m_metaroom.m_tree, m_metaroom.GetVertex(i*4+j),  m_metaroom.GetVertex(i*4+j));
+			RoomRange range(&m_metaroom._tree, m_metaroom.GetVertex(i*4+j),  m_metaroom.GetVertex(i*4+j));
 
 			while(range.popFront())
 			{
@@ -214,9 +214,9 @@ void Document::SelectLinked()
 				{
 					if(m_metaroom.GetVertex(i) == range.min)
 					{
-						if(m_metaroom.m_selection.MarkFace(range.face()))
+						if(m_metaroom._selection.MarkFace(range.face()))
 						{
-							m_metaroom.m_selection.select_face(range.face(), Bitwise::OR);
+							m_metaroom._selection.select_face(range.face(), Bitwise::OR);
 							stack.push_back(range.face());
 						}
 
@@ -227,7 +227,7 @@ void Document::SelectLinked()
 		}
 	}
 
-	m_metaroom.m_selection.ClearMarks();
+	m_metaroom._selection.ClearMarks();
 }
 
 
@@ -395,7 +395,7 @@ void Document::SetPermeability(int value)
 
 void Document::PushSettingCommand(uint32_t value, SettingCommand::Type type)
 {
-	std::vector<int> selection;
+	std::vector<uint32_t> selection;
 
 	switch(type)
 	{
@@ -405,10 +405,10 @@ void Document::PushSettingCommand(uint32_t value, SettingCommand::Type type)
 	case SettingCommand::Type::Shade:
 	case SettingCommand::Type::AmbientShade:
 	case SettingCommand::Type::Audio:
-		selection = m_metaroom.m_selection.GetFaceSelection();
+		selection = m_metaroom._selection.GetFaceSelection();
 		break;
 	default:
-		selection = m_metaroom.m_selection.GetSelection();
+		selection = m_metaroom._selection.GetSelection();
 		break;
 	}
 
@@ -442,7 +442,7 @@ void Document::PushSettingCommand(uint32_t value, SettingCommand::Type type)
 
 void Document::PushGravityCommand(float value, DifferentialSetCommmand::Type type)
 {
-	std::vector<int> selection =  m_metaroom.m_selection.GetFaceSelection();
+	std::vector<uint32_t> selection =  m_metaroom._selection.GetFaceSelection();
 
 	if(selection.empty())
 		return;
@@ -458,7 +458,7 @@ void Document::PushGravityCommand(float value, DifferentialSetCommmand::Type typ
 
 void Document::PushShadeCommand(float value, DifferentialSetCommmand::Type type)
 {
-	std::vector<int> selection =  m_metaroom.m_selection.GetFaceSelection();
+	std::vector<uint32_t> selection =  m_metaroom._selection.GetFaceSelection();
 
 	if(selection.empty())
 		return;
@@ -551,7 +551,7 @@ bool Document::LoadFile(GLViewWidget * gl, QFileInfo const& Path, bool load_room
 
 		file.exceptions ( std::ifstream::failbit | std::ifstream::badbit );
 
-		m_metaroom.faces = 0;
+		m_metaroom._entitySystem.clear();
 		m_metaroom.Read(m_window, file, 0);
 		m_metaroom.CommitMove(false);
 

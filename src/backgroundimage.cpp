@@ -143,7 +143,7 @@ void BackgroundImage::Render(GLViewWidget* gl)
 
 	for(int i = 0; i < size(); ++i)
 	{
-		if(m_flags[i] == 0)
+		if(m_flags && m_flags[i] == 0)
 			continue;
 
         gl->glBindTexture(GL_TEXTURE_2D, m_textures[i]); gl->glAssert();
@@ -356,7 +356,9 @@ void BackgroundImage::SetBackgroundLayer(GLViewWidget * gl, BackgroundLayer laye
 {
 //don't try to load something we already have.
 	if(m_layer == layer || m_type != Type::Lifaundi)
+	{
 		return;
+	}
 
 	std::ifstream file(m_filename, std::ios::binary);
 
@@ -749,15 +751,20 @@ void BackgroundImage::ImportS16Frames(GLViewWidget * gl, std::ifstream file, uin
 
 void BackgroundImage::LoadImage(GLViewWidget * gl, std::string const& filename)
 {
-	/*
 	QImageReader reader(QString::fromStdString(filename));
 	QImage image = reader.read();
 
+	version       = -1;
 	tiles = (glm::ivec2(image.width(), image.height()) + 255) / 256;
+	tile_size     = glm::u16vec2(256, 256);
+	pixels        = glm::u16vec2(image.width(), image.height());
 
+
+	m_textures    = std::unique_ptr<uint32_t[]> (new uint32_t[size()]);
+	memset(&m_textures[0], 0, sizeof(uint32_t) * size());
 	gl->glGenTextures(size(), &m_textures[0]);
 
-	std::vector<glm::vec3> RGB(256*256);
+	std::vector<glm::u8vec4> RGB(256*256);
 
 	for(int i = 0; i < size(); ++i)
 	{
@@ -773,10 +780,22 @@ void BackgroundImage::LoadImage(GLViewWidget * gl, std::string const& filename)
 		gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 
+		for(int px = 0; px < 65536; ++px)
+		{
+			QColor color{};
+			auto _x = x * 256 + px % 256;
+			auto _y =  y * 256 + 256 - px / 256;
 
+			if(_x < image.width() && _y < image.height())
+				color = image.pixelColor(_x, _y);
 
+			RGB[px].r = color.red();
+			RGB[px].g = color.green();
+			RGB[px].b = color.blue();
+			RGB[px].a = color.alpha();
+		}
 
-		gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tile_size.x, tile_size.y, 0, GL_RGB, gl_type, buffer);
-	}*/
+		gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tile_size.x, tile_size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, &RGB[0]);
+	}
 }
 

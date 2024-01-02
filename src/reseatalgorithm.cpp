@@ -13,10 +13,10 @@ std::vector<int> Reseat(Metaroom * metaroom, std::vector<int> && selection)
 
     for(uint32_t i = 0; i < selection.size(); ++i)
 	{
-		memcpy(verts[0], &metaroom->m_verts[selection[i]*4], sizeof(verts[0]));
+		memcpy(&verts[0], &metaroom->_verts[selection[i]][0], sizeof(verts[0]));
 //		memcpy(types[0], &metaroom->m_doorType[selection[i]*4], sizeof(types[0]));
 
-		glm::vec2 gravity = metaroom->GetGravity(selection[i]);
+		glm::vec2 gravity = metaroom->MetaroomMemory::GetGravity(selection[i]);
 		glm::vec2 center  = metaroom->GetCenter(selection[i]);
 
 		if(gravity.x == 0 && gravity.y == 0)
@@ -31,8 +31,8 @@ std::vector<int> Reseat(Metaroom * metaroom, std::vector<int> && selection)
 
         for(uint32_t j = i+1; j < selection.size(); ++j)
 		{
-			memcpy(verts[1], &metaroom->m_verts[selection[j]*4], sizeof(verts[1]));
-			glm::vec2 gravity2 = metaroom->GetGravity(selection[i]);
+			memcpy(verts[1], &metaroom->_verts[selection[j]][0], sizeof(verts[1]));
+			glm::vec2 gravity2 = metaroom->MetaroomMemory::GetGravity(selection[i]);
 
 			if(gravity2.x == 0 && gravity2.y == 0)
 				gravity2 = glm::vec2(1, 0);

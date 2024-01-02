@@ -142,7 +142,7 @@ enter(Qt::Key_Z, this)
 		int text = QInputDialog::getInt(this, tr("Select Room By ID"),
 												tr("Room ID:"), 0, 0, document->m_metaroom.size(), 1, &ok);
 		if (ok)
-			document->m_metaroom.m_selection.select_face(text, Bitwise::SET);
+			document->m_metaroom._selection.select_face(text, Bitwise::SET);
 	});
 	connect(ui->debugDumpPermTable,  &QAction::triggered,  this, [this]() { document->m_metaroom.DumpPermeabilityTable(); });
 
@@ -453,7 +453,7 @@ void MainWindow::SetStatusBarMessage(glm::ivec2 coords)
 	{
 		if( ui->viewRoomId->isChecked() && document)
 		{
-			statusBar()->showMessage(QString("room id: %1").arg(document->m_metaroom.m_tree.GetFace(coords)));
+                    statusBar()->showMessage(QString("room id: %1").arg(document->m_metaroom._tree.GetFace(coords)));
 		}
 		else
 		{
@@ -580,7 +580,7 @@ bool MainWindow::fileOpen(bool load_rooms, bool load_background)
 	dialog.setAcceptMode(QFileDialog::AcceptOpen);
 
 	if(load_background == true)
-		dialog.setNameFilter("Background (*.spr *.s16 *.blk *.lf_bck)");
+		dialog.setNameFilter("Background (*.spr *.s16 *.blk *.lf_bck *.png *.jpg *.bmp)");
 	else if(load_rooms == true)
 		dialog.setNameFilter("Room System (*.lf_mta)");
 

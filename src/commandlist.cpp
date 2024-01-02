@@ -5,13 +5,13 @@
 
 TransformCommand::TransformCommand(Document * document) :
 	metaroom(&document->m_metaroom),
-	indices(metaroom->m_selection.GetVertSelection())
+	indices(metaroom->_selection.GetVertSelection())
 {
-	verts = std::unique_ptr<glm::ivec2[]>(new glm::ivec2[indices.size()]);
+	verts = shared_array<glm::ivec2>(indices.size());
 
 	for(size_t i = 0; i < indices.size(); ++i)
 	{
-		verts[i] = metaroom->m_prev_verts[indices[i]];
+		verts[i] = metaroom->prev(i);
 	}
 
 	metaroom->CommitMove();
@@ -19,11 +19,11 @@ TransformCommand::TransformCommand(Document * document) :
 
 void TransformCommand::RollForward()
 {
-	metaroom->m_selection.SetVertexSelection(indices);
+	metaroom->_selection.SetVertexSelection(indices);
 
 	for(size_t i = 0; i < indices.size(); ++i)
 	{
-		std::swap(verts[i], metaroom->m_verts[indices[i]]);
+		std::swap(verts[i], metaroom->verts(indices[i]));
 	}
 
 	metaroom->CommitMove();
@@ -31,56 +31,52 @@ void TransformCommand::RollForward()
 
 void TransformCommand::RollBack()
 {
-	metaroom->m_selection.SetVertexSelection(indices);
+	metaroom->_selection.SetVertexSelection(indices);
 
 	for(size_t i = 0; i < indices.size(); ++i)
 	{
-		std::swap(verts[i], metaroom->m_verts[indices[i]]);
+		std::swap(verts[i], metaroom->verts(indices[i]));
 	}
 
 	metaroom->CommitMove();
 }
 
-DeleteCommand::DeleteCommand(Document * document, std::vector<int> && selection) :
+DeleteCommand::DeleteCommand(Document * document, std::vector<uint32_t> && selection) :
 	metaroom(&document->m_metaroom),
 	rooms(Clipboard::Extract(metaroom, selection)),
 	indices(std::move(selection))
 {
+	_permDelta = metaroom->GetPermeabilities(indices);
 	DeleteCommand::RollForward();
 }
 
 void DeleteCommand::RollForward()
 {
 	metaroom->RemoveFaces(indices);
+	metaroom->RemovePermeabilities(_permDelta);
 }
 
 void DeleteCommand::RollBack()
 {
 	metaroom->Insert(rooms, indices);
+	metaroom->AddPermeabilities(_permDelta);
 }
 
 InsertCommand::InsertCommand(Document * document, std::vector<Room> && insertion) :
 	metaroom(&document->m_metaroom),
 	rooms(std::move(insertion))
 {
-	for(auto & r : rooms)
-		r.uuid = ++(metaroom->m_uuid_counter);
-
 	InsertCommand::RollForward();
 }
 
 void InsertCommand::RollForward()
 {
-	first = metaroom->Insert(rooms);
+	indices = metaroom->Insert(rooms);
 }
 
 void InsertCommand::RollBack()
 {
-	metaroom->faces = first;
-	metaroom->m_tree.SetDirty();
-	metaroom->m_dirty = true;
-
-	metaroom->m_selection.clear();
+	metaroom->RemoveFaces(indices);
 }
 
 
@@ -94,45 +90,44 @@ SliceCommand::SliceCommand(Document * document, std::vector<SliceInfo> && _slice
 
 void SliceCommand::RollForward()
 {
-	first = metaroom->Slice(slice);
+	indices = metaroom->Slice(slice);
 	metaroom->CommitMove();
 
-	metaroom->m_selection.clear();
+	metaroom->_selection.clear();
 
 	for(size_t i = 0; i < slice.size(); i += 2)
 	{
-		int j = first + i/2;
+		int j = indices[i];
 
 		int e = slice[i].edge % 4;
 
-		metaroom->m_selection.select_vertex(Metaroom::NextInEdge(slice[i].edge), Bitwise::OR);
-		metaroom->m_selection.select_vertex(slice[i+1].edge, Bitwise::OR);
+		metaroom->_selection.select_vertex(Metaroom::NextInEdge(slice[i].edge), Bitwise::OR);
+		metaroom->_selection.select_vertex(slice[i+1].edge, Bitwise::OR);
 
-		metaroom->m_selection.select_vertex(j*4 + e, Bitwise::OR);
-		metaroom->m_selection.select_vertex(j*4 + (e+3)%4, Bitwise::OR);
+		metaroom->_selection.select_vertex(j*4 + e, Bitwise::OR);
+		metaroom->_selection.select_vertex(j*4 + (e+3)%4, Bitwise::OR);
 	}
 }
 
 void SliceCommand::RollBack()
 {
-	metaroom->faces = first;
 	for(size_t i = 0; i < slice.size(); i += 2)
 	{
-		std::swap(metaroom->m_verts[Metaroom::NextInEdge(slice[i].edge)], slice[i  ].vertex);
-		std::swap(metaroom->m_verts[slice[i+1].edge], slice[i+1].vertex);
+		std::swap(metaroom->verts(Metaroom::NextInEdge(slice[i].edge)), slice[i  ].vertex);
+		std::swap(metaroom->verts(slice[i+1].edge), slice[i+1].vertex);
 	}
 
+	metaroom->RemoveFaces(indices);
 	metaroom->CommitMove();
-
-	metaroom->m_selection.clear();
+	metaroom->_selection.clear();
 
 	for(uint i = 0; i < slice.size(); i += 2)
 	{
-		metaroom->m_selection.select_face(slice[i].edge / 4, Bitwise::OR);
+		metaroom->_selection.select_face(slice[i].edge / 4, Bitwise::OR);
 	}
 }
 
-ReorderCommand::ReorderCommand(Document * document, std::vector<int> && ordering) :
+ReorderCommand::ReorderCommand(Document * document, std::vector<uint32_t> && ordering) :
 	metaroom(&document->m_metaroom),
 	indices(std::move(ordering))
 {
@@ -141,52 +136,24 @@ ReorderCommand::ReorderCommand(Document * document, std::vector<int> && ordering
 
 void ReorderCommand::RollForward()
 {
-	std::vector<int> tmp = indices;
+	std::vector<uint32_t> tmp = indices;
 	std::sort(tmp.begin(), tmp.end());
 
-	metaroom->Duplicate(indices);
-
-//transfer uuid
-	for(uint32_t i = 0; i < indices.size(); ++i)
-		metaroom->m_uuid[first+i] = metaroom->m_uuid[indices[i]];
+	original_rooms = Clipboard::Extract(metaroom, tmp);
 
 	metaroom->RemoveFaces(tmp);
-
-	metaroom->CommitMove();
-	metaroom->m_selection.clear();
-
-	for(size_t i = metaroom->faces - indices.size(); i < metaroom->faces; ++i)
-	{
-		metaroom->m_selection.select_face(i, Bitwise::SET);
-	}
+	metaroom->Insert(original_rooms, tmp);
 }
 
 void ReorderCommand::RollBack()
 {
-	std::vector<int> tmp = indices;
-	std::sort(tmp.begin(), tmp.end());
+	metaroom->RemoveFaces(indices);
+	metaroom->Insert(original_rooms, indices);
 
-	uint32_t first = metaroom->size();
-	metaroom->Expand(tmp);
-
-	for(uint32_t i = 0; i < indices.size(); ++i)
-	{
-		metaroom->CopyRoom(indices[i], first+i);
-		metaroom->m_uuid[indices[i]] = metaroom->m_uuid[first+i];
-	}
-
-	metaroom->faces = first;
-
-	metaroom->CommitMove();
-	metaroom->m_selection.clear();
-
-	for(auto i : indices)
-	{
-		metaroom->m_selection.select_face(i, Bitwise::SET);
-	}
+	original_rooms.clear();
 }
 
-SettingCommand::SettingCommand(Document * document, std::vector<int> && list, uint32_t value, Type type) :
+SettingCommand::SettingCommand(Document * document, std::vector<uint32_t> && list, uint32_t value, Type type) :
 	metaroom(&document->m_metaroom),
 	indices(std::move(list)),
 	value(value),
@@ -198,27 +165,27 @@ SettingCommand::SettingCommand(Document * document, std::vector<int> && list, ui
 	{
 	case Type::Gravity:
 		for(size_t i = 0; i < indices.size(); ++i)
-			prev_values[i] = metaroom->m_gravity[indices[i]];
+			prev_values[i] = metaroom->_gravity[indices[i]];
 		break;
 	case Type::Track:
 		for(size_t i = 0; i < indices.size(); ++i)
-			prev_values[i] = metaroom->m_music[indices[i]];
+			prev_values[i] = metaroom->_music[indices[i]];
 		break;
 	case Type::RoomType:
 		for(size_t i = 0; i < indices.size(); ++i)
-			prev_values[i] = metaroom->m_roomType[indices[i]];
+			prev_values[i] = metaroom->_roomType[indices[i]];
 		break;
 	case Type::Shade:
 		for(size_t i = 0; i < indices.size(); ++i)
-			prev_values[i] = metaroom->m_directionalShade[indices[i]];
+			prev_values[i] = metaroom->_directionalShade[indices[i]];
 		break;
 	case Type::AmbientShade:
 		for(size_t i = 0; i < indices.size(); ++i)
-			prev_values[i] = metaroom->m_ambientShade[indices[i]];
+			prev_values[i] = metaroom->_ambientShade[indices[i]];
 		break;
 	case Type::Audio:
 		for(size_t i = 0; i < indices.size(); ++i)
-			memcpy(&prev_values[i], &metaroom->m_audio[indices[i]], 4);
+			memcpy(&prev_values[i], &metaroom->_audio[indices[i]], 4);
 		break;
 	default:
 		break;
@@ -233,29 +200,30 @@ void SettingCommand::RollForward()
 	switch(type)
 	{
 	case Type::Gravity:
+		metaroom->gl.SetDirty();
+
 		for(auto i : indices)
-			metaroom->m_gravity[i] = value;
-		metaroom->m_dirty = true;
+			metaroom->_gravity[i] = value;
 		break;
 	case Type::Track:
 		for(auto i : indices)
-			metaroom->m_music[i]   = value;
+			metaroom->_music[i]   = value;
 		break;
 	case Type::RoomType:
 		for(auto i : indices)
-			metaroom->m_roomType[i] = value;
+			metaroom->_roomType[i] = value;
 		break;
 	case Type::Shade:
 		for(auto i : indices)
-			metaroom->m_directionalShade[i] = value;
+			metaroom->_directionalShade[i] = value;
 		break;
 	case Type::AmbientShade:
 		for(auto i : indices)
-			metaroom->m_ambientShade[i] = value;
+			metaroom->_ambientShade[i] = value;
 		break;
 	case Type::Audio:
 		for(auto i : indices)
-			memcpy(&metaroom->m_audio[i], &value, 4);
+			memcpy(&metaroom->_audio[i], &value, 4);
 		break;
 	default:
 		break;
@@ -267,29 +235,30 @@ void SettingCommand::RollBack()
 	switch(type)
 	{
 	case Type::Gravity:
+		metaroom->gl.SetDirty();
+
 		for(size_t i = 0; i < indices.size(); ++i)
-			 metaroom->m_gravity[indices[i]] = prev_values[i];
-		metaroom->m_dirty = true;
+			metaroom->_gravity[indices[i]] = prev_values[i];
 		break;
 	case Type::Track:
 		for(size_t i = 0; i < indices.size(); ++i)
-			metaroom->m_music[indices[i]]  = prev_values[i];
+			metaroom->_music[indices[i]]  = prev_values[i];
 		break;
 	case Type::RoomType:
 		for(size_t i = 0; i < indices.size(); ++i)
-			metaroom->m_roomType[indices[i]] = prev_values[i];
+			metaroom->_roomType[indices[i]] = prev_values[i];
 		break;
 	case Type::Shade:
 		for(size_t i = 0; i < indices.size(); ++i)
-			metaroom->m_directionalShade[indices[i]]  = prev_values[i];
+			metaroom->_directionalShade[indices[i]]  = prev_values[i];
 		break;
 	case Type::AmbientShade:
 		for(size_t i = 0; i < indices.size(); ++i)
-			metaroom->m_ambientShade[indices[i]] = prev_values[i];
+			metaroom->_ambientShade[indices[i]] = prev_values[i];
 		break;
 	case Type::Audio:
 		for(size_t i = 0; i < indices.size(); ++i)
-			memcpy(&metaroom->m_audio[indices[i]], &prev_values[i], 4);
+			memcpy(&metaroom->_audio[indices[i]], &prev_values[i], 4);
 		break;
 	default:
 		break;
@@ -305,24 +274,18 @@ PermeabilityCommand::PermeabilityCommand(Document * document, std::vector<std::p
 	keys((uint64_t*)&heap[0]),
 	values(&heap[sizeof(uint64_t)*doors.size()])
 {
-	for(uint i = 0; i < length; ++i)
-		keys[i] = metaroom->GetDoorKey(doors[i].first, doors[i].second);
-
 //fill array with previous values
 	memset(&values[0], 100, length);
 
-	uint32_t i{}, j{};
-
-	while(i < length && j < metaroom->m_permeabilities.size())
+	for(uint i = 0; i < length; ++i)
 	{
-		if(metaroom->m_permeabilities[j].first < keys[i])
-			++j;
-		else if(metaroom->m_permeabilities[j].first > keys[i])
-			++j;
-		else
+		keys[i] = metaroom->GetDoorKey(doors[i].first, doors[i].second);
+
+		auto itr = metaroom->_permeabilities.find(keys[i]);
+
+		if(itr != metaroom->_permeabilities.end())
 		{
-			values[i] = metaroom->m_permeabilities[j].second;
-			++i, ++j;
+			values[i] = itr->second;
 		}
 	}
 
@@ -340,70 +303,47 @@ void PermeabilityCommand::SetValue(int v)
 
 void  PermeabilityCommand::RollForward()
 {
-	InsertNewValues();
-	RemoveDoubles();
-	metaroom->m_tree.SetVBODirty();
+	if(permeability == 100)
+	{
+		for(auto i = 0u; i < length; ++i)
+		{
+			auto itr = metaroom->_permeabilities.find(keys[i]);
+
+			if(itr != metaroom->_permeabilities.end())
+			{
+				metaroom->_permeabilities.erase(itr);
+			}
+		}
+	}
+	else
+	{
+		for(auto i = 0u; i < length; ++i)
+		{
+			metaroom->_permeabilities[keys[i]] = permeability;
+		}
+	}
+
+	metaroom->_tree.SetVBODirty();
 }
 
 void  PermeabilityCommand::RollBack()
 {
-	InsertOriginalValues();
-	RemoveDoubles();
-	metaroom->m_tree.SetVBODirty();
-}
-
-void PermeabilityCommand::InsertOriginalValues()
-{
-	auto & array = metaroom->m_permeabilities;
-
-	array.reserve(array.size() + length);
-
-	for(uint32_t i = 0; i < length; ++i)
-		array.push_back({keys[i], values[i] + 101});
-
-	std::sort(array.begin(), array.end(), [](auto const& a, auto const& b)
+	for(auto i = 0u; i < length; ++i)
 	{
-		if(a.first != b.first)
-			return a.first < b.first;
+		if(values[i] != 100)
+			metaroom->_permeabilities[keys[i]] = values[i];
+		else
+		{
+			auto itr = metaroom->_permeabilities.find(keys[i]);
 
-		return a.second < b.second;
-	});
-}
-
-void PermeabilityCommand::InsertNewValues()
-{
-	auto & array = metaroom->m_permeabilities;
-
-	array.reserve(array.size() + length);
-
-	for(uint32_t i = 0; i < length; ++i)
-		array.push_back({keys[i], permeability+101});
-
-	std::sort(array.begin(), array.end(), [](auto const& a, auto const& b)
-	{
-		if(a.first != b.first)
-			return a.first < b.first;
-
-		return a.second < b.second;
-	});
-}
-
-void PermeabilityCommand::RemoveDoubles()
-{
-	auto & array = metaroom->m_permeabilities;
-
-	uint32_t write{0};
-	for(uint32_t read=0, next = 0; read < array.size(); read = next, ++write)
-	{
-		for(next = read+1; next < array.size() && array[read].first == array[next].first; ++next) {}
-
-		if(write != next-1)
-			array[write] = array[next-1];
-
-		array[write].second -= 101 * (array[write].second > 100);
+			if(itr != metaroom->_permeabilities.end())
+			{
+				metaroom->_permeabilities.erase(itr);
+			}
+		}
 	}
 
-	array.resize(write);
+	metaroom->_tree.SetVBODirty();
 }
 
 bool PermeabilityCommand::IsSelection(std::vector<std::pair<int, int>> const& list) const
@@ -420,7 +360,7 @@ bool PermeabilityCommand::IsSelection(std::vector<std::pair<int, int>> const& li
 	return true;
 }
 
-std::unique_ptr<CommandInterface> DifferentialSetCommmand::GravityCommand(Document * document, std::vector<int> && list, float value, Type type)
+std::unique_ptr<CommandInterface> DifferentialSetCommmand::GravityCommand(Document * document, std::vector<uint32_t> && list, float value, Type type)
 {
 	assert(type == Type::GravityAngle || type == Type::GravityStrength || type == Type::ShadeAngle || type == Type::ShadeStrength);
 	std::vector<uint32_t> values(list.size());
@@ -434,7 +374,7 @@ std::unique_ptr<CommandInterface> DifferentialSetCommmand::GravityCommand(Docume
 
 		for(size_t i = 0; i < list.size(); ++i)
 		{
-			glm::vec2 grav = glm::unpackHalf2x16(document->m_metaroom.m_gravity[list[i]]);
+			glm::vec2 grav = glm::unpackHalf2x16(document->m_metaroom._gravity[list[i]]);
 			grav = direction * glm::length(grav);
 			values[i] = glm::packHalf2x16(grav);
 
@@ -446,7 +386,7 @@ std::unique_ptr<CommandInterface> DifferentialSetCommmand::GravityCommand(Docume
 	{
 		for(size_t i = 0; i < list.size(); ++i)
 		{
-			glm::vec2 grav = glm::unpackHalf2x16(document->m_metaroom.m_gravity[list[i]]);
+			glm::vec2 grav = glm::unpackHalf2x16(document->m_metaroom._gravity[list[i]]);
 			grav = value * glm::normalize(grav);
 			values[i] = glm::packHalf2x16(grav);
 
@@ -463,7 +403,7 @@ std::unique_ptr<CommandInterface> DifferentialSetCommmand::GravityCommand(Docume
 	return std::unique_ptr<CommandInterface>(new DifferentialSetCommmand(document, std::move(list), std::move(values), Type::Gravity));
 }
 
-std::unique_ptr<CommandInterface> DifferentialSetCommmand::ShadeCommand(Document * document, std::vector<int> && list, float value, Type type)
+std::unique_ptr<CommandInterface> DifferentialSetCommmand::ShadeCommand(Document * document, std::vector<uint32_t> && list, float value, Type type)
 {
 	assert(type == Type::ShadeAngle || type == Type::ShadeStrength);
 	std::vector<uint32_t> values(list.size());
@@ -477,7 +417,7 @@ std::unique_ptr<CommandInterface> DifferentialSetCommmand::ShadeCommand(Document
 
 		for(size_t i = 0; i < list.size(); ++i)
 		{
-			glm::vec2 grav = glm::unpackHalf2x16(document->m_metaroom.m_directionalShade[list[i]]);
+			glm::vec2 grav = glm::unpackHalf2x16(document->m_metaroom._directionalShade[list[i]]);
 			grav = direction * glm::length(grav);
 			values[i] = glm::packHalf2x16(grav);
 
@@ -489,7 +429,7 @@ std::unique_ptr<CommandInterface> DifferentialSetCommmand::ShadeCommand(Document
 	{
 		for(size_t i = 0; i < list.size(); ++i)
 		{
-			glm::vec2 grav = glm::unpackHalf2x16(document->m_metaroom.m_directionalShade[list[i]]);
+			glm::vec2 grav = glm::unpackHalf2x16(document->m_metaroom._directionalShade[list[i]]);
 			grav = value * glm::normalize(grav);
 			values[i] = glm::packHalf2x16(grav);
 
@@ -507,7 +447,7 @@ std::unique_ptr<CommandInterface> DifferentialSetCommmand::ShadeCommand(Document
 }
 
 
-DifferentialSetCommmand::DifferentialSetCommmand(Document * document, std::vector<int> && list, std::vector<uint32_t> && value, Type type) :
+DifferentialSetCommmand::DifferentialSetCommmand(Document * document, std::vector<uint32_t> && list, std::vector<uint32_t> && value, Type type) :
 	metaroom(&document->m_metaroom),
 	new_values(std::move(value)),
 	indices(std::move(list)),
@@ -519,27 +459,27 @@ DifferentialSetCommmand::DifferentialSetCommmand(Document * document, std::vecto
 	{
 	case Type::Gravity:
 		for(size_t i = 0; i < indices.size(); ++i)
-			prev_values[i] = metaroom->m_gravity[indices[i]];
+			prev_values[i] = metaroom->_gravity[indices[i]];
 		break;
 	case Type::Track:
 		for(size_t i = 0; i < indices.size(); ++i)
-			prev_values[i] = metaroom->m_music[indices[i]];
+			prev_values[i] = metaroom->_music[indices[i]];
 		break;
 	case Type::RoomType:
 		for(size_t i = 0; i < indices.size(); ++i)
-			prev_values[i] = metaroom->m_roomType[indices[i]];
+			prev_values[i] = metaroom->_roomType[indices[i]];
 		break;
 	case Type::Shade:
 		for(size_t i = 0; i < indices.size(); ++i)
-			prev_values[i] = metaroom->m_directionalShade[indices[i]];
+			prev_values[i] = metaroom->_directionalShade[indices[i]];
 		break;
 	case Type::AmbientShade:
 		for(size_t i = 0; i < indices.size(); ++i)
-			memcpy(&prev_values[i], &metaroom->m_ambientShade[indices[i]], 4);
+			memcpy(&prev_values[i], &metaroom->_ambientShade[indices[i]], 4);
 		break;
 	case Type::Audio:
 		for(size_t i = 0; i < indices.size(); ++i)
-			memcpy(&prev_values[i], &metaroom->m_audio[indices[i]], 4);
+			memcpy(&prev_values[i], &metaroom->_audio[indices[i]], 4);
 		break;
 	default:
 		break;
@@ -554,29 +494,30 @@ void DifferentialSetCommmand::RollForward()
 	switch(type)
 	{
 	case Type::Gravity:
+		metaroom->gl.SetDirty();
+
 		for(size_t i = 0; i < indices.size(); ++i)
-			 metaroom->m_gravity[indices[i]] = new_values[i];
-		metaroom->m_dirty = true;
+			metaroom->_gravity[indices[i]] = new_values[i];
 		break;
 	case Type::Track:
 		for(size_t i = 0; i < indices.size(); ++i)
-			metaroom->m_music[indices[i]]  = new_values[i];
+			metaroom->_music[indices[i]]  = new_values[i];
 		break;
 	case Type::RoomType:
 		for(size_t i = 0; i < indices.size(); ++i)
-			metaroom->m_roomType[indices[i]] = new_values[i];
+			metaroom->_roomType[indices[i]] = new_values[i];
 		break;
 	case Type::Shade:
 		for(size_t i = 0; i < indices.size(); ++i)
-			metaroom->m_directionalShade[indices[i]] = new_values[i];
+			metaroom->_directionalShade[indices[i]] = new_values[i];
 		break;
 	case Type::AmbientShade:
 		for(size_t i = 0; i < indices.size(); ++i)
-			memcpy(&metaroom->m_ambientShade[indices[i]], &new_values[i], 4);
+			memcpy(&metaroom->_ambientShade[indices[i]], &new_values[i], 4);
 		break;
 	case Type::Audio:
 		for(size_t i = 0; i < indices.size(); ++i)
-			memcpy(&metaroom->m_audio[indices[i]], &new_values[i], 4);
+			memcpy(&metaroom->_audio[indices[i]], &new_values[i], 4);
 		break;
 	default:
 		break;
@@ -589,29 +530,30 @@ void DifferentialSetCommmand::RollBack()
 	switch(type)
 	{
 	case Type::Gravity:
+		metaroom->gl.SetDirty();
+
 		for(size_t i = 0; i < indices.size(); ++i)
-			 metaroom->m_gravity[indices[i]] = prev_values[i];
-		metaroom->m_dirty = true;
+			metaroom->_gravity[indices[i]] = prev_values[i];
 		break;
 	case Type::Track:
 		for(size_t i = 0; i < indices.size(); ++i)
-			metaroom->m_music[indices[i]]  = prev_values[i];
+			metaroom->_music[indices[i]]  = prev_values[i];
 		break;
 	case Type::RoomType:
 		for(size_t i = 0; i < indices.size(); ++i)
-			metaroom->m_roomType[indices[i]] = prev_values[i];
+			metaroom->_roomType[indices[i]] = prev_values[i];
 		break;
 	case Type::Shade:
 		for(size_t i = 0; i < indices.size(); ++i)
-			metaroom->m_directionalShade[indices[i]]  = prev_values[i];
+			metaroom->_directionalShade[indices[i]]  = prev_values[i];
 		break;
 	case Type::AmbientShade:
 		for(size_t i = 0; i < indices.size(); ++i)
-			memcpy(&metaroom->m_ambientShade[indices[i]], &prev_values[i], 4);
+			memcpy(&metaroom->_ambientShade[indices[i]], &prev_values[i], 4);
 		break;
 	case Type::Audio:
 		for(size_t i = 0; i < indices.size(); ++i)
-			memcpy(&metaroom->m_audio[indices[i]], &prev_values[i], 4);
+			memcpy(&metaroom->_audio[indices[i]], &prev_values[i], 4);
 		break;
 	default:
 		break;

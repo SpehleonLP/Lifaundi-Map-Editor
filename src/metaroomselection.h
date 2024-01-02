@@ -1,5 +1,6 @@
 #ifndef METAROOMSELECTION_H
 #define METAROOMSELECTION_H
+#include "entitysystem.h"
 #include "enums.hpp"
 #include <memory>
 #include <vector>
@@ -11,6 +12,7 @@ class Metaroom;
 class MetaroomSelection
 {
 public:
+	typedef EntitySystem::Range Range;
 	MetaroomSelection() = default;
 	MetaroomSelection(MetaroomSelection const& it) = delete;
 	MetaroomSelection(MetaroomSelection &&) = delete;
@@ -19,7 +21,7 @@ public:
 
     void Release(GLViewWidget *gl);
 
-	bool ToggleSelectAll(uint32_t faces, Bitwise flags);
+	bool ToggleSelectAll(Range faces, Bitwise flags);
 
 	bool Changed() const { return m_selectionChanged; }
 
@@ -34,7 +36,7 @@ public:
 	size_t size() const { return m_alloced; };
 
 	void erase(size_t i);
-	void erase(std::vector<int> const& vec);
+	void erase(std::vector<uint32_t> const& vec);
 	void clear();
 
 	void begin_and();
@@ -43,12 +45,12 @@ public:
 	uint8_t operator[](size_t i) const { return m_array[i]; }
 	uint8_t & operator[](size_t i) { return m_array[i]; }
 
-	std::vector<int> GetVertSelection() const;
-	std::vector<int> GetFaceSelection() const;
-	std::vector<int> GetEdgeSelection() const;
-	std::vector<int> GetSelection() const;
-	void SetSelection(std::vector<int> const&);
-	void SetVertexSelection(std::vector<int> const&);
+	std::vector<uint32_t> GetVertSelection() const;
+	std::vector<uint32_t> GetFaceSelection() const;
+	std::vector<uint32_t> GetEdgeSelection() const;
+	std::vector<uint32_t> GetSelection() const;
+	void SetSelection(std::vector<uint32_t> const&);
+	void SetVertexSelection(const std::vector<uint32_t> &);
 
 	void select_vertex(int id, Bitwise flags);
 	void select_face(int id, Bitwise flags);

@@ -42,7 +42,7 @@ FluidLinks::FluidLinks(Metaroom * metaroom)
 	std::vector<int> doors;
 	std::vector<std::pair<int, int>> indices;
 
-	metaroom->m_tree.GetHallDoors(doors, indices);
+	metaroom->_tree.GetHallDoors(doors, indices);
 
 //create hall index...
 	for(uint32_t i = 0; i < indices.size(); )

@@ -32,27 +32,27 @@ void  ExportOptions::save(Metaroom* mta, std::string const& path, const std::vec
 	fprintf(file, "setv va01 addm %i %i %i %i \"%s\"\n", coord.x, coord.y, coord.z, coord.w, blk.c_str());
 	fprintf(file, "mmsc %i %i \"\"\n", coord.x + coord.z / 2, coord.y + coord.w / 2);
 
-	std::unique_ptr<uint8_t[]> saved(new uint8_t[(mta->size() + 7)/8]);
-	memset(&saved[0], 0, (mta->size() + 7)/8);
+	std::unique_ptr<uint8_t[]> saved(new uint8_t[(mta->noFaces() + 7)/8]);
+	memset(&saved[0], 0, (mta->noFaces() + 7)/8);
 
-	for(uint32_t i = 0; i < mta->size(); ++i)
+	for(uint32_t i : mta->range())
 	{
 		int l{-1}, r, tl, tr, bl, br;
 
 		for(int j = 0; j < 4; ++j)
 		{
-			if(mta->m_verts[i*4+j]      .x == mta->m_verts[i*4+(j+1)%4].x
-			&& mta->m_verts[i*4+(j+2)%4].x == mta->m_verts[i*4+(j+3)%4].x
-			&& mta->m_verts[i*4+j      ].x != mta->m_verts[i*4+(j+2)%4].x)
+			if(mta->_verts[i][j]      .x == mta->_verts[i][(j+1)%4].x
+			&& mta->_verts[i][(j+2)%4].x == mta->_verts[i][(j+3)%4].x
+			&& mta->_verts[i][j      ].x != mta->_verts[i][(j+2)%4].x)
 			{
-				l = mta->m_verts[i*4+j      ].x + offset.x;
-				r = mta->m_verts[i*4+(j+2)%4].x + offset.x;
+				l = mta->_verts[i][j      ].x + offset.x;
+				r = mta->_verts[i][(j+2)%4].x + offset.x;
 
-				tl = -std::max(mta->m_verts[i*4+j      ].x,  mta->m_verts[i*4+(j+1)%4].x) + offset.y;
-				bl = -std::min(mta->m_verts[i*4+j      ].x,  mta->m_verts[i*4+(j+1)%4].x) + offset.y;
+				tl = -std::max(mta->_verts[i][j      ].x,  mta->_verts[i][(j+1)%4].x) + offset.y;
+				bl = -std::min(mta->_verts[i][j      ].x,  mta->_verts[i][(j+1)%4].x) + offset.y;
 
-				tr = -std::max(mta->m_verts[i*4+j + (j+2)%4].x,  mta->m_verts[i*4+(j+3)%4].x) + offset.y;
-				br = -std::min(mta->m_verts[i*4+j + (j+2)%4].x,  mta->m_verts[i*4+(j+3)%4].x) + offset.y;
+				tr = -std::max(mta->_verts[i][j + (j+2)%4].x,  mta->_verts[i][(j+3)%4].x) + offset.y;
+				br = -std::min(mta->_verts[i][j + (j+2)%4].x,  mta->_verts[i][(j+3)%4].x) + offset.y;
 
 				if(l > r)
 				{
@@ -68,11 +68,11 @@ void  ExportOptions::save(Metaroom* mta, std::string const& path, const std::vec
 		{
 			saved[i/8] |= 1 << (i % 8);
 			fprintf(file, "  setv va00 addr va01 %i %i %i %i %i %i\n", l, r, tl, tr, bl, br);
-			fprintf(file, "    rtyp va00 %i\n", mta->m_roomType[i]);
+			fprintf(file, "    rtyp va00 %i\n", mta->_roomType[i]);
 
-			if(mta->m_music[i] >= 0)
+			if(mta->_music[i] >= 0)
 			{
-				fprintf(file, "    rmsc %i %i \"%s\\\\%s\"\n", (l + r) / 2, (tl+tr+bl+br)/4, mmsc.c_str(), track_list[mta->m_music[i]].c_str() );
+				fprintf(file, "    rmsc %i %i \"%s\\\\%s\"\n", (l + r) / 2, (tl+tr+bl+br)/4, mmsc.c_str(), track_list[mta->_music[i]].c_str() );
 			}
 			else
 			{
@@ -88,7 +88,7 @@ void  ExportOptions::save(Metaroom* mta, std::string const& path, const std::vec
 	std::vector<QuadTree::Door>     doors;
 	std::vector<QuadTree::DoorList> indices;
 
-	mta->m_tree.GetWriteDoors(doors, indices);
+	mta->_tree.GetWriteDoors(doors, indices);
 
 	int write_count{0};
 
@@ -118,7 +118,7 @@ void  ExportOptions::save(Metaroom* mta, std::string const& path, const std::vec
 
 	write_count = 0;
 //clear game variables
-	for(uint32_t i = 0; i < mta->size(); ++i)
+	for(uint32_t i : mta->range())
 	{
 		if(!(saved[i/8] & (1 << (i%8))))
 			continue;

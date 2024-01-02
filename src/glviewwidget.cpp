@@ -327,7 +327,7 @@ void GLViewWidget::paintGL()
     if(w->document == nullptr)
 		return;
 
-    if(w->document->m_metaroom.m_selection.Changed()) w->OnSelectionChanged();
+    if(w->document->m_metaroom._selection.Changed()) w->OnSelectionChanged();
 
 	w->SetStatusBarMessage(GetWorldPosition());
 

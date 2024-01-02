@@ -66,7 +66,7 @@ public:
 	bool AutoReseat();
 
 	std::vector<SliceInfo> m_slice;
-	std::vector<int>       m_ordering;
+	std::vector<uint32_t>  m_ordering;
 
 	int slice_edge{-1};
 

@@ -2,10 +2,12 @@
 #define METAROOM_H
 #include "metaroomselection.h"
 #include "metaroomdoors.h"
+#include "metaroom_gl.h"
+#include "metaroom_memory.h"
 #include "quadtree.h"
 #include "enums.hpp"
-#include "indexbuffers.h"
 #include "controllerfsm.h"
+#include "Spehleon/lib/Support/shared_array.hpp"
 #include <glm/vec2.hpp>
 #include <glm/gtc/type_precision.hpp>
 #include <memory>
@@ -32,7 +34,7 @@ struct Room;
 typedef struct FMOD_GUID FMOD_GUID;
 class Document;
 
-class Metaroom
+class Metaroom : public MetaroomMemory
 {
 public:
 	enum
@@ -43,6 +45,8 @@ public:
 	static int NextInEdge(int id) { return (id & 0xFFFFFFFC) + ((id+1) & 0x03); }
 	static int GetOppositeEdge(int id) { return id ^ 0x02; }
 
+	MetaroomGL gl{*this};
+
 	Metaroom(Document *);
 	~Metaroom();
 
@@ -51,17 +55,20 @@ public:
 
     void Release(GLViewWidget *gl);
 
-	int Insert(std::vector<Room> const&);
-	void SetRoom(int index, Room const&);
-	void Insert(std::vector<Room> const&, std::vector<int> const&);
-	void CopyRoom(int dst, int src);
-	uint64_t GetDoorKey(uint32_t a, uint32_t b) const;
+	std::vector<uint32_t> Insert(std::vector<Room> const&);
+	void Insert(std::vector<Room> const&, std::vector<uint32_t> const&);
 
-	glm::vec4 GetDimensions() const { return m_tree.GetDimensions(); };
-	
+	glm::vec4 GetDimensions() const { return _tree.GetDimensions(); };
 
-	glm::vec2 GetGravity(int room) const;
-	glm::vec2 GetCenter(int room) const;
+	void AddFace(glm::ivec2 min, glm::ivec2 max);
+	bool CanAddFace(glm::ivec2 * verts);
+	std::vector<uint32_t> AddFaces(uint32_t no_faces = 1);
+
+	void RemoveFace(int id);
+	void RemoveFaces(const std::vector<uint32_t> &vec);
+
+	std::vector<uint32_t> Duplicate(std::vector<uint32_t> const& faces);
+	void PruneDegenerate();
 
 	glm::vec2 GetGravity() const;
 	glm::vec3 GetShade() const;
@@ -72,12 +79,9 @@ public:
 	//int GetWallType() const;
 
 	int GetPermeability() const;
-	int GetPermeability(int a, int b) const;
 
 	void SetDoorType(int);
 	int GetDoorType();
-
-	size_t size() const { return faces; }
 
 	void Read(MainWindow * window, std::ifstream &, size_t offset);
 	uint32_t Write(MainWindow * window, std::ofstream &);
@@ -85,23 +89,10 @@ public:
     void Prepare(GLViewWidget *gl);
     void Render(GLViewWidget* gl, int selected_door_type);
 
-	int Slice(std::vector<SliceInfo> & slice);
-	int Duplicate(std::vector<int> const& faces);
-	void Expand(std::vector<int> const& faces);
+	std::vector<uint32_t> Slice(std::vector<SliceInfo> & slice);
 
-	int        GetSliceEdge(glm::ivec2 p) const;
-	glm::ivec2 GetPointOnEdge(int v0, float p) const;
-	float      GetPercentOfEdge(int v0, glm::ivec2) const;
-	float      ProjectOntoEdge(int v0, glm::ivec2) const;
+	inline int GetFace(glm::ivec2 position) const { return _tree.GetFace(position); }
 
-	void AddFace(glm::ivec2 min, glm::ivec2 max);
-	bool CanAddFace(glm::ivec2 * verts);
-
-	int AddFaces(int no_faces = 1);
-	inline int GetFace(glm::ivec2 position) const { return m_tree.GetFace(position); }
-
-	void RemoveFace(int id);
-	void RemoveFaces(std::vector<int> const& vec);
 
 	void Translate(glm::ivec2 translation, glm::ivec2 half_dimensions);
 	void Rotate(glm::ivec2 center, glm::vec2 complex);
@@ -116,36 +107,25 @@ public:
 
 	glm::ivec2 GetSelectionCenter() const;
 
-	inline glm::ivec2 GetNextVertex(int i) const { return m_verts[(i & 0xFFFFFFFC) + ((i+1)&0x03)]; }
-	inline glm::ivec2 GetVertex(int i) const { return m_verts[i]; }
-	inline glm::ivec2 GetEdge(int i) const { return m_verts[(i & 0xFFFFFFFC) + ((i+1)&0x03)] - m_verts[i]; }
-
-	inline glm::ivec2 GetVertex(int i, int j) const { return m_verts[i*4 + j%4]; }
-	inline glm::ivec2 GetEdge(int i, int j) const { return GetVertex(i, j+1) - GetVertex(i, j); }
 
 	std::vector<glm::i16vec2> SaveVerts();
 	void RestoreVerts(std::vector<glm::i16vec2> const& vec);
 
-	void GetFaceAABB(int id, glm::i16vec2 & tl, glm::i16vec2 & br) const;
 
 	glm::i16vec4 GetBoundingBox() const;
 
 	void PruneLinks();
 	void ConvertLinks(int a, int b);
 
-	bool IsPointContained(int face, glm::ivec2 point);
 
 	static bool IsColinear(glm::ivec2 p, glm::ivec2 q, glm::ivec2 r);
 
 	Document *const   document;
-    mutable QuadTree  m_tree{this};
-	MetaroomSelection m_selection;
-	IndexBuffers      m_indices;
+	mutable QuadTree  _tree{this};
+	MetaroomSelection _selection;
 
 	void update_selections() {};
 
-
-	bool m_dirty{true};
 
 	void remove_face_links(int id);
 	void RingSelectFace(int face, glm::ivec2 mouse, Bitwise flags);
@@ -159,60 +139,7 @@ public:
 	std::string TestTreeSymmetry();
 	std::string TestDoorSymmetry();
 
-	void PruneDegenerate();
-	void DumpPermeabilityTable() { m_permeabilities.clear(); m_dirty = true; }
 
-	std::vector<std::pair<uint64_t, uint8_t> > m_permeabilities;
-
-	std::unique_ptr<glm::ivec2[]> m_verts;
-	std::unique_ptr<glm::ivec2[]> m_prev_verts;
-	std::unique_ptr<glm::ivec2[]> m_scratch_verts;
-
-//room properties
-	std::unique_ptr<uint32_t[]>  m_gravity;  // 2 half floats
-	std::unique_ptr<int8_t[]>    m_music;
-	std::unique_ptr<uint8_t[]>   m_roomType;
-	std::unique_ptr<int[]>	     m_color;
-	std::unique_ptr<std::pair<int, int>[]> m_hall;
-#if HAVE_UUID
-	std::unique_ptr<uint32_t[]>  m_uuid;
-	uint32_t                      m_uuid_counter{};
-#endif
-
-	std::unique_ptr<uint32_t[]>   m_directionalShade;  // 2 half floats
-	std::unique_ptr<uint8_t []>   m_ambientShade;
-	std::unique_ptr<glm::u8vec4[]>m_audio;  // 2 half floats
-
-	enum Buffers
-	{
-		bVertices=0,
-		bHalls=2,
-		bGravity = 3,
-		NoBuffers,
-
-	};
-
-	enum Arrays
-	{
-		aRooms = 0,
-		aHalls = 2,
-		aGravity,
-		NoArrays,
-
-	};
-
-	uint32_t allocated{};
-	uint32_t faces{};
-
-	uint32_t gl_vert_texture{};
-	uint32_t gl_vert_vbo{};
-
-	uint32_t m_vao[NoArrays]{};
-	uint32_t m_buffers[NoBuffers]{};
-
-	uint32_t m_glAlloced{};
-	uint32_t m_hallAlloc{};
-	uint32_t m_noHalls{};
 };
 
 

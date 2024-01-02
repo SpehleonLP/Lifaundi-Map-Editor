@@ -120,7 +120,7 @@ void MetaroomDoors::UpdateDoors(Metaroom * metaroom)
 {
 	m_dirty = true;
 
-	auto selection = metaroom->m_selection.GetVertSelection();
+        auto selection = metaroom->_selection.GetVertSelection();
 	std::vector<Edge> edges;
 
 //	for(int i : selection)

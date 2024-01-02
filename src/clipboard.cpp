@@ -5,10 +5,10 @@ static std::vector<Room> g_ClipBoard;
 
 std::vector<Room>   Clipboard::Extract(Metaroom* metaroom)
 {
-	return Extract(metaroom, metaroom->m_selection.GetFaceSelection());
+    return Extract(metaroom, metaroom->_selection.GetFaceSelection());
 }
 
-std::vector<Room>   Clipboard::Extract(Metaroom* metaroom, std::vector<int> const& selection)
+std::vector<Room>   Clipboard::Extract(Metaroom* metaroom, std::vector<uint32_t> const& selection)
 {
 	std::vector<Room> r;
 	r.reserve(selection.size());
@@ -17,18 +17,13 @@ std::vector<Room>   Clipboard::Extract(Metaroom* metaroom, std::vector<int> cons
 	{
 		Room room;
 
-		room.type				= metaroom->m_roomType[i];
-		room.music_track		= metaroom->m_music[i];
-		room.gravity			= metaroom->m_gravity[i];
-		room.directionalShade	= metaroom->m_directionalShade[i];
-		room.ambientShade		= metaroom->m_ambientShade[i];
-		room.audio				= metaroom->m_audio[i];
-
-		for(int j = 0; j < 4; ++j)
-		{
-	//		room.wall_types[j] = metaroom->m_doorType[i*4+j];
-			room.verts[j]      = metaroom->m_verts[i*4+j];
-		}
+		room.type				= metaroom->_roomType[i];
+		room.music_track		= metaroom->_music[i];
+		room.gravity			= metaroom->_gravity[i];
+		room.directionalShade	= metaroom->_directionalShade[i];
+		room.ambientShade		= metaroom->_ambientShade[i];
+		room.audio				= metaroom->_audio[i];
+		room.verts				= metaroom->_verts[i];
 
 		r.push_back(room);
 	}

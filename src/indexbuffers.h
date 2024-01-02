@@ -1,5 +1,6 @@
 #ifndef INDEXBUFFERS_H
 #define INDEXBUFFERS_H
+#include "entitysystem.h"
 #include <cstdint>
 
 class GLViewWidget;
@@ -11,7 +12,7 @@ public:
 	~IndexBuffers();
 
     void Release(GLViewWidget * gl);
-    void Prepare(GLViewWidget *gl, uint32_t size);
+	void Prepare(GLViewWidget *gl, EntitySystem::Range);
 
 	uint32_t EdgeVBO() const { return m_vbo[0]; }
 	uint32_t FaceVBO() const { return m_vbo[1]; }

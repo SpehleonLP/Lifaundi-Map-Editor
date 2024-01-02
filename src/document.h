@@ -7,6 +7,7 @@
 #include "controllerfsm.h"
 #include "mainwindow.h"
 #include "metaroom.h"
+#include "entitysystem.h"
 #include <memory>
 #include <vector>
 

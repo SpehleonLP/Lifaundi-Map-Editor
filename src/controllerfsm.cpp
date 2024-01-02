@@ -76,7 +76,7 @@ static bool ArrangeCounterClockwise(glm::ivec2 * verts)
 		&& sign == (math::cross(verts[0] - verts[3], verts[3] - verts[2]) <= 0);
 }
 
-bool GetVerticies(glm::ivec2 * dst, std::vector<int> const& selection, Metaroom * metaroom)
+bool GetVerticies(glm::ivec2 * dst, std::vector<uint32_t> const& selection, Metaroom * metaroom)
 {
 	std::vector<glm::ivec2> vec(selection.size());
 
@@ -101,7 +101,7 @@ bool GetVerticies(glm::ivec2 * dst, std::vector<int> const& selection, Metaroom 
 }
 
 template<typename T>
-static T GetMode(T const* array, std::vector<int> const& selection)
+static T GetMode(T const* array, std::vector<uint32_t> const& selection)
 {
 	std::vector<T> vec(selection.size());
 
@@ -115,7 +115,7 @@ static T GetMode(T const* array, std::vector<int> const& selection)
 }
 
 template<typename T>
-static T GetAverage(T const* array, std::vector<int> const& selection)
+static T GetAverage(T const* array, std::vector<uint32_t> const& selection)
 {
 	double accumulator=0;
 
@@ -127,7 +127,7 @@ static T GetAverage(T const* array, std::vector<int> const& selection)
 	return accumulator / selection.size();
 }
 
-static uint32_t GetAverageHalf2x16(uint32_t const* array, std::vector<int> const& selection)
+static uint32_t GetAverageHalf2x16(uint32_t const* array, std::vector<uint32_t> const& selection)
 {
 	glm::vec2 accumulator{0,0};
 
@@ -139,7 +139,7 @@ static uint32_t GetAverageHalf2x16(uint32_t const* array, std::vector<int> const
 	return glm::packHalf2x16(accumulator /(float) selection.size());
 }
 
-static glm::u8vec4 GetAverageU8vec4(glm::u8vec4 const* array, std::vector<int> const& selection)
+static glm::u8vec4 GetAverageU8vec4(glm::u8vec4 const* array, std::vector<uint32_t> const& selection)
 {
 	glm::vec4 accumulator{0};
 
@@ -158,12 +158,13 @@ bool ControllerFSM::AutoReseat()
 	if(m_state != State::None || !doc)
 		return false;
 
-	std::vector<std::pair<glm::vec2, int>> sortInfo;
-	sortInfo.resize(doc->m_metaroom.size());
+	auto range = doc->m_metaroom.range();
+	std::vector<std::pair<glm::vec2, int>> sortInfo(range.size());
+	auto itr = range.begin();
 
-	for(uint32_t i = 0; i < doc->m_metaroom.size(); ++i)
+	for(uint32_t i = 0; itr < range.end(); ++i, ++itr)
 	{
-		sortInfo[i] = std::make_pair(doc->m_metaroom.GetCenter(i), (int)i);
+		sortInfo[i] = std::make_pair(doc->m_metaroom.GetCenter(*itr), (int)(*itr));
 	}
 
 	std::sort(sortInfo.begin(), sortInfo.end(), [](auto const& a, auto const& b) { return a.first.y < b.first.y; });
@@ -182,7 +183,7 @@ bool ControllerFSM::AutoReseat()
 		}
 	}
 
-	std::vector<int> ordering(sortInfo.size());
+	std::vector<uint32_t> ordering(sortInfo.size());
 
 	bool didChange = false;
 
@@ -224,8 +225,8 @@ bool ControllerFSM::SetTool(Tool tool)
 	if(tool == Tool::Face)
 	{
 		auto& metaroom = m_parent->document->m_metaroom;
-		auto selection = metaroom.m_selection.GetVertSelection();
-		auto faces     = metaroom.m_selection.GetFaceSelection();
+                auto selection = metaroom._selection.GetVertSelection();
+                auto faces     = metaroom._selection.GetFaceSelection();
 
 		glm::ivec2 verts[4];
 		if(!GetVerticies(verts, selection, &metaroom))
@@ -248,12 +249,12 @@ bool ControllerFSM::SetTool(Tool tool)
 
 		Room room;
 
-		room.type				= GetMode(&metaroom.m_roomType[0], faces);
-		room.music_track		= GetMode(&metaroom.m_music[0], faces);
-		room.gravity			= GetAverageHalf2x16(&metaroom.m_gravity[0], faces);
-		room.directionalShade	= GetAverageHalf2x16(&metaroom.m_directionalShade[0], faces);
-		room.ambientShade		= GetAverage(&metaroom.m_ambientShade[0], faces);
-		room.audio				= GetAverageU8vec4(&metaroom.m_audio[0], faces);
+		room.type				= GetMode(&metaroom._roomType[0], faces);
+		room.music_track		= GetMode(&metaroom._music[0], faces);
+		room.gravity			= GetAverageHalf2x16(&metaroom._gravity[0], faces);
+		room.directionalShade	= GetAverageHalf2x16(&metaroom._directionalShade[0], faces);
+		room.ambientShade		= GetAverage(&metaroom._ambientShade[0], faces);
+		room.audio				= GetAverageU8vec4(&metaroom._audio[0], faces);
 
 		memcpy(&room.verts[0], verts, sizeof(verts));
 
@@ -302,7 +303,7 @@ bool ControllerFSM::SetTool(Tool tool)
 		break;
 	case Tool::Order:
 		m_state = State::Reorder;
-		m_parent->document->m_metaroom.m_selection.clear();
+                m_parent->document->m_metaroom._selection.clear();
 		break;
 	case Tool::Finish:
 		m_parent->SetStatusBarMessage();
@@ -361,12 +362,12 @@ bool ControllerFSM::OnLeftDown(glm::vec2 position, Bitwise , bool)
 	{
 	case State::None:
 	{
-		int face = m_parent->document->m_metaroom.m_tree.GetFace(position);
+		int face = m_parent->document->m_metaroom._tree.GetFace(position);
 //get best match for a face
 
 		if(face == -1)
 			m_state = State::MouseDownOnNothing;
-		else if(m_parent->document->m_metaroom.m_selection.IsFaceSelected(face))
+                else if(m_parent->document->m_metaroom._selection.IsFaceSelected(face))
 			m_state = State::MouseDownOnSelected;
 		else
 			m_state = State::MouseDownOnUnselected;
@@ -428,11 +429,11 @@ bool ControllerFSM::OnLeftUp(glm::vec2 position, Bitwise flags, bool alt)
 	case State::None: break;
 	case State::MouseDownOnSelected:
 	{
-		int face = m_parent->document->m_metaroom.m_tree.GetFace(mouse_down_pos);
+		int face = m_parent->document->m_metaroom._tree.GetFace(mouse_down_pos);
 
 		if(face >= 0)
 		{
-			m_parent->document->m_metaroom.m_selection.select_face(face, flags);
+                    m_parent->document->m_metaroom._selection.select_face(face, flags);
 			m_parent->document->m_metaroom.update_selections();
 		}
 
@@ -494,13 +495,13 @@ bool ControllerFSM::OnLeftUp(glm::vec2 position, Bitwise flags, bool alt)
 		return true;
 	case State::Reorder:
 	{
-		int face = m_parent->document->m_metaroom.m_tree.GetFace(mouse_down_pos);
+		int face = m_parent->document->m_metaroom._tree.GetFace(mouse_down_pos);
 
 		if(face < 0) return false;
 
-		m_parent->document->m_metaroom.m_selection.select_face(face, Bitwise::XOR);
+                m_parent->document->m_metaroom._selection.select_face(face, Bitwise::XOR);
 
-		if(m_parent->document->m_metaroom.m_selection.IsSelected(face))
+                if(m_parent->document->m_metaroom._selection.IsSelected(face))
 		{
 			m_ordering.push_back(face);
 		}
@@ -508,7 +509,7 @@ bool ControllerFSM::OnLeftUp(glm::vec2 position, Bitwise flags, bool alt)
 		{
 			for(size_t i = 0; i < m_ordering.size(); ++i)
 			{
-				if(m_ordering[i] == face)
+				if(m_ordering[i] == (uint32_t)face)
 				{
 					m_ordering.erase(m_ordering.begin()+i);
 					break;
@@ -533,7 +534,7 @@ bool ControllerFSM::OnLeftUp(glm::vec2 position, Bitwise flags, bool alt)
 		if(m_slice.empty())
 			return false;
 
-		std::vector<int> list;
+		std::vector<uint32_t> list;
 		std::vector<uint32_t> values;
 
 		list.resize(m_slice.size()/2);
@@ -544,7 +545,7 @@ bool ControllerFSM::OnLeftUp(glm::vec2 position, Bitwise flags, bool alt)
 		for(uint32_t i = 0; i < m_slice.size(); i += 2)
 		{
 			list[i/2] = (m_slice[i].edge/4);
-			if(list[i/2] == slice_edge/4)	id = i;
+			if(list[i/2] == (uint32_t)slice_edge/4)	id = i;
 		}
 
 		assert(id != -1);
@@ -553,7 +554,7 @@ bool ControllerFSM::OnLeftUp(glm::vec2 position, Bitwise flags, bool alt)
 		int edge = ((m_slice[id].percent <= m_slice[id+1].percent? m_slice[id].edge : m_slice[id+1].edge) + 5);
 		id       = edge - m_slice[id].edge;
 
-		glm::vec2 gravity		= mta.GetGravity(list[0]);
+		glm::vec2 gravity		= mta.MetaroomMemory::GetGravity(list[0]);
 		glm::vec2 floor_normal  = math::OrthoNormal(mta.GetEdge(slice_edge/4, edge));
 
 		for(uint32_t i = 0; i < list.size(); ++i)
@@ -783,7 +784,7 @@ bool ControllerFSM::OnMouseMove(glm::vec2 p, Bitwise flags)
 
 void ControllerFSM::CreateSlice(std::vector<SliceInfo> & slices, int edge, glm::ivec2 position)
 {
-	auto & selection = m_parent->document->m_metaroom.m_selection;
+    auto & selection = m_parent->document->m_metaroom._selection;
 	bool selected = selection.IsFaceSelected(edge / 4);
 
 	auto & metaroom = m_parent->document->m_metaroom;
@@ -791,7 +792,7 @@ void ControllerFSM::CreateSlice(std::vector<SliceInfo> & slices, int edge, glm::
 	float mid;
 	int original_edge = edge;
 
-	while(metaroom.m_tree.GetSliceFace(
+	while(metaroom._tree.GetSliceFace(
 		metaroom.GetVertex(edge),
 		metaroom.GetVertex(Metaroom::NextInEdge(edge)),
 		position,
@@ -844,7 +845,7 @@ void ControllerFSM::AddFace()
 	m_state = State::None;
 
 	if(math::length2(max - min) > 16
-	&& !m_parent->document->m_metaroom.m_tree.DoesOverlap(min, max))
+	&& !m_parent->document->m_metaroom._tree.DoesOverlap(min, max))
 	{
 		Room room;
 		room.verts[0] = max;
@@ -897,11 +898,11 @@ void ControllerFSM::Prepare(GLViewWidget *gl)
 	{
 		assert(slice_edge >= 0);
 		SetUpSlices(m_slice, slice_edge, m_parent->document->m_metaroom.ProjectOntoEdge(slice_edge, mouse_current_pos));
-		m_parent->document->m_metaroom.m_selection.MarkFace(slice_edge/4);
+                m_parent->document->m_metaroom._selection.MarkFace(slice_edge/4);
 
 		CreateSlice(m_slice, m_slice[0].edge, m_slice[0].vertex);
 		CreateSlice(m_slice, m_slice[1].edge, m_slice[1].vertex);
-		m_parent->document->m_metaroom.m_selection.ClearMarks();
+                m_parent->document->m_metaroom._selection.ClearMarks();
 
 		if(m_state != State::SliceGravity)
 			std::sort(m_slice.begin(), m_slice.end(),

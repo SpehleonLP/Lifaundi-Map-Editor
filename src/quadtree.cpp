@@ -33,7 +33,7 @@ void QuadTree::Release(GLViewWidget *gl)
 
 bool QuadTree::empty() const
 {
-	return m_metaroom->size() == 0;
+	return m_metaroom->noFaces() == 0;
 }
 
 void QuadTree::Rebuild()
@@ -42,7 +42,7 @@ void QuadTree::Rebuild()
 	m_vbo_dirty = true;
 
 	glm::i16vec2 min, max;
-	uint32_t     size = m_metaroom->size();
+	uint32_t     size = m_metaroom->noFaces();
 	auto bounds = m_metaroom->GetBoundingBox();
 
 	bounds.x *= -2 * (bounds.x < 0);
@@ -50,9 +50,9 @@ void QuadTree::Rebuild()
 
 	if(size == 0) return;
 
-	std::unique_ptr<Leaf[]> leaves(new Leaf[m_metaroom->size()]);
+	std::unique_ptr<Leaf[]> leaves(new Leaf[m_metaroom->noFaces()]);
 
-	for(uint32_t i = 0; i < size; ++i)
+	for(auto i : m_metaroom->range())
 	{
 		m_metaroom->GetFaceAABB(i, min, max);
 
@@ -101,8 +101,8 @@ void QuadTree::WriteTree(std::ofstream & fp)
 {
 	if(m_mvsf.empty())
 	{
-		std::vector<glm::i16vec4> boxes = MVSF_sampler::GetBoundingBoxes(m_metaroom);
-		m_mvsf = CreateNodes(m_metaroom->GetBoundingBox(), &boxes[0], m_metaroom->size());
+
+
 	}
 
 	uint32_t length = m_mvsf.size();
@@ -119,22 +119,79 @@ std::vector<QuadTree::Node> QuadTree::CreateNodes(glm::i16vec4 bounds, glm::i16v
 
 	if(size == 0) return std::vector<Node>();
 
-	std::unique_ptr<Leaf[]> leaves(new Leaf[size]);
+	struct Memo
+	{
+		std::vector<Node> leaves;
+		glm::i16vec4	  bounds;
+		int				  id;
+	};
+
+	std::vector<Memo> memo(1, {
+		.leaves = std::vector<Leaf>(size),
+		.bounds = bounds,
+		.parent = -1,
+		.id = 0,
+	});
 
 	for(uint32_t i = 0; i < size; ++i)
 	{
-		auto min =  glm::i16vec2(boxes[i].x, boxes[i].y);
-		auto max =  glm::i16vec2(boxes[i].z, boxes[i].w);
-
-		leaves[i].face_id = i;
-		leaves[i].z_order = math::GetZOrder(glm::ivec2(min.x + max.x + bounds.x, min.y + max.y + bounds.y)/2);
-		leaves[i].min     = min;
-		leaves[i].max     = max;
+		memo.back().leaves[i].face_id = i;
+		memo.back().leaves[i].min     = glm::i16vec2(boxes[i].x, boxes[i].y);
+		memo.back().leaves[i].max     = glm::i16vec2(boxes[i].z, boxes[i].w);
 	}
 
-	std::sort(&leaves[0], &leaves[0] + size,
-		[](const Leaf & a, const Leaf & b)
-			{ return a.z_order < b.z_order; });
+	std::vector<Leaf> result;
+	result.reserve(size*2);
+	result.push_back({});
+
+	while(memo.size())
+	{
+		auto top = std::move(memo.back());
+		memo.pop_back();
+
+		result[top.id] = {
+			.leaf = memo.leaves.size() <= 1? 1 : 0,
+			.child = result.size(),
+			.min = top.min,
+			.max = top.max
+		};
+
+		if(result[top.id].leaf)
+		{
+			result[top.id].child = memo.leaves.empty()? -1 :  memo.leaves.front().child;
+			continue;
+		}
+
+		Memo corners[4];
+		auto mid = (glm::ivec2(top.min) + glm::ivec2(top.max)) / 2;
+
+		for(auto leaf : top.leaves)
+		{
+			auto center = (glm::ivec2(leaf.min) + glm::ivec2(leaf.max)) / 2;
+
+			int bucket = (center.x > mid.x)? 0x01 : 0x00;
+			bucket |= (center.y > mid.y)? 0x02 : 0x00;
+
+			corners[bucket].leaves.push_back(leaf);
+
+			if(corners[bucket].leaves.size() == 0)
+			{
+
+			}
+
+		}
+
+		auto offset = memo.size();
+		memo.push_back({
+
+
+		});
+
+
+	}
+
+
+
 
 	uint32_t layer_size = size;
 	uint32_t alloc = 2;
@@ -145,9 +202,11 @@ std::vector<QuadTree::Node> QuadTree::CreateNodes(glm::i16vec4 bounds, glm::i16v
 		layer_size = (layer_size+1)/2;
 	}
 
-	std::vector<Node> nodes(alloc);
+	std::vector<Leaf> nodes(size*2);
 
-	BuildTree(&nodes[0], &leaves[0], 0, size, 0, 0, 1, alloc);
+
+	nodes.resize(BuildTree(&nodes[0], leaves, 0, size, 0, 0, 1, alloc));
+
 //	fprintf(stderr, "final length: %ui\nallocated: %ui", length, alloced);
 
 	return nodes;
@@ -349,10 +408,10 @@ void QuadTree::GetWriteDoors(std::vector<Door> & doors, std::vector<DoorList> & 
 	std::stack<int> s;
 	std::vector<DoorInfo> info;
 
-	indices.resize(m_metaroom->size()*4);
-	doors.reserve(m_metaroom->size()*8);
+	indices.resize(m_metaroom->noVertices());
+	doors.reserve(m_metaroom->noEdges()*2);
 
-	for(uint32_t i = 0; i < m_metaroom->size()*4; ++i)
+	for(auto i : m_metaroom->edgeRange())
 	{
 		//if(typeId && m_metaroom->m_doorType[i] != 0)	continue;
 
@@ -408,7 +467,7 @@ void QuadTree::GetWriteDoors(std::vector<Door> & doors, std::vector<DoorList> & 
 
 		for(size_t j = 0; j < info.size(); ++j)
 		{
-			int perm = m_metaroom->GetPermeability(i/4, info[j].face);
+			int perm = m_metaroom->MetaroomMemory::GetPermeability(i/4, info[j].face);
 			doors.push_back({perm, info[j].face, info[j].end});
 		}
 	}
@@ -423,9 +482,9 @@ void QuadTree::GetHallDoors(std::vector<int> & doors, std::vector<std::pair<int,
 
 	std::vector<DoorInfo> info;
 
-	indices.resize(m_metaroom->size());
+	indices.resize(m_metaroom->noFaces());
 
-	for(uint32_t i = 0; i < m_metaroom->size()*4; ++i)
+	for(auto i : m_metaroom->edgeRange())
 	{
 		indices[i].first = doors.size();
 
@@ -461,7 +520,7 @@ std::vector<uint8_t> QuadTree::GetEdgeFlags()
 	if(m_nodes == nullptr)
 		return {};
 
-	std::vector<uint8_t> r(m_metaroom->size(), 0);
+	std::vector<uint8_t> r(m_metaroom->noFaces(), 0);
 
 	auto min = m_nodes[0].min;
 	auto max = m_nodes[0].max;
@@ -509,7 +568,7 @@ void QuadTree::GetWriteDoors(int edge, std::stack<int> & stack, std::vector<Door
 			DoorInfo info;
 			info.begin = begin.first;
 			info.end   = end.first;
-			info.perm  = m_metaroom->GetPermeability(edge/4, range.face());
+			info.perm  = m_metaroom->MetaroomMemory::GetPermeability(edge/4, range.face());
 			info.face  = range.face();
 
 			edges.push_back(info);
@@ -541,7 +600,7 @@ std::vector<QuadTree::EdgeVertex> QuadTree::GetRenderWalls()
 
 	if(m_nodes)
 	{
-		for(uint32_t i = 0; i < m_metaroom->size()*4; ++i)
+		for(auto i : m_metaroom->edgeRange())
 			GetRenderWalls(i, r);
 	}
 
@@ -566,7 +625,7 @@ void QuadTree::GetRenderWalls(int edge, std::vector<EdgeVertex> & edges) const
 
 		if(math::GetOverlap(range.v0, range.v1, range.a0, range.a1, &begin, &end))
 		{
-			e.permeability = m_metaroom->GetPermeability(edge/4, range.face());
+			e.permeability = m_metaroom->MetaroomMemory::GetPermeability(edge/4, range.face());
 
 			int vertices[4] = { edge, next_edge, range.edge(), range.nextEdge() };
 

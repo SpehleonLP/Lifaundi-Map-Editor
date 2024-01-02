@@ -35,7 +35,7 @@ void MetaroomSelection::erase(size_t i)
 	memset(&m_array[(m_alloced - (i+1))*4], 0, 4);
 }
 
-void MetaroomSelection::erase(std::vector<int> const& vec)
+void MetaroomSelection::erase(std::vector<uint32_t> const& vec)
 {
 	uint32_t read = 0, write = 0;
 
@@ -96,9 +96,9 @@ void MetaroomSelection::ClearMarks()
 	}
 }
 
-std::vector<int> MetaroomSelection::GetVertSelection() const
+std::vector<uint32_t> MetaroomSelection::GetVertSelection() const
 {
-	std::vector<int> r;
+	std::vector<uint32_t> r;
 
 	for(uint32_t i = 0; i < m_alloced*4; ++i)
 	{
@@ -109,9 +109,9 @@ std::vector<int> MetaroomSelection::GetVertSelection() const
 	return r;
 }
 
-std::vector<int> MetaroomSelection::GetFaceSelection() const
+std::vector<uint32_t> MetaroomSelection::GetFaceSelection() const
 {
-	std::vector<int> r;
+	std::vector<uint32_t> r;
 
 	for(uint32_t i = 0; i < m_alloced; ++i)
 	{
@@ -122,9 +122,9 @@ std::vector<int> MetaroomSelection::GetFaceSelection() const
 	return r;
 }
 
-std::vector<int> MetaroomSelection::GetSelection() const
+std::vector<uint32_t> MetaroomSelection::GetSelection() const
 {
-	std::vector<int> r;
+	std::vector<uint32_t> r;
 
 	for(uint32_t i = 0; i < m_alloced; ++i)
 	{
@@ -135,9 +135,9 @@ std::vector<int> MetaroomSelection::GetSelection() const
 	return r;
 }
 
-std::vector<int> MetaroomSelection::GetEdgeSelection() const
+std::vector<uint32_t> MetaroomSelection::GetEdgeSelection() const
 {
-	std::vector<int> r;
+	std::vector<uint32_t> r;
 
 	for(uint32_t i = 0; i < m_alloced*4; ++i)
 	{
@@ -148,7 +148,7 @@ std::vector<int> MetaroomSelection::GetEdgeSelection() const
 	return r;
 }
 
-void MetaroomSelection::SetSelection(std::vector<int> const& vec)
+void MetaroomSelection::SetSelection(std::vector<uint32_t> const& vec)
 {
 	clear();
 
@@ -158,7 +158,7 @@ void MetaroomSelection::SetSelection(std::vector<int> const& vec)
 	}
 }
 
-void MetaroomSelection::SetVertexSelection(std::vector<int> const& vec)
+void MetaroomSelection::SetVertexSelection(std::vector<uint32_t> const& vec)
 {
 	for(int i : vec)
 	{
@@ -166,13 +166,13 @@ void MetaroomSelection::SetVertexSelection(std::vector<int> const& vec)
 	}
 }
 
-bool MetaroomSelection::ToggleSelectAll(uint32_t faces, Bitwise flags)
+bool MetaroomSelection::ToggleSelectAll(Range range, Bitwise flags)
 {
 	m_selectionChanged = true;
 
 	bool changed = false;
 
-    for(uint32_t i = 0; i < faces*4; ++i)
+	for(auto i : range)
 	{
 		bool is_selected = IsVertSelected(i);
 		select_vertex(i, flags);
@@ -182,7 +182,7 @@ bool MetaroomSelection::ToggleSelectAll(uint32_t faces, Bitwise flags)
 	if(changed == false)
 		clear();
 
-	m_selectedFaces = faces;
+	m_selectedFaces = range.size();
 	return changed;
 }
 
