@@ -34,7 +34,7 @@ size_t MetaroomDoors::RemoveFaces(std::vector<int> const& vec)
 	return accumulator;
 }
 
-size_t MetaroomDoors::RemoveFace(int i)
+size_t MetaroomDoors::RemoveFace(uint32_t i)
 {
 	m_dirty = true;
 
@@ -56,18 +56,18 @@ size_t MetaroomDoors::RemoveFace(int i)
 }
 
 
-size_t MetaroomDoors::RemoveEdges(std::vector<int> const& vec)
+size_t MetaroomDoors::RemoveEdges(std::vector<uint32_t> const& vec)
 {
 	m_dirty = true;
 
 	uint32_t read = 0;
 	uint32_t write = 0;
 
-	for(int i : vec)
+	for(uint32_t i : vec)
 	{
 		while(read < m_edges.size() && m_edges[read].m[0].face < i)
 		{
-			int face = m_edges[read].m[0].face;
+			auto face = m_edges[read].m[0].face;
 
 			uint32_t j = 0;
 
@@ -92,7 +92,7 @@ size_t MetaroomDoors::RemoveEdges(std::vector<int> const& vec)
 
 	while(read < m_edges.size() && m_edges[read].m[0].face)
 	{
-		int face = m_edges[read].m[0].face;
+		auto face = m_edges[read].m[0].face;
 
 		uint32_t j = 0;
 

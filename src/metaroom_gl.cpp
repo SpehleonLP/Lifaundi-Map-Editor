@@ -34,7 +34,7 @@ void MetaroomGL::Release(GLViewWidget *gl)
 
 void MetaroomGL::Render(GLViewWidget *gl, int selected_door_type)
 {
-	if(me.empty() == 0)
+	if(me.empty())
 		return;
 
 	Prepare(gl);

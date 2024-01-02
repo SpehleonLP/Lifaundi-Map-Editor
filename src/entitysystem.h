@@ -28,6 +28,7 @@ public:
 
 	uint32_t GetVBO(QOpenGLFunctions_3_2_Core * gl);
 	std::vector<uint32_t> const& GetList() const;
+	std::vector<int> GetInversse() const;
 
 	struct Range
 	{

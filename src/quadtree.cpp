@@ -101,8 +101,8 @@ void QuadTree::WriteTree(std::ofstream & fp)
 {
 	if(m_mvsf.empty())
 	{
-
-
+		std::vector<glm::i16vec4> boxes = MVSF_sampler::GetBoundingBoxes(m_metaroom);
+		m_mvsf = CreateNodes(m_metaroom->GetBoundingBox(), &boxes[0], m_metaroom->noFaces());
 	}
 
 	uint32_t length = m_mvsf.size();
@@ -112,6 +112,8 @@ void QuadTree::WriteTree(std::ofstream & fp)
 		fp.write((char*)&m_mvsf[0], length * sizeof(m_mvsf[0]));
 }
 
+/// this works as proved by the quad tree algorithm being reused for all the interaction
+/// the only difference is the source being from the mvsf sampler
 std::vector<QuadTree::Node> QuadTree::CreateNodes(glm::i16vec4 bounds, glm::i16vec4 const* boxes, uint32_t size)
 {
 	bounds.x *= -2 * (bounds.x < 0);
@@ -119,79 +121,22 @@ std::vector<QuadTree::Node> QuadTree::CreateNodes(glm::i16vec4 bounds, glm::i16v
 
 	if(size == 0) return std::vector<Node>();
 
-	struct Memo
-	{
-		std::vector<Node> leaves;
-		glm::i16vec4	  bounds;
-		int				  id;
-	};
-
-	std::vector<Memo> memo(1, {
-		.leaves = std::vector<Leaf>(size),
-		.bounds = bounds,
-		.parent = -1,
-		.id = 0,
-	});
+	std::unique_ptr<Leaf[]> leaves(new Leaf[size]);
 
 	for(uint32_t i = 0; i < size; ++i)
 	{
-		memo.back().leaves[i].face_id = i;
-		memo.back().leaves[i].min     = glm::i16vec2(boxes[i].x, boxes[i].y);
-		memo.back().leaves[i].max     = glm::i16vec2(boxes[i].z, boxes[i].w);
+		auto min =  glm::i16vec2(boxes[i].x, boxes[i].y);
+		auto max =  glm::i16vec2(boxes[i].z, boxes[i].w);
+
+		leaves[i].face_id = i;
+		leaves[i].z_order = math::GetZOrder(glm::ivec2(min.x + max.x + bounds.x, min.y + max.y + bounds.y)/2);
+		leaves[i].min     = min;
+		leaves[i].max     = max;
 	}
 
-	std::vector<Leaf> result;
-	result.reserve(size*2);
-	result.push_back({});
-
-	while(memo.size())
-	{
-		auto top = std::move(memo.back());
-		memo.pop_back();
-
-		result[top.id] = {
-			.leaf = memo.leaves.size() <= 1? 1 : 0,
-			.child = result.size(),
-			.min = top.min,
-			.max = top.max
-		};
-
-		if(result[top.id].leaf)
-		{
-			result[top.id].child = memo.leaves.empty()? -1 :  memo.leaves.front().child;
-			continue;
-		}
-
-		Memo corners[4];
-		auto mid = (glm::ivec2(top.min) + glm::ivec2(top.max)) / 2;
-
-		for(auto leaf : top.leaves)
-		{
-			auto center = (glm::ivec2(leaf.min) + glm::ivec2(leaf.max)) / 2;
-
-			int bucket = (center.x > mid.x)? 0x01 : 0x00;
-			bucket |= (center.y > mid.y)? 0x02 : 0x00;
-
-			corners[bucket].leaves.push_back(leaf);
-
-			if(corners[bucket].leaves.size() == 0)
-			{
-
-			}
-
-		}
-
-		auto offset = memo.size();
-		memo.push_back({
-
-
-		});
-
-
-	}
-
-
-
+	std::sort(&leaves[0], &leaves[0] + size,
+		[](const Leaf & a, const Leaf & b)
+			{ return a.z_order < b.z_order; });
 
 	uint32_t layer_size = size;
 	uint32_t alloc = 2;
@@ -202,11 +147,9 @@ std::vector<QuadTree::Node> QuadTree::CreateNodes(glm::i16vec4 bounds, glm::i16v
 		layer_size = (layer_size+1)/2;
 	}
 
-	std::vector<Leaf> nodes(size*2);
+	std::vector<Node> nodes(alloc);
 
-
-	nodes.resize(BuildTree(&nodes[0], leaves, 0, size, 0, 0, 1, alloc));
-
+	BuildTree(&nodes[0], &leaves[0], 0, size, 0, 0, 1, alloc);
 //	fprintf(stderr, "final length: %ui\nallocated: %ui", length, alloced);
 
 	return nodes;
@@ -380,7 +323,7 @@ int QuadTree::GetFace(glm::ivec2 position)
 
 		if(math::boxContains(position, node.min, node.max))
 		{
-			if(node.leaf == true)
+			if(node.leaf)
 			{
 				if(m_metaroom->IsPointContained(node.child, position))
 				{

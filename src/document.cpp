@@ -29,7 +29,7 @@ Document::~Document()
 void Document::Release(GLViewWidget * gl)
 {
 	gl->glAssert();
-    m_metaroom.Release(gl);
+	m_metaroom.gl.Release(gl);
 
     if(m_background)
       m_background->Release(gl);

@@ -124,3 +124,18 @@ std::vector<uint32_t> const& EntitySystem::GetList() const
 	std::sort(_usedList.begin(), _usedList.end());
 	return _usedList;
 }
+
+std::vector<int> EntitySystem::GetInversse() const
+{
+	std::vector<int> r(_totalSize, -1);
+
+	uint32_t counter = 0;
+
+	for(auto item : _usedList)
+	{
+		r[item] = counter++;
+	}
+
+	return r;
+
+}

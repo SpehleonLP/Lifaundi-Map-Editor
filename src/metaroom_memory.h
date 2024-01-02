@@ -2,6 +2,7 @@
 #define METAROOM_MEMORY_H
 #include "Spehleon/lib/Support/shared_array.hpp"
 #include "src/entitysystem.h"
+#include "src/metaroomselection.h"
 #include <glm/gtc/type_precision.hpp>
 #include <map>
 
@@ -16,7 +17,7 @@ public:
 	xxEdgeRange edgeRange() const;
 
 	__always_inline bool empty() const { return noFaces() == 0; }
-	__always_inline size_t noFaces() const { return _entitySystem.used() == 0; };
+	__always_inline size_t noFaces() const { return _entitySystem.used(); };
 	__always_inline size_t noEdges() const { return noFaces()*4; }
 	__always_inline size_t noVertices() const { return noFaces() * 4; }
 
@@ -42,7 +43,6 @@ public:
 	int GetPermeability(int a, int b) const;
 
 	glm::i16vec4 GetBoundingBox() const;
-	int        GetSliceEdge(glm::ivec2 p) const;
 	glm::ivec2 GetPointOnEdge(int v0, float p) const;
 	float      GetPercentOfEdge(int v0, glm::ivec2) const;
 	float      ProjectOntoEdge(int v0, glm::ivec2) const;
@@ -55,6 +55,16 @@ public:
 	std::vector<std::pair<uint64_t, float>> GetPermeabilities(std::vector<uint32_t> const& indices, bool remove = false);
 	void RemovePermeabilities(std::vector<std::pair<uint64_t, float>> const&);
 	void AddPermeabilities(std::vector<std::pair<uint64_t, float>>  const&);
+	void DumpPermeabilityTable() { _permeabilities.clear(); }
+
+	void AddPermeabilities(MetaroomMemory & src);
+
+	glm::vec2 GetGravity() const;
+	glm::vec3 GetShade() const;
+	glm::vec4 GetAudio() const;
+
+	int GetMusicTrack() const;
+	int GetRoomType() const;
 
 public:
 	std::map<uint64_t, float> _permeabilities;
@@ -80,6 +90,9 @@ public:
 	shared_array<uint32_t>    _directionalShade;  // 2 half floats
 	shared_array<uint8_t >    _ambientShade;
 	shared_array<glm::u8vec4> _audio;  // 2 half floats
+
+// needed for realloc
+	MetaroomSelection			_selection;
 
 	EntitySystem _entitySystem{std::bind(&MetaroomMemory::Realloc, this, std::placeholders::_1)};
 	void Realloc(size_t);

@@ -43,7 +43,7 @@ public:
 	explicit MainWindow(QWidget *parent = nullptr);
 	~MainWindow();
 
-	std::vector<std::string> GetTrackList(int8_t * music, uint32_t length);
+	std::vector<std::string> GetTrackList(int8_t * music, EntitySystem::Range range);
 	void SetTrackList(std::vector<std::string> const&);
 
 	void CreateDoorType();

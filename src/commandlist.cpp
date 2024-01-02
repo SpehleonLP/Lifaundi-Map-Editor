@@ -26,6 +26,7 @@ void TransformCommand::RollForward()
 		std::swap(verts[i], metaroom->verts(indices[i]));
 	}
 
+	_permDelta = metaroom->GetInvalidPermeabilities();
 	metaroom->CommitMove();
 }
 
@@ -38,6 +39,7 @@ void TransformCommand::RollBack()
 		std::swap(verts[i], metaroom->verts(indices[i]));
 	}
 
+	metaroom->AddPermeabilities(_permDelta);
 	metaroom->CommitMove();
 }
 

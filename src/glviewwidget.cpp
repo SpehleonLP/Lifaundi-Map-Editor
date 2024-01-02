@@ -374,7 +374,7 @@ void GLViewWidget::paintGL()
 	glDefaultVAOs::RenderSquare(this);
 
     w->document->RenderBackground(this);
-    w->document->m_metaroom.Render(this, -1);
+	w->document->m_metaroom.gl.Render(this, -1);
 
     w->toolbox.Render(this);
 	

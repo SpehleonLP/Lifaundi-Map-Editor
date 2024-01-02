@@ -43,6 +43,7 @@ void IndexBuffers::Prepare(GLViewWidget*gl, EntitySystem::Range range)
     gl->glAssert();
 
 //fill with edge data
+	dst = data.data();
 	for(auto i : range)
 	{
 		*(dst++) = i*4+0;

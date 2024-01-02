@@ -140,9 +140,12 @@ enter(Qt::Key_Z, this)
 	connect(ui->debugSelectRoom,     &QAction::triggered,  this, [this]() {
 		bool ok;
 		int text = QInputDialog::getInt(this, tr("Select Room By ID"),
-												tr("Room ID:"), 0, 0, document->m_metaroom.size(), 1, &ok);
+												tr("Room ID:"), 0, 0, document->m_metaroom.noFaces(), 1, &ok);
 		if (ok)
+		{
+			text = document->m_metaroom._entitySystem.GetList()[text];
 			document->m_metaroom._selection.select_face(text, Bitwise::SET);
+		}
 	});
 	connect(ui->debugDumpPermTable,  &QAction::triggered,  this, [this]() { document->m_metaroom.DumpPermeabilityTable(); });
 
@@ -388,7 +391,7 @@ void MainWindow::DisplayString(std::string && str)
 		QMessageBox::Ok);
 }
 
-std::vector<std::string> MainWindow::GetTrackList(int8_t * music, uint32_t length)
+std::vector<std::string> MainWindow::GetTrackList(int8_t * music, EntitySystem::Range range)
 {
 	std::vector<std::string> r;
 
@@ -397,7 +400,7 @@ std::vector<std::string> MainWindow::GetTrackList(int8_t * music, uint32_t lengt
 
 	std::vector<uint32_t> refCount(ui->room_music->count(), 0);
 
-	for(uint32_t i = 0; i < length; ++i)
+	for(auto i : range)
 		if(music[i] >= 0) refCount[music[i]] += 1;
 
 	std::vector<std::pair<QString, uint32_t>> sort_vector;
@@ -422,7 +425,7 @@ std::vector<std::string> MainWindow::GetTrackList(int8_t * music, uint32_t lengt
 		}
 	}
 
-	for(uint32_t i = 0; i < length; ++i)
+	for(auto i : range)
 		if(music[i] >= 0) music[i] = refCount[music[i]];
 
 	SetTrackList(r);
@@ -551,7 +554,7 @@ void MainWindow::fileCAOS()
 
 		try
 		{
-			auto music = GetTrackList(&document->m_metaroom.m_music[0], document->m_metaroom.size());
+			auto music = GetTrackList(&document->m_metaroom._music[0], document->m_metaroom.range());
 			options.save(&document->m_metaroom, dialog.selectedFiles().first().toStdString(), std::move(music));
 			break;
 		}

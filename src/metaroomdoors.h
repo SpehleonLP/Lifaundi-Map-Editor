@@ -9,7 +9,7 @@ struct Edge
 	struct Vertex
 	{
 		int id;
-		int face;
+		uint32_t face;
 		uint8_t type;
 		uint8_t perm;
 	} m[2];
@@ -35,9 +35,9 @@ public:
 
 	void AddEdges(std::vector<Edge> & e);
 
-	size_t RemoveEdges(std::vector<int> const& vec);
+	size_t RemoveEdges(const std::vector<uint32_t> &vec);
 	size_t RemoveFaces(std::vector<int> const& vec);
-	size_t RemoveFace(int i);
+	size_t RemoveFace(uint32_t i);
 
     void   Prerender(GLViewWidget *gl);
 	void   Render(uint32_t vertex_texture);

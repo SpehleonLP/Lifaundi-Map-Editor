@@ -22,7 +22,15 @@ public:
 	struct Node
 	{
 		int         leaf : 1;
-		int			child;
+		int			child : 31;
+		glm::i16vec2 min;
+		glm::i16vec2 max;
+	};
+
+	struct Leaf
+	{
+		uint32_t    z_order;
+		int         face_id;
 		glm::i16vec2 min;
 		glm::i16vec2 max;
 	};
@@ -104,6 +112,8 @@ friend class RoomRange;
 	void GetRenderWalls(int edge, std::vector<EdgeVertex> & edges) const;
 
 	void     Rebuild();
+	static uint32_t BuildTree(Node * nodes, Leaf const* leaves, uint32_t min, uint32_t max, uint32_t mask, uint32_t node, uint32_t base, uint32_t alloc, uint32_t depth = 0);
+
 
 	Metaroom              * m_metaroom{nullptr};
 	std::unique_ptr<Node[]> m_nodes;

@@ -53,8 +53,6 @@ public:
 	std::vector<std::pair<int, int> > GetSelectedDoors() const;
 	std::vector<int>  GetExtrudableEdges() const;
 
-    void Release(GLViewWidget *gl);
-
 	std::vector<uint32_t> Insert(std::vector<Room> const&);
 	void Insert(std::vector<Room> const&, std::vector<uint32_t> const&);
 
@@ -70,12 +68,6 @@ public:
 	std::vector<uint32_t> Duplicate(std::vector<uint32_t> const& faces);
 	void PruneDegenerate();
 
-	glm::vec2 GetGravity() const;
-	glm::vec3 GetShade() const;
-	glm::vec4 GetAudio() const;
-
-	int GetMusicTrack() const;
-	int GetRoomType() const;
 	//int GetWallType() const;
 
 	int GetPermeability() const;
@@ -86,13 +78,10 @@ public:
 	void Read(MainWindow * window, std::ifstream &, size_t offset);
 	uint32_t Write(MainWindow * window, std::ofstream &);
 
-    void Prepare(GLViewWidget *gl);
-    void Render(GLViewWidget* gl, int selected_door_type);
-
 	std::vector<uint32_t> Slice(std::vector<SliceInfo> & slice);
 
 	inline int GetFace(glm::ivec2 position) const { return _tree.GetFace(position); }
-
+	int        GetSliceEdge(glm::ivec2 p) const;
 
 	void Translate(glm::ivec2 translation, glm::ivec2 half_dimensions);
 	void Rotate(glm::ivec2 center, glm::vec2 complex);
@@ -111,9 +100,6 @@ public:
 	std::vector<glm::i16vec2> SaveVerts();
 	void RestoreVerts(std::vector<glm::i16vec2> const& vec);
 
-
-	glm::i16vec4 GetBoundingBox() const;
-
 	void PruneLinks();
 	void ConvertLinks(int a, int b);
 
@@ -122,7 +108,6 @@ public:
 
 	Document *const   document;
 	mutable QuadTree  _tree{this};
-	MetaroomSelection _selection;
 
 	void update_selections() {};
 

@@ -26,15 +26,7 @@ void MetaroomMemory::Realloc(size_t size)
 	_ambientShade		= realloc(_ambientShade, size);
 	_audio				= realloc(_audio, size);
 
-//room properties
-	shared_array<uint32_t>  _gravity;  // 2 half floats
-	shared_array<int8_t>    _music;
-	shared_array<uint8_t>   _roomType;
-	shared_array<int>	    _color;
-
-	shared_array<uint32_t>    _directionalShade;  // 2 half floats
-	shared_array<uint8_t >    _ambientShade;
-	shared_array<glm::u8vec4> _audio;  // 2 half floats
+	_selection.resize(size);
 }
 
 void MetaroomMemory::SetRoom(int index, Room const& room)
@@ -264,6 +256,20 @@ void MetaroomMemory::AddPermeabilities(std::vector<std::pair<uint64_t, float>>  
 
 }
 
+void MetaroomMemory::AddPermeabilities(MetaroomMemory & src)
+{
+	auto inverse = src._entitySystem.GetInversse();
+
+	for(auto const& item : src._permeabilities)
+	{
+		auto a = item.first & 0xFFFFFFFF;
+		auto b = (item.first >> 32) & 0xFFFFFFFF;
+		auto key = GetDoorKey(inverse[a], inverse[b]);
+		_permeabilities[key] = item.second;
+	}
+}
+
+
 bool	   MetaroomMemory::DoShareEdge(uint32_t i, uint32_t j) const
 {
 	std::pair<float, int> begin, end;
@@ -285,4 +291,127 @@ bool	   MetaroomMemory::DoShareEdge(uint32_t i, uint32_t j) const
 	}
 
 	return false;
+}
+
+glm::vec2 MetaroomMemory::GetGravity() const
+{
+	float length{};
+	float angle{};
+	int   count{};
+
+	for(auto i : range())
+	{
+		if(!_selection.IsFaceSelected(i))
+			continue;
+
+		glm::vec2 vec = glm::unpackHalf2x16(_gravity[i]);
+
+		float len = glm::length(vec);
+		length += len;
+
+		if(len)
+		{
+			vec /= len;
+			angle += std::atan2(vec.y, vec.x);
+		}
+
+		++count;
+	}
+
+	return glm::vec2(length, angle) / (count? count : 1.f);
+}
+
+glm::vec3 MetaroomMemory::GetShade() const
+{
+	float length{};
+	float angle{};
+	float ambient{};
+	int   count{};
+
+	for(auto i : range())
+	{
+		if(!_selection.IsFaceSelected(i))
+			continue;
+
+		glm::vec2 vec = glm::unpackHalf2x16(_directionalShade[i]);
+		ambient += _ambientShade[i];
+
+		float len = glm::length(vec);
+		length += len;
+
+		if(len)
+		{
+			vec /= len;
+			angle += std::atan2(vec.y, vec.x);
+		}
+
+		++count;
+	}
+
+	return glm::vec3(length, angle, ambient) / (count? count : 1.f);
+}
+
+glm::vec4 MetaroomMemory::GetAudio() const
+{
+	glm::vec4 audio{0};
+	int   count{};
+
+	for(auto i : range())
+	{
+		if(!_selection.IsFaceSelected(i))
+			continue;
+
+		audio += _audio[i];
+		++count;
+	}
+
+	if(count)
+	{
+		audio /= count;
+	}
+
+	return audio;
+}
+
+
+
+
+int MetaroomMemory::GetMusicTrack() const
+{
+	bool     match = false;
+	int      track = 0;
+
+	for(auto i : range())
+	{
+		if(_selection.IsFaceSelected(i))
+		{
+			if(match == true && track != _music[i])
+				return false;
+
+			track = _music[i];
+			match = true;
+		}
+	}
+
+	return track;
+}
+
+int MetaroomMemory::GetRoomType() const
+{
+	bool match = false;
+	int   r_type = -1;
+
+	for(auto i : range())
+	{
+		if(_selection.IsFaceSelected(i))
+		{
+			if(match == true && r_type != _roomType[i])
+				return -1;
+
+			r_type = _roomType[i];
+			match = true;
+		}
+	}
+
+	return r_type;
 }

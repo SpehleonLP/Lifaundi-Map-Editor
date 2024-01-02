@@ -153,13 +153,26 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 	PruneDegenerate();
 }
 
+
+
 uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 {
 	std::vector<QuadTree::DoorList> door_indices;
 	std::vector<QuadTree::Door>     door_list;
 
-	auto mta = CRUSH();
+	Metaroom mta{document};
 
+	{
+		auto new_list = mta.Insert(Clipboard::Extract(this, _entitySystem.GetList()));
+
+		for(auto i = 0u; i < new_list.size(); ++i)
+		{
+			if(new_list[i] != i)
+				LOG_F(FATAL, "Problem writing metaroom: %s", "Room reindexing failed");
+		}
+	}
+
+	mta.AddPermeabilities(*this);
 	auto no_faces = _entitySystem.used();
 
 	mta._tree.GetWriteDoors(door_list, door_indices);
@@ -167,7 +180,7 @@ uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 	
 	uint32_t offset = fp.tellp();
 
-	auto tracks = window->GetTrackList(&_music[0], no_faces);
+	auto tracks = window->GetTrackList(&_music[0], range());
 
 	const char * title = "lfmp";
 
@@ -195,7 +208,7 @@ uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 		return r;
 	}();
 
-	fp.write((char*)&mta.verts[0], sizeof(verts[0]) * verts.size());
+	fp.write((char*)&verts[0], sizeof(verts[0]) * verts.size());
 	fp.write((char*)&mta._gravity[0],  4 * no_faces);
 	fp.write((char*)&mta._roomType[0], 1 * no_faces);
 	fp.write((char*)&mta._music[0],    1 * no_faces);
@@ -292,129 +305,6 @@ std::vector<uint32_t> Metaroom::Slice(std::vector<SliceInfo> & slice)
 
 
 	return result;
-}
-
-glm::vec2 Metaroom::GetGravity() const
-{
-	float length{};
-	float angle{};
-	int   count{};
-
-	for(auto i : range())
-	{
-		if(!_selection.IsFaceSelected(i))
-			continue;
-
-		glm::vec2 vec = glm::unpackHalf2x16(_gravity[i]);
-
-		float len = glm::length(vec);
-		length += len;
-
-		if(len)
-		{
-			vec /= len;
-			angle += std::atan2(vec.y, vec.x);
-		}
-
-		++count;
-	}
-
-	return glm::vec2(length, angle) / (count? count : 1.f);
-}
-
-glm::vec3 Metaroom::GetShade() const
-{
-	float length{};
-	float angle{};
-	float ambient{};
-	int   count{};
-
-	for(auto i : range())
-	{
-		if(!_selection.IsFaceSelected(i))
-			continue;
-
-		glm::vec2 vec = glm::unpackHalf2x16(_directionalShade[i]);
-		ambient += _ambientShade[i];
-
-		float len = glm::length(vec);
-		length += len;
-
-		if(len)
-		{
-			vec /= len;
-			angle += std::atan2(vec.y, vec.x);
-		}
-
-		++count;
-	}
-
-	return glm::vec3(length, angle, ambient) / (count? count : 1.f);
-}
-
-glm::vec4 Metaroom::GetAudio() const
-{
-	glm::vec4 audio{0};
-	int   count{};
-
-	for(auto i : range())
-	{
-		if(!_selection.IsFaceSelected(i))
-			continue;
-
-		audio += _audio[i];
-		++count;
-	}
-
-	if(count)
-	{
-		audio /= count;
-	}
-
-	return audio;
-}
-
-
-
-
-int Metaroom::GetMusicTrack() const
-{
-	bool     match = false;
-	int      track = 0;
-
-	for(auto i : range())
-	{
-		if(_selection.IsFaceSelected(i))
-		{
-			if(match == true && track != _music[i])
-				return false;
-
-			track = _music[i];
-			match = true;
-		}
-	}
-
-	return track;
-}
-
-int Metaroom::GetRoomType() const
-{
-	bool match = false;
-	int   r_type = -1;
-
-	for(auto i : range())
-	{
-		if(_selection.IsFaceSelected(i))
-		{
-			if(match == true && r_type != _roomType[i])
-				return -1;
-
-			r_type = _roomType[i];
-			match = true;
-		}
-	}
-
-	return r_type;
 }
 
 int Metaroom::GetPermeability() const
@@ -754,6 +644,33 @@ void Metaroom::ClickSelect(glm::ivec2 pos, Bitwise flags, bool alt, float zoom)
 		_selection.end_and();
 
 	update_selections();
+}
+
+int        Metaroom::GetSliceEdge(glm::ivec2 p) const
+{
+	int face = GetFace(p);
+
+	if(face == -1)
+		return -1;
+
+	int best_edge      = -1;
+	float min_distance = FLT_MAX;
+
+	for(int i = 0; i < 4; ++i)
+	{
+		float distance2 = math::LineDistanceSquared(_verts[face][i], _verts[face][(i+1)%4], p);
+
+		if(distance2 < min_distance)
+		{
+			best_edge    = i;
+			min_distance = distance2;
+		}
+	}
+
+	if(best_edge >= 0)
+		return face*4 + best_edge;
+
+	return -1;
 }
 
 void Metaroom::RingSelectFace(int face, glm::ivec2 mouse, Bitwise flags)
