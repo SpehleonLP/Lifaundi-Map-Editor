@@ -13,8 +13,9 @@ std::vector<Room>   Clipboard::Extract(Metaroom* metaroom, std::vector<uint32_t>
 	std::vector<Room> r;
 	r.reserve(selection.size());
 
-	for(int i : selection)
+	for(uint32_t i : selection)
 	{
+		assert(i < metaroom->_roomType.size());
 		Room room;
 
 		room.type				= metaroom->_roomType[i];

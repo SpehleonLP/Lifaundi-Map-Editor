@@ -27,9 +27,9 @@ public:
 
 	inline glm::ivec2 GetNextVertex(int i) const { return raw()[(i & 0xFFFFFFFC) + ((i+1)&0x03)]; }
 	inline glm::ivec2 GetVertex(int i) const { return raw()[i]; }
-	inline glm::ivec2 GetEdge(int i) const { return raw()[(i & 0xFFFFFFFC) + ((i+1)&0x03)] - raw()[i]; }
+	inline glm::ivec2 GetEdge(int i) const { return _verts[i >> 2][(i+1)&3] - _verts[i >> 2][i&3]; }
 
-	inline glm::ivec2 GetVertex(int i, int j) const { return raw()[i*4 + j%4]; }
+	inline glm::ivec2 GetVertex(int i, int j) const { return _verts[i][j&0x03]; }
 	inline glm::ivec2 GetEdge(int i, int j) const { return GetVertex(i, j+1) - GetVertex(i, j); }
 
 	__always_inline glm::ivec2 * raw() { return &_verts[0][0]; };

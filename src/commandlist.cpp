@@ -11,7 +11,7 @@ TransformCommand::TransformCommand(Document * document) :
 
 	for(size_t i = 0; i < indices.size(); ++i)
 	{
-		verts[i] = metaroom->prev(i);
+		verts[i] = metaroom->prev(indices[i]);
 	}
 
 	metaroom->CommitMove();

@@ -129,17 +129,22 @@ void MetaroomGL::Prepare(GLViewWidget* gl)
 	halls.reserve(me.noFaces());
 
 	ArrowShader::Vertex buffer;
-	for(auto i : me.range())
+	auto range = me.range();
+
+	for(auto i = range.begin(), next = i; i != range.end(); i = next)
 	{
+		if(++next == range.end())
+			continue;
+
 		for(int j = 0; j < 16; ++j)
 		{
 			const int a = (j % 4);
 			const int b = (j / 4);
 
-			const auto a0 = me.GetVertex(i-1, a);
-			const auto a1 = me.GetVertex(i-1, a+1);
-			const auto b0 = me.GetVertex(i, b);
-			const auto b1 = me.GetVertex(i, b+1);
+			const auto a0 = me.GetVertex(*i, a);
+			const auto a1 = me.GetVertex(*i, a+1);
+			const auto b0 = me.GetVertex(*next, b);
+			const auto b1 = me.GetVertex(*next, b+1);
 
 			if(a0 == a1
 			|| b0 == b1

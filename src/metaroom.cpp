@@ -489,10 +489,19 @@ void Metaroom::Translate(glm::ivec2 translation, glm::ivec2 half_dimensions)
 {
 	gl.SetDirty();
 
+	if(_prev.size() < _verts.size())
+		_prev = _verts.clone();
+
+	if(_scratch.size() < _verts.size())
+		_scratch = _verts.clone();
+
 	for(auto i : edgeRange())
 	{
-		scratch(i) = prev(i) + translation * (int) _selection.IsVertSelected(i);
-		scratch(i) = glm::max(-half_dimensions, glm::min(scratch(i), half_dimensions));
+		if(_selection.IsVertSelected(i))
+		{
+			scratch(i) = prev(i) + translation;
+			scratch(i) = glm::max(-half_dimensions, glm::min(scratch(i), half_dimensions));
+		}
 	}
 
 	solve_constraints();
