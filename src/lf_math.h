@@ -75,7 +75,7 @@ namespace math
 		if(b_0 < b_1) 
 			throw std::runtime_error("room winding order wrong");
 		
-		*begin = b_1 < 0? std::make_pair(0.f, 0) : std::make_pair(b_1, 2);		
+		*begin = b_1 < 0? std::make_pair(0.f, 0) : std::make_pair(b_1, 2);
 		*end   = b_0 > 1? std::make_pair(1.f, 1) : std::make_pair(b_0, 3);
 		
 		//check that we really overlap...

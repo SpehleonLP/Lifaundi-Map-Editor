@@ -59,10 +59,10 @@ static const char * kFrag()
 
 		void main()
 		{
-			int x = int(gl_FragCoord.x) % 10;
-			int y = int(gl_FragCoord.y) % 10;
+			int x = int(gl_FragCoord.x) % 16;
+			int y = int(gl_FragCoord.y) % 16;
 
-			frag_color = vec4(int(x == y || x == 10 - y));
+			frag_color = vec4(int(x == y || x == 16 - y));
 		});
 }
 

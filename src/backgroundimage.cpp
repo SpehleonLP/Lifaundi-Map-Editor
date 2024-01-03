@@ -131,7 +131,7 @@ void BackgroundImage::Release(GLViewWidget * gl)
 
 void BackgroundImage::Render(GLViewWidget* gl)
 {
-    CreateVBO(gl);
+	CreateVBO(gl);
 
 //	m_transparencyShader.bind(gl);
 //	gl->glDrawArrays(GL_TRIANGLES, size()*6, 6); gl->glAssert();
@@ -141,13 +141,12 @@ void BackgroundImage::Render(GLViewWidget* gl)
     gl->glBindVertexArray(m_vao); gl->glAssert();
     gl->glActiveTexture(GL_TEXTURE0);
 
-	for(int i = 0; i < size(); ++i)
+	for(uint32_t i = 0, texture = 0; i < m_noQuads; i += MAX_ARRAY_LAYERS, ++texture)
 	{
-		if(m_flags && m_flags[i] == 0)
-			continue;
+		auto no_tris = 6 * std::min<size_t>(m_noQuads - i, MAX_ARRAY_LAYERS);
 
-        gl->glBindTexture(GL_TEXTURE_2D, m_textures[i]); gl->glAssert();
-        gl->glDrawArrays(GL_TRIANGLES, i*6, 6); gl->glAssert();
+		gl->glBindTexture(GL_TEXTURE_2D_ARRAY, m_textures[texture]); gl->glAssert();
+		gl->glDrawArrays(GL_TRIANGLES, i*6, no_tris); gl->glAssert();
 	}
 }
 
@@ -220,13 +219,16 @@ void BackgroundImage::CreateVBO(GLViewWidget* gl)
 
 	std::unique_ptr<vertex[]> buffer(new vertex[size()*6 + 6]);
 
+	vertex * corner = &buffer[0];
+
 	for(uint8_t y = 0; y < tiles.y; ++y)
 	{
 		for(uint8_t x = 0; x < tiles.x; ++x)
 		{
 			auto i          = (int) y * tiles.x + x;
-		//	auto info      = m_flags[i];
-			vertex * corner = &buffer[i * 6];
+
+			if(m_flags && m_flags[i] == 0)
+				continue;
 
 			if(tile_size.x == 256)
 			{
@@ -252,11 +254,12 @@ void BackgroundImage::CreateVBO(GLViewWidget* gl)
 
 			corner[3] = corner[2];
 			corner[4] = corner[1];
+
+			corner += 6;
 		}
 	}
 
 	{
-		vertex * corner = &buffer[size() * 6];
 		glm::ivec3 half_size(pixels.x/2, pixels.y/2, 0);
 
 		corner[0].position = glm::ivec3(-half_size.x, -half_size.y, 0);
@@ -273,6 +276,8 @@ void BackgroundImage::CreateVBO(GLViewWidget* gl)
 
 		corner[3] = corner[2];
 		corner[4] = corner[1];
+
+		corner += 6;
 	}
 
     gl->glGenVertexArrays(1, &m_vao);
@@ -280,7 +285,9 @@ void BackgroundImage::CreateVBO(GLViewWidget* gl)
 
     gl->glBindVertexArray(m_vao);
     gl->glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    gl->glBufferData(GL_ARRAY_BUFFER, (size()+1) * 6 * sizeof(vertex), &buffer[0], GL_STATIC_DRAW);
+	gl->glBufferData(GL_ARRAY_BUFFER, (uint8_t*)corner - (uint8_t*)&buffer[0], &buffer[0], GL_STATIC_DRAW);
+
+	m_noQuads = (corner - &buffer[0])/6 - 1;
 
 	//position
     gl->glVertexAttribPointer(0, 3, GL_INT, GL_FALSE, sizeof(vertex), (void*) offsetof(vertex, position));
@@ -398,30 +405,13 @@ void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file, Backgr
 		file.read((char*)&pixels, sizeof(pixels));
 	}
 
+	if(m_flags == nullptr)
+	{
+		m_flags		= std::unique_ptr<uint16_t[]> (new uint16_t[size()]);
+	}
 
 	if(memcmp(title, "lbck", 4))
 		throw std::runtime_error("Bad File");
-
-	if(m_textures == nullptr)
-	{
-		m_flags		= std::unique_ptr<uint16_t[]> (new uint16_t[size()]);
-		m_textures  = std::unique_ptr<uint32_t[]> (new uint32_t[size()]);
-
-		memset(&m_textures[0], 0, sizeof(uint32_t) * size());
-		gl->glGenTextures(size(), &m_textures[0]);
-
-		for(int i = 0; i < size(); ++i)
-		{
-			gl->glBindTexture(GL_TEXTURE_2D, m_textures[i]);
-			gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 1);
-		}
-
-		gl->glAssert();
-	}
 
 	auto offsets		 = std::vector<mip_offsets>(size()+1);
 
@@ -431,12 +421,53 @@ void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file, Backgr
 	std::unique_ptr<uint8_t[]> buffer(new uint8_t[TILE_BYTES]);
 	std::unique_ptr<uint8_t[]> buffer2(new uint8_t[TILE_BYTES]);
 
-	for(int i = 0; i < size(); ++i)
+	if(m_textures.size())
+	{
+		gl->glDeleteTextures(m_textures.size(), &m_textures[0]);
+	}
+
+	m_textures  = shared_array<uint32_t>(noTextures(), 0);
+
+	gl->glGenTextures(m_textures.size(), &m_textures[0]);
+
+	for(auto i = 0u; i < m_textures.size(); ++i)
+	{
+		gl->glBindTexture(GL_TEXTURE_2D_ARRAY, m_textures[i]);
+		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_LEVEL, 1);
+
+		if(g_ImageFormat[(int)layer] == GL_R16)
+		{
+			gl->glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_R16, 128, 128, MAX_ARRAY_LAYERS, 0, GL_RED, GL_FLOAT, nullptr);
+			gl->glTexImage3D(GL_TEXTURE_2D_ARRAY, 1, GL_R16, 64, 64, MAX_ARRAY_LAYERS, 0, GL_RED, GL_FLOAT, nullptr);
+			gl->glAssert();
+		}
+		else
+		{
+			auto image_size = MAX_ARRAY_LAYERS * 128*128 / 16 * g_BytesPerBlock[(int)layer];
+			gl->glCompressedTexImage3D(GL_TEXTURE_2D_ARRAY, 0, g_ImageFormat[(int)layer], 128, 128, MAX_ARRAY_LAYERS, 0, image_size, nullptr);
+			gl->glCompressedTexImage3D(GL_TEXTURE_2D_ARRAY, 1, g_ImageFormat[(int)layer], 64, 64, MAX_ARRAY_LAYERS, 0, image_size >> 2, nullptr);
+			gl->glAssert();
+		}
+	}
+
+	gl->glAssert();
+
+
+
+	for(int i = 0, texture = 0; i < size(); ++i, ++texture)
 	{
 		if(m_flags[i] == 0)
+		{
+			--texture;
 			continue;
+		}
 
-		gl->glBindTexture(GL_TEXTURE_2D, m_textures[i]);
+		gl->glBindTexture(GL_TEXTURE_2D_ARRAY, m_textures[texture / MAX_ARRAY_LAYERS]);
+		auto texture_layer = texture % MAX_ARRAY_LAYERS;
 
 		uint32_t * mip = (uint32_t*)&offsets[i];
 
@@ -506,23 +537,25 @@ void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file, Backgr
 
 			if(g_ImageFormat[(int)layer] != GL_R16)
 			{
-				gl->glCompressedTexImage2D(GL_TEXTURE_2D,
+
+				gl->glCompressedTexSubImage3D(GL_TEXTURE_2D_ARRAY,
 					mipLevel-1,
-					g_ImageFormat[(int)layer],
+					0, 0, texture_layer,
 					width    / d0,
 					height   / d0,
-					0,
+					1,
+					g_ImageFormat[(int)layer],
 					area / d1 / 16 * g_BytesPerBlock[(int)layer],		//no bytes
 					&buffer2[0]);
 			}
 			else
 			{
-				gl->glTexImage2D(GL_TEXTURE_2D,
+				gl->glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
 					mipLevel-1,
-					g_ImageFormat[(int)layer],
+					0, 0, texture_layer,
 					width    / d0,
 					height   / d0,
-					0,
+					1,
 					GL_RED,
 					GL_UNSIGNED_SHORT,	// type
 					&buffer2[0]);
@@ -617,10 +650,20 @@ void BackgroundImage::LoadSpr(GLViewWidget * gl, std::ifstream file)
 	m_flags		  = std::unique_ptr<uint16_t[]> (new uint16_t[size()]);
 	memset(&m_flags[0], 0xFF, sizeof(m_flags[0]) * size());
 
-	m_textures    = std::unique_ptr<uint32_t[]> (new uint32_t[size()]);
-	memset(&m_textures[0], 0, sizeof(uint32_t) * size());
+	m_textures  = shared_array<uint32_t>(noTextures(), 0);
+	gl->glGenTextures(m_textures.size(), &m_textures[0]);
 
-	gl->glGenTextures(size(), &m_textures[0]);
+	for(auto i = 0u; i < m_textures.size(); ++i)
+	{
+		gl->glBindTexture(GL_TEXTURE_2D_ARRAY, m_textures[i]);
+		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_LEVEL, 0);
+
+		gl->glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGB, 144, 150, MAX_ARRAY_LAYERS, 0, GL_RGBA, GL_FLOAT, nullptr);
+	}
 
 	uint8_t raw_data[144*150];
 	uint8_t rgb_data[144*150*3];
@@ -644,15 +687,9 @@ void BackgroundImage::LoadSpr(GLViewWidget * gl, std::ifstream file)
 
 		}
 
-
-		gl->glBindTexture(GL_TEXTURE_2D, m_textures[j]);
-        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-
-		gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 144, 150, 0, GL_RGB, GL_UNSIGNED_BYTE, rgb_data);
+		gl->glBindTexture(GL_TEXTURE_2D_ARRAY, m_textures[j/MAX_ARRAY_LAYERS]);
+		auto texture_layer = j % MAX_ARRAY_LAYERS;
+		gl->glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, texture_layer, 144, 150, 1, GL_RGB, GL_UNSIGNED_BYTE, rgb_data);
 	}
 
 	file.close();
@@ -718,10 +755,20 @@ void BackgroundImage::ImportS16Frames(GLViewWidget * gl, std::ifstream file, uin
 	m_flags		  = std::unique_ptr<uint16_t[]> (new uint16_t[size()]);
 	memset(&m_flags[0], 0xFF, sizeof(m_flags[0]) * size());
 
-	m_textures    = std::unique_ptr<uint32_t[]> (new uint32_t[size()]);
-	memset(&m_textures[0], 0, sizeof(uint32_t) * size());
+	m_textures  = shared_array<uint32_t>(noTextures(), 0);
+	gl->glGenTextures(m_textures.size(), &m_textures[0]);
 
-	gl->glGenTextures(size(), &m_textures[0]);
+	for(auto i = 0u; i < m_textures.size(); ++i)
+	{
+		gl->glBindTexture(GL_TEXTURE_2D_ARRAY, m_textures[i]);
+		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_LEVEL, 0);
+
+		gl->glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGB, tile_size.x, tile_size.y, MAX_ARRAY_LAYERS, 0, GL_RGBA, GL_FLOAT, nullptr);
+	}
 
 	for(uint32_t i = 0; i < no_tiles; ++i)
 	{
@@ -733,14 +780,9 @@ void BackgroundImage::ImportS16Frames(GLViewWidget * gl, std::ifstream file, uin
 		file.seekg(header[i].offset, std::ios_base::beg);
 		file.read((char*)&buffer[0], tile_size.x*tile_size.y*2);
 
-		gl->glBindTexture(GL_TEXTURE_2D, m_textures[j]);
-        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-
-		gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tile_size.x, tile_size.y, 0, GL_RGB, gl_type, buffer);
+		gl->glBindTexture(GL_TEXTURE_2D_ARRAY, m_textures[j/MAX_ARRAY_LAYERS]);
+		auto texture_layer = j % MAX_ARRAY_LAYERS;
+		gl->glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, texture_layer, tile_size.x, tile_size.y, 1, GL_RGB, gl_type, buffer);
 	}
 
 	file.close();
@@ -759,10 +801,20 @@ void BackgroundImage::LoadImage(GLViewWidget * gl, std::string const& filename)
 	tile_size     = glm::u16vec2(256, 256);
 	pixels        = glm::u16vec2(image.width(), image.height());
 
+	m_textures  = shared_array<uint32_t>(noTextures(), 0);
+	gl->glGenTextures(m_textures.size(), &m_textures[0]);
 
-	m_textures    = std::unique_ptr<uint32_t[]> (new uint32_t[size()]);
-	memset(&m_textures[0], 0, sizeof(uint32_t) * size());
-	gl->glGenTextures(size(), &m_textures[0]);
+	for(auto i = 0u; i < m_textures.size(); ++i)
+	{
+		gl->glBindTexture(GL_TEXTURE_2D_ARRAY, m_textures[i]);
+		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_LEVEL, 0);
+
+		gl->glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA, 256, 256, MAX_ARRAY_LAYERS, 0, GL_RGBA, GL_FLOAT, nullptr);
+	}
 
 	std::vector<glm::u8vec4> RGB(256*256);
 
@@ -772,13 +824,6 @@ void BackgroundImage::LoadImage(GLViewWidget * gl, std::string const& filename)
 		int y = i % tiles.y;
 
 		int j = ((tiles.y-1) - y) * tiles.x + x;
-
-		gl->glBindTexture(GL_TEXTURE_2D, m_textures[j]);
-        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 
 		for(int px = 0; px < 65536; ++px)
 		{
@@ -795,7 +840,9 @@ void BackgroundImage::LoadImage(GLViewWidget * gl, std::string const& filename)
 			RGB[px].a = color.alpha();
 		}
 
-		gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tile_size.x, tile_size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, &RGB[0]);
+		gl->glBindTexture(GL_TEXTURE_2D_ARRAY, m_textures[j/MAX_ARRAY_LAYERS]);
+		auto texture_layer = j % MAX_ARRAY_LAYERS;
+		gl->glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, texture_layer, tile_size.x, tile_size.y, 1, GL_RGBA, GL_UNSIGNED_BYTE, &RGB[0]);
 	}
 }
 

@@ -246,8 +246,8 @@ std::vector<uint32_t> Metaroom::Insert(std::vector<Room> const& list)
 {
 	auto faces = AddFaces(list.size());
 
-	for(auto i : faces)
-		SetRoom(i, list[i]);
+	for(auto i = 0u; i < faces.size(); ++i)
+		SetRoom(faces[i], list[i]);
 
 	_selection.clear();
 
@@ -290,7 +290,7 @@ std::vector<uint32_t> Metaroom::Slice(std::vector<SliceInfo> & slice)
 
 	for(auto  i = 0u; i < slice.size(); i += 2)
 	{
-		int j = result[i];
+		int j = result[i/2];
 		int e = slice[i].edge % 4;
 
 		_verts[j][e]         = slice[i  ].vertex;
@@ -429,12 +429,12 @@ void Metaroom::AddFace(glm::ivec2 min, glm::ivec2 max)
 	memcpy_s(&_prev[face], &_verts[face]);
 
 	_selection.select_face(face, Bitwise::SET);
-	gl.SetDirty();
+	gl.SetIndicesDirty();
 }
 
 std::vector<uint32_t> Metaroom::AddFaces(uint32_t no_faces)
 {
-	gl.SetDirty();
+	gl.SetIndicesDirty();
 	_tree.SetDirty();
 
 	std::vector<uint32_t> x;
@@ -452,7 +452,7 @@ std::vector<uint32_t> Metaroom::AddFaces(uint32_t no_faces)
 
 void Metaroom::RemoveFace(int id)
 {
-	gl.SetDirty();
+	gl.SetIndicesDirty();
 
 	_entitySystem.ReleaseEntity(id);
 
@@ -462,7 +462,7 @@ void Metaroom::RemoveFace(int id)
 
 void Metaroom::RemoveFaces(std::vector<uint32_t> const& vec)
 {
-	gl.SetDirty();
+	gl.SetIndicesDirty();
 	_selection.clear();
 	_tree.SetDirty();
 

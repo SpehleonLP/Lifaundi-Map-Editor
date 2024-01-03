@@ -18,6 +18,7 @@
 #include <cmath>
 #include <chrono>
 #include <iostream>
+#include <loguru.hpp>
 
 struct Matrices
 {
@@ -396,7 +397,7 @@ void 	GLViewWidget::resizeGL(int w, int h)
 #include <GL/glu.h>
 #include <QMessageBox>
 
-void GLViewWidget::displayOpenGlError(const char * file, const char * function, int line)
+void GLViewWidget::displayOpenGlError(const char * file, const char *, int line)
 {
     GLenum error = glGetError();
 
@@ -404,10 +405,7 @@ void GLViewWidget::displayOpenGlError(const char * file, const char * function, 
 
     do
     {
-        QMessageBox::information(this, QGuiApplication::applicationDisplayName(),
-                                 tr("FILE: %1\nFUNC: %2\nLINE: %3\nERROR: %4")
-                                 .arg(file, function, QString::number(line), (const char *) gluErrorString(error)));
-
+		loguru::log(loguru::Verbosity_ERROR, file, line, "%s", (const char *) gluErrorString(error));
     } while((error = glGetError()) != GL_NO_ERROR);
 
     w->close();

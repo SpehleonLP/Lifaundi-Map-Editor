@@ -569,8 +569,8 @@ void QuadTree::GetRenderWalls(int edge, std::vector<EdgeVertex> & edges) const
 		if(math::GetOverlap(range.v0, range.v1, range.a0, range.a1, &begin, &end))
 		{
 			e.permeability = m_metaroom->MetaroomMemory::GetPermeability(edge/4, range.face());
-
-			int vertices[4] = { edge, next_edge, range.edge(), range.nextEdge() };
+// first 2 have to flip because one is going -> other is going <-
+			int vertices[4] = { next_edge, edge, range.edge(), range.nextEdge() };
 
 			e.vertex  = m_metaroom->GetVertex(vertices[begin.second]);
 			edges.push_back(e);

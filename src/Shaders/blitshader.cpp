@@ -75,11 +75,13 @@ static const char * kVert()
 		in vec2 a_texCoord0;
 
 		out vec2 v_texCoord0;
+		flat out int v_layer;
 
 		void main()
 		{
 			gl_Position = u_projection * (u_modelview * vec4(a_vertex, 1.0));
 			v_texCoord0 = a_texCoord0;
+			v_layer = (gl_VertexID / 6) % 256;
 		});
 }
 
@@ -103,10 +105,11 @@ static const char * kVert()
 static const char * kFrag()
 {
 	return SHADER(
-		uniform sampler2D u_texture;
+		uniform sampler2DArray u_texture;
 		uniform int u_layer;
 
 		in vec2 v_texCoord0;
+		flat in int v_layer;
 
 		out vec4 frag_color;
 
@@ -116,7 +119,7 @@ static const char * kFrag()
 			{
 			case 2:
 			{ // normals
-				frag_color = texture(u_texture, v_texCoord0);
+				frag_color = texture(u_texture, vec3(v_texCoord0, v_layer));
 				vec2 rg = frag_color.rg * 2.0 - 1.0;
 				frag_color.b = (1.0 - dot(rg, rg)) * 0.5 + 0.5;
 				break;
@@ -124,11 +127,11 @@ static const char * kFrag()
 			//AO/depth
 			case 3:
 			case 4:
-				frag_color = texture(u_texture, v_texCoord0);
+				frag_color = texture(u_texture, vec3(v_texCoord0, v_layer));
 				frag_color.rgb = vec3(frag_color.r);
 				break;
 			default:
-				frag_color = texture(u_texture, v_texCoord0);
+				frag_color = texture(u_texture, vec3(v_texCoord0, v_layer));
 				break;
 			}
 		});

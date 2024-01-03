@@ -76,7 +76,12 @@ void MetaroomGL::Prepare(GLViewWidget* gl)
 	_dirty = false;
 	bool initialized_vaos = (_vao[0] != 0L);
 
-	_indices.Prepare(gl, me.range());
+	if(_indicesDirty)
+	{
+		_indicesDirty = false;
+		_indices.Prepare(gl, me.range());
+	}
+
 
 	if(initialized_vaos == false)
 	{

@@ -99,7 +99,7 @@ void SliceCommand::RollForward()
 
 	for(size_t i = 0; i < slice.size(); i += 2)
 	{
-		int j = indices[i];
+		int j = indices[i/2];
 
 		int e = slice[i].edge % 4;
 
@@ -141,7 +141,7 @@ void ReorderCommand::RollForward()
 	std::vector<uint32_t> tmp = indices;
 	std::sort(tmp.begin(), tmp.end());
 
-	original_rooms = Clipboard::Extract(metaroom, tmp);
+	original_rooms = Clipboard::Extract(metaroom, indices);
 
 	metaroom->RemoveFaces(tmp);
 	metaroom->Insert(original_rooms, tmp);
