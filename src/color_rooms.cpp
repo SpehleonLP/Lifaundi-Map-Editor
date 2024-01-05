@@ -94,21 +94,35 @@ int32_t ColorRooms::MaxColorUsed() const
 	return r;
 }
 
-void ColorRooms::DoColoring()
+void ColorRooms::DoColoring(std::shared_ptr<ColorProgress> progress)
 {
+
 	Range range(doors, indices);
 	auto edges = GetEdgeList(doors, indices);
 
 	coloring.clear();
 	coloring.resize(edges.size(), -1);
 	auto islands = GetIslands();
+
+	progress->_totalIslands = islands.size();
+	progress->_processedIslands = 0;
+
 	for(auto & island : islands)
 	{
-		if(!DoColoringInternal(island))
+		if(!DoColoringInternal(island, progress))
 			throw std::runtime_error("Coloring failed");
+
+		++(progress->_processedIslands);
+		(progress->_totalBacktrack) += progress->_backtrackInIsland;
+		progress->_backtrackInIsland = 0;
 	}
 
 	CheckColoring();
+
+	progress->noColors = MaxColorUsed();
+	progress->coloring = std::move(coloring);
+	progress->_complete = true;
+
 /*
 	assert(r.size() == edge_flags.size());
 
@@ -207,16 +221,25 @@ repeat:
 }
 
 
-bool ColorRooms::DoColoringInternal(std::vector<StackFrame> & stack)
+bool ColorRooms::DoColoringInternal(std::vector<StackFrame> & stack, std::shared_ptr<ColorProgress> progress)
 {
+	progress->_totalRooms = stack.size();
+
 	for(uint32_t i = 0; i < stack.size(); ++i)
 	{
+		progress->_currentRoom = i;
+
 //no available colors
 		while(!DoColoring(stack[i]))
 		{
 			if(--i > stack.size())
 			{
 				return false;
+			}
+			else
+			{
+				progress->_backtrackInIsland += 1;
+				progress->_currentRoom = i;
 			}
 		}
 	}

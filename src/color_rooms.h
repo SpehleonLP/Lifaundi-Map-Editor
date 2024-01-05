@@ -2,6 +2,21 @@
 #define COLOR_ROOMS_H
 #include "quadtree.h"
 
+struct ColorProgress
+{
+	std::atomic<int> _processedIslands{};
+	std::atomic<int> _totalIslands{};
+	std::atomic<int> _currentRoom{};
+	std::atomic<int> _totalRooms{};
+	std::atomic<int> _totalBacktrack{};
+	std::atomic<int> _backtrackInIsland{};
+	std::atomic<int> _totalColors{};
+	std::atomic<bool> _complete{};
+
+	std::vector<int8_t> coloring;
+	int8_t noColors;
+};
+
 class ColorRooms
 {
 struct Range;
@@ -20,7 +35,7 @@ public:
 	}
 
 
-	void DoColoring();
+	void DoColoring(std::shared_ptr<ColorProgress> progress);
 	std::vector<int8_t> const& GetColoring() const { return coloring; }
 
 	int		 GetMaxDegree(int * room) const;
@@ -29,7 +44,7 @@ public:
 	void	 CheckColoring() const;
 
 private:
-	bool DoColoringInternal(std::vector<StackFrame> & face_queue);
+	bool DoColoringInternal(std::vector<StackFrame> & face_queue, std::shared_ptr<ColorProgress> progress);
 	bool DoColoring(StackFrame & frame);
 	std::vector<std::vector<StackFrame> > GetIslands() const;
 

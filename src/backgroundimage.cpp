@@ -34,11 +34,11 @@ const uint8_t BackgroundImage::g_BytesPerBlock[NoLayers] =
 
 static const unsigned int texture_offset[(int)BackgroundLayer::Total] =
 {
-	Background::Blocks * BaseColorOffset,
-	Background::Blocks * RoughOffset,
-	Background::Blocks * NormalOffset,
-	Background::Blocks * OcclusionOffset,
-	Background::Blocks * DepthOffset,
+	Background::Blocks * (int)BaseColorOffset,
+	Background::Blocks * (int)RoughOffset,
+	Background::Blocks * (int)NormalOffset,
+	Background::Blocks * (int)OcclusionOffset,
+	Background::Blocks * (int)DepthOffset,
 };
 
 
@@ -528,7 +528,6 @@ void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file, Backgr
 				interleave_BC4(&buffer2[0], &buffer[texture_offset[(int)BackgroundLayer::AmbientOcclusion] / d1], blocks_x * blocks_y);
 				break;
 			case BackgroundLayer::Depth:
-				std::swap(buffer, buffer2);
 				break;
 			default:
 				throw std::logic_error("unhandled image format case");
@@ -558,7 +557,7 @@ void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file, Backgr
 					1,
 					GL_RED,
 					GL_UNSIGNED_SHORT,	// type
-					&buffer2[0]);
+					&buffer[texture_offset[(int)BackgroundLayer::Depth] / d1]);
 			}
 
             gl->glAssert();

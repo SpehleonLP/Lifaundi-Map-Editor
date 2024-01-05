@@ -1,5 +1,7 @@
 #include "metaroom.h"
+#include "colorprogressindicator.h"
 #include "lf_math.h"
+#include "qapplication.h"
 #include "quadtree.h"
 #include "document.h"
 #include "glviewwidget.h"
@@ -12,6 +14,10 @@
 #include <fstream>
 #include <cstring>
 #include <loguru.hpp>
+#include <thread>
+#include <chrono>
+
+using namespace std::literals::chrono_literals;
 
 template<typename T>
 void * memcpy_s(T * dst, T const* src, size_t items = 1)
@@ -230,11 +236,32 @@ uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 
 	mta._tree.WriteTree(fp);
 
-	ColorRooms color(door_list, door_indices, mta._tree.GetEdgeFlags());
-	color.DoColoring();
+	std::shared_ptr<ColorProgress> progress = std::make_shared<ColorProgress>();
+	std::thread coloring_thread([&door_list, &door_indices, &mta, &progress]()
+	{
+		ColorRooms color(door_list, door_indices, mta._tree.GetEdgeFlags());
+		color.DoColoring(progress);
+	});
 
-	auto const& coloring = color.GetColoring();
-	int8_t noColors = color.MaxColorUsed();
+	std::this_thread::sleep_for(50ms);
+	if(progress->_complete == false)
+	{
+		std::unique_ptr<ColorProgressIndicator> indicator(new ColorProgressIndicator(window, progress));
+		indicator->show();
+
+		while(progress->_complete == false)
+		{
+			std::this_thread::sleep_for(20ms);
+			indicator->Update();
+
+			QCoreApplication::processEvents();
+		}
+	}
+
+	coloring_thread.join();
+
+	auto coloring = std::move(progress->coloring);
+	int8_t noColors = progress->noColors;
 
 	fp.write((char*)&noColors, sizeof(noColors));
 	fp.write((char*)&coloring[0], sizeof(coloring[0]) * coloring.size());

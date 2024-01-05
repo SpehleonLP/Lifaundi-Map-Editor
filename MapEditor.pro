@@ -35,6 +35,7 @@ DEFINES += GLM_EXT_INCLUDED GLM_FORCE_INLINE GLM_ENABLE_EXPERIMENTAL
 
 SOURCES += \
 ../../Libraries/loguru/loguru.cpp \
+	colorprogressindicator.cpp \
 	exportoptions.cpp \
         main.cpp \
         mainwindow.cpp \
@@ -80,6 +81,7 @@ HEADERS += \
 	../../Libraries/Spehleon/lib/Support/lockfreequeue.hpp \
 	../../Libraries/Spehleon/lib/Support/numeric_range.hpp \
 	../../Libraries/Spehleon/lib/Support/unsafe_view.hpp \
+	colorprogressindicator.h \
 	exportoptions.h \
         mainwindow.h \
 	nlohmann/json_detail.hpp \
@@ -125,6 +127,7 @@ HEADERS += \
 	src/walltype_db.h
 
 FORMS += \
+        colorprogressindicator.ui \
         exportoptions.ui \
         mainwindow.ui
 
