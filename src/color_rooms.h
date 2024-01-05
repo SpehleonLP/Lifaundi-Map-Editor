@@ -45,6 +45,8 @@ struct ColorRooms::StackFrame
 {
 	uint32_t face_id;
 	 int32_t color;
+
+	bool operator==(uint32_t it) const { return face_id == it; };
 };
 
 struct ColorRooms::Range

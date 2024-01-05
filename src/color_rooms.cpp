@@ -142,28 +142,65 @@ std::vector<std::vector<ColorRooms::StackFrame>>  ColorRooms::GetIslands() const
 	std::vector<std::vector<StackFrame>> r;
 	std::vector<uint8_t> marks(edges.size(), 0);
 
+// this is just a BFS
 	for(uint32_t i = 0; i < marks.size(); ++i)
 	{
 		if(marks[i] != 0) continue;
 		marks[i] = 1;
 
-		std::vector<StackFrame> queue;
-		queue.push_back({i, 0});
+		std::vector<uint32_t> island;
+		island.push_back(i);
 		bool flags = (edge_flags[i] & 0x06) != 0;
 
-		for(uint32_t j = 0; j < queue.size(); ++j)
+		for(uint32_t j = 0; j < island.size(); ++j)
 		{
-			for(range.setRoom(queue[j].face_id); !range.empty(); range.popFront())
+			// iterate over face room this face is attached to.
+			for(range.setRoom(island[j]); !range.empty(); range.popFront())
 			{
 				if(marks[range.front()] == 0 && ((edge_flags[range.front()] & 0x06) != 0) == flags)
 				{
 					marks[range.front()] = 1;
-					queue.push_back({(uint32_t)range.front(), 0});
+					island.push_back(range.front());
 				}
 			}
 		}
 
-		r.push_back(std::move(queue));
+/* now we have an island in BFS order, we want ordered such that:
+*	the smallest face from the island where it is attached to something in the list is added to the list
+*	if the graph is optimized for the navier stokes caching, this order should also get a linear 4 coloring almost every time.
+*/
+		std::sort(island.begin(), island.end(), [](auto a, auto b)
+		{
+			return a > b;
+		});
+
+		std::vector<StackFrame> sorted_island;
+		sorted_island.reserve(island.size());
+
+		sorted_island.push_back({island.back(), 0});
+		island.pop_back();
+
+		while(island.size())
+		{
+			for(int j = island.size()-1; j >= 0; --j)
+			{
+	// iterate over each thing
+				for(range.setRoom(island[j]); !range.empty(); range.popFront())
+				{
+					if(std::find(sorted_island.rbegin(), sorted_island.rend(), island[j]) != sorted_island.rend())
+					{
+						sorted_island.push_back({island[j], 0});
+						island.erase(island.begin() + j);
+						goto repeat;
+					}
+				}
+			}
+
+repeat:
+			(void)0;
+		}
+
+		r.push_back(std::move(sorted_island));
 	}
 
 	return r;
@@ -190,7 +227,6 @@ bool ColorRooms::DoColoringInternal(std::vector<StackFrame> & stack)
 bool ColorRooms::DoColoring(StackFrame & frame)
 {
 	Range range(doors, indices);
-
 	auto flags = GetColorFlags(frame.face_id);
 
 //no available colors
