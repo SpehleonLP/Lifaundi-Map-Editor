@@ -2,6 +2,7 @@
 #include "document.h"
 #include "metaroom.h"
 #include <glm/glm.hpp>
+#include <iostream>
 
 TransformCommand::TransformCommand(Document * document) :
 	metaroom(&document->m_metaroom),
@@ -274,13 +275,17 @@ PermeabilityCommand::PermeabilityCommand(Document * document, std::vector<std::p
 	permeability(perm_value),
 	heap(new uint8_t[(sizeof(uint64_t)+1) * doors.size()]),
 	keys((uint64_t*)&heap[0]),
-	values(&heap[sizeof(uint64_t)*doors.size()])
+	values((uint8_t*)(keys+length))
 {
 //fill array with previous values
 	memset(&values[0], 100, length);
 
+	std::cerr << "//------------------\n";
+
 	for(uint i = 0; i < length; ++i)
 	{
+		std::cerr << doors[i].first << '\t' << doors[i].second  << '\n';
+
 		keys[i] = metaroom->GetDoorKey(doors[i].first, doors[i].second);
 
 		auto itr = metaroom->_permeabilities.find(keys[i]);

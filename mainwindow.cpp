@@ -166,8 +166,8 @@ enter(Qt::Key_Z, this)
 		SetZoom(m_zoom * 7.f/8);
 	});
 
-#define QDoubleSpinBoxChanged()  (void (QDoubleSpinBox::*)(double)) &QDoubleSpinBox::valueChanged
-#define QSpinBoxChanged()  (void (QSpinBox::*)(int)) &QSpinBox::valueChanged
+#define QDoubleSpinBoxChanged()  (void (QDoubleSpinBox::*)(double)) &QDoubleSpinBox::editingFinished
+#define QSpinBoxChanged()  (void (QSpinBox::*)(int)) &QSpinBox::editingFinished
 #define QComboBoxChanged()  (void (QComboBox::*)(int)) &QComboBox::currentIndexChanged
 #define QSpinDialChanged()  (void (QDial::*)(double)) &QDial::valueChanged
 

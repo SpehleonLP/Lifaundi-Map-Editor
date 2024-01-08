@@ -273,7 +273,12 @@ std::vector<uint32_t> QuadTree::GetOverlappingEdges(glm::ivec2 v0, glm::ivec2 v1
 	while(range.popFront())
 	{
 		if(math::DoesOverlap(v0, v1-v0, range.a0, range.a1))
+		{
+			if(r.size())
+				assert(r.back() != range.edge());
+
 			r.push_back(range.edge());
+		}
 	}
 
 	return r;

@@ -23,7 +23,7 @@ public:
 
 	__always_inline static int NextInEdge(int id) { return (id & 0xFFFFFFFC) + ((id+1) & 0x03); }
 	__always_inline static int GetOppositeEdge(int id) { return id ^ 0x02; }
-	__always_inline static uint32_t GetDoorKey(uint32_t a, uint32_t b) { return a < b? ((uint64_t)a << 32) | b : ((uint64_t)b << 32) | a; }
+	__always_inline static uint64_t GetDoorKey(uint32_t a, uint32_t b) { return a < b? ((uint64_t)a << 32) | b : ((uint64_t)b << 32) | a; }
 
 	inline glm::ivec2 GetNextVertex(int i) const { return raw()[(i & 0xFFFFFFFC) + ((i+1)&0x03)]; }
 	inline glm::ivec2 GetVertex(int i) const { return raw()[i]; }

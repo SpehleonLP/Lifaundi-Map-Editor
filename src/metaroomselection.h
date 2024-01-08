@@ -1,5 +1,6 @@
 #ifndef METAROOMSELECTION_H
 #define METAROOMSELECTION_H
+#include "Support/shared_array.hpp"
 #include "entitysystem.h"
 #include "enums.hpp"
 #include <memory>
@@ -33,7 +34,7 @@ public:
 	uint32_t NoSelectedEdges() const { return m_selectedEdges; }
 
 	void resize(size_t);
-	size_t size() const { return m_alloced; };
+	size_t size() const { return _selection.size(); };
 
 	void erase(size_t i);
 	void erase(std::vector<uint32_t> const& vec);
@@ -42,8 +43,8 @@ public:
 	void begin_and();
 	void end_and();
 
-	uint8_t operator[](size_t i) const { return m_array[i]; }
-	uint8_t & operator[](size_t i) { return m_array[i]; }
+//	uint8_t operator[](size_t i) const { return m_array[i]; }
+//	uint8_t & operator[](size_t i) { return m_array[i]; }
 
 	std::vector<uint32_t> GetVertSelection() const;
 	std::vector<uint32_t> GetFaceSelection() const;
@@ -61,14 +62,22 @@ public:
 	bool MarkFace(int id);
 	void ClearMarks();
 
-	bool IsVertSelected(int id) const { return m_array[id] != 0; }
-	bool IsFaceSelected(int id) const { return IsVertSelected(id*4+0) & IsVertSelected(id*4+1) & IsVertSelected(id*4+2) & IsVertSelected(id*4+3); }
-	bool IsEdgeSelected(int id) const { return IsVertSelected(id) & IsVertSelected((id & 0xFFFFFFFC) + (id+1) % 4); }
-	bool IsSelected(int id) const { return IsVertSelected(id*4+0) | IsVertSelected(id*4+1) | IsVertSelected(id*4+2) | IsVertSelected(id*4+3); }
+	__always_inline bool IsVertSelected(int id) const { return _selection[id>>2][id&0x3] != 0; }
+	__always_inline bool IsVertSelected(int face, int vert) const { return _selection[face][vert] != 0; }
+	__always_inline bool IsFaceSelected(int id) const { return IsVertSelected(id, 0) && IsVertSelected(id, 1) && IsVertSelected(id, 2) && IsVertSelected(id, 3); }
+	__always_inline bool IsEdgeSelected(int edge) const { return IsVertSelected(edge) && IsVertSelected(edge >> 2, (edge+1) % 4); }
+	__always_inline bool IsAnyCornerSelected(int face) const { return IsVertSelected(face, 0) || IsVertSelected(face, 1) || IsVertSelected(face, 2) || IsVertSelected(face, 3); }
+
+	__always_inline uint8_t * data() const { return (uint8_t*)_selection.data(); };
+
+	__always_inline uint8_t & vertex(int i) { return ((uint8_t*)_selection.data())[i]; };
+	__always_inline std::array<uint8_t, 4> & face(int i) { return _selection[i]; };
+
+	__always_inline uint8_t vertex(int i) const { return ((uint8_t*)_selection.data())[i]; };
+	__always_inline std::array<uint8_t, 4> face(int i) const { return _selection[i]; };
 
 private:
-	std::unique_ptr<uint8_t[]>    m_array;
-	uint32_t                      m_alloced{};
+	shared_array<std::array<uint8_t, 4>>  _selection;
 
 	bool                          m_selectionChanged{true};
 	uint32_t                      m_vbo[2]{};

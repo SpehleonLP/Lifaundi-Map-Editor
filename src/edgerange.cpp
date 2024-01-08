@@ -17,15 +17,12 @@ EdgeRange::EdgeRange(const QuadTree * tree, glm::ivec2 v0, glm::ivec2 v1,  glm::
 	v0(v0),
 	v1(v1)
 {
-
-	if(m_nodes != nullptr)
-		stack.push(0);
 }
 
 bool EdgeRange::popFront()
 {
 	do {
-		if(child > -1)
+		if(_face > -1)
 		{
 			while(++i < 4)
 			{
@@ -38,7 +35,7 @@ bool EdgeRange::popFront()
 					return true;
 			}
 
-			child = -1;
+			_face = -1;
 		}
 
 		i     = -1;

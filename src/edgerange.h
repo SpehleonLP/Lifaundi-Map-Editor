@@ -11,9 +11,9 @@ public:
 		EdgeRange(tree, v0, v1, v1, minimum) {};
 	EdgeRange(const QuadTree * tree, glm::ivec2 v0, glm::ivec2 v1, glm::ivec2 v2, int minimum = -1);
 
-	int  face() const { return child; }
-	int  edge() const { return child*4 + i; }
-	int  nextEdge() const { return child*4 + (i+1)%4; }
+	int  face() const { return _face; }
+	int  edge() const { return _face*4 + i; }
+	int  nextEdge() const { return _face*4 + (i+1)%4; }
 	int  index() const { return i; }
 	glm::ivec2 vec() const { return v1 - v0; }
 	bool popFront();

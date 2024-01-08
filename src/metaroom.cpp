@@ -499,6 +499,13 @@ void Metaroom::RemoveFaces(std::vector<uint32_t> const& vec)
 	}
 }
 
+void Metaroom::BeginMove()
+{
+	_prev = _verts.clone();
+	_scratch = _verts.clone();
+}
+
+
 void Metaroom::CancelMove()
 {
 	_verts = _prev.clone();
@@ -512,15 +519,14 @@ void Metaroom::CommitMove(bool update_mvsf)
 	gl.SetDirty();
 }
 
+
 void Metaroom::Translate(glm::ivec2 translation, glm::ivec2 half_dimensions)
 {
 	gl.SetDirty();
 
-	if(_prev.size() < _verts.size())
-		_prev = _verts.clone();
+	assert(_prev.size() == _verts.size());
+	assert(_scratch.size() == _verts.size());
 
-	if(_scratch.size() < _verts.size())
-		_scratch = _verts.clone();
 
 	for(auto i : edgeRange())
 	{
@@ -539,13 +545,14 @@ void Metaroom::Rotate(glm::ivec2 center, glm::vec2 complex)
 {
 	gl.SetDirty();
 
-	_scratch = _prev.clone();
+	assert(_prev.size() == _verts.size());
+	assert(_scratch.size() == _verts.size());
 
 	for(auto i : edgeRange())
 	{
 		if(_selection.IsVertSelected(i))
 		{
-			glm::ivec2 p = scratch(i)  - center;
+			glm::ivec2 p = prev(i)  - center;
 
 			p = glm::ivec2(
 					p.x * complex.x - p.y * complex.y,
@@ -563,12 +570,13 @@ void Metaroom::Scale(glm::ivec2 center, glm::vec2 scale)
 {
 	gl.SetDirty();
 
-	_scratch = _prev.clone();
+	assert(_prev.size() == _verts.size());
+	assert(_scratch.size() == _verts.size());
 
 	for(auto i : edgeRange())
 	{
 		if(_selection.IsVertSelected(i))
-			scratch(i) = glm::ivec2(glm::vec2(scratch(i) - center) * scale) + center;
+			scratch(i) = glm::ivec2(glm::vec2(prev(i) - center) * scale) + center;
 	}
 
 	solve_constraints();

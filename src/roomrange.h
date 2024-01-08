@@ -8,7 +8,7 @@ public:
 	RoomRange(const QuadTree * tree, int edge, bool minimum = false);
 	RoomRange(const QuadTree * tree, glm::ivec2 v0, glm::ivec2 v1, int minimum = -1);
 
-	int  face() const { return child; }
+	int  face() const { return _face; }
 	bool popFront();
 
 	const glm::ivec2  min, max;
@@ -18,7 +18,7 @@ protected:
 
 	const QuadTree::Node * m_nodes;
 	const Metaroom       * m_metaroom;
-	int child{-1};
+	int _face{-1};
 	const int minimum{-1};
 };
 

@@ -17,82 +17,58 @@ void MetaroomSelection::Release(GLViewWidget *gl)
 
 void MetaroomSelection::resize(size_t new_size)
 {
-	if(new_size <= m_alloced)
+	if(new_size <= _selection.size())
 		return;
 
-	std::unique_ptr<uint8_t[]> r(new uint8_t[new_size*4]);
-
-	if(m_array != nullptr)
-		memcpy(&r[0], &m_array[0], std::min<size_t>(m_alloced, new_size)*4);
-
-	m_array    = std::move(r);
-	m_alloced  = new_size;
+	auto tmp = shared_array<std::array<uint8_t, 4>>(new_size, std::array<uint8_t, 4>{0});
+	memcpy(tmp.data(), _selection.data(), _selection.byteLength());
+	_selection = tmp;
 }
 
 void MetaroomSelection::erase(size_t i)
 {
-	memmove(&m_array[i*4], &m_array[(i+1)*4], 4 * (m_alloced - i));
-	memset(&m_array[(m_alloced - (i+1))*4], 0, 4);
+	memset(&_selection[i], 0, sizeof(_selection[0]));
 }
 
 void MetaroomSelection::erase(std::vector<uint32_t> const& vec)
 {
-	uint32_t read = 0, write = 0;
-
 	for(int i : vec)
 	{
-		assert(read < m_alloced);
-
-		uint32_t copy_length = i - read;
-
-		if(copy_length == 0)
-		{
-			++read;
-			continue;
-		}
-
-		memmove(&m_array[write*4], &m_array[read*4], copy_length);
-
-		read  += copy_length+1;
-		write += copy_length;
+		erase(i);
 	}
-
-	assert((read - write) <= vec.size());
 }
 
 void MetaroomSelection::clear()
 {
 	m_selectionChanged = true;
-	memset(&m_array[0], 0, m_alloced*4);
+	memset(&_selection[0], 0, _selection.byteLength());
 }
 
 void MetaroomSelection::begin_and()
 {
-	for(uint32_t i = 0; i < m_alloced*4; ++i)
-		m_array[i] <<= 1;
+	for(uint32_t i = 0; i < _selection.size()*4; ++i)
+		vertex(i) <<= 1;
 }
 
 void MetaroomSelection::end_and()
 {
-	for(uint32_t i = 0; i < m_alloced*4; ++i)
-		m_array[i] = ((m_array[i] >> 1) & m_array[i]) & 0x01;
+	for(uint32_t i = 0; i < _selection.size()*4; ++i)
+		vertex(i) = ((vertex(i) >> 1) & vertex(i)) & 0x01;
 }
 
 
-bool MetaroomSelection::MarkFace(int id)
+bool MetaroomSelection::MarkFace(int i)
 {
-	if(m_array[id] & 0x02)
-		return false;
-
-	m_array[id] |= 0x02;
-	return true;
+	bool mark = (vertex(i) & 0x02);
+	vertex(i) |= 0x02;
+	return !mark;
 }
 
 void MetaroomSelection::ClearMarks()
 {
-	for(uint32_t i = 0; i < m_alloced; ++i)
+	for(uint32_t i = 0; i < _selection.size(); ++i)
 	{
-		m_array[i] &= 0x01;
+		vertex(i) &= 0x01;
 	}
 }
 
@@ -100,7 +76,7 @@ std::vector<uint32_t> MetaroomSelection::GetVertSelection() const
 {
 	std::vector<uint32_t> r;
 
-	for(uint32_t i = 0; i < m_alloced*4; ++i)
+	for(uint32_t i = 0; i < _selection.size()*4; ++i)
 	{
 		if(IsVertSelected(i))
 			r.push_back(i);
@@ -113,7 +89,7 @@ std::vector<uint32_t> MetaroomSelection::GetFaceSelection() const
 {
 	std::vector<uint32_t> r;
 
-	for(uint32_t i = 0; i < m_alloced; ++i)
+	for(uint32_t i = 0; i < _selection.size(); ++i)
 	{
 		if(IsFaceSelected(i))
 			r.push_back(i);
@@ -126,9 +102,9 @@ std::vector<uint32_t> MetaroomSelection::GetSelection() const
 {
 	std::vector<uint32_t> r;
 
-	for(uint32_t i = 0; i < m_alloced; ++i)
+	for(uint32_t i = 0; i < _selection.size(); ++i)
 	{
-		if(IsSelected(i))
+		if(IsAnyCornerSelected(i))
 			r.push_back(i);
 	}
 
@@ -139,7 +115,7 @@ std::vector<uint32_t> MetaroomSelection::GetEdgeSelection() const
 {
 	std::vector<uint32_t> r;
 
-	for(uint32_t i = 0; i < m_alloced*4; ++i)
+	for(uint32_t i = 0; i < _selection.size()*4; ++i)
 	{
 		if(IsEdgeSelected(i))
 			r.push_back(i);
@@ -192,11 +168,11 @@ void MetaroomSelection::select_vertex(int id, Bitwise flags)
 
 	switch(flags)
 	{
-	case Bitwise::SET:  m_array[id]  =  1;	break;
-	case Bitwise::AND:	m_array[id] |=  1;	break;
-	case Bitwise::OR:   m_array[id]  =  1;	break;
-	case Bitwise::XOR:  m_array[id] ^=  1;	break;
-	case Bitwise::NOT:	m_array[id] &=  0xFE;	break;
+	case Bitwise::SET:  vertex(id)  =  1;	break;
+	case Bitwise::AND:	vertex(id) |=  1;	break;
+	case Bitwise::OR:   vertex(id)  =  1;	break;
+	case Bitwise::XOR:  vertex(id) ^=  1;	break;
+	case Bitwise::NOT:	vertex(id) &=  0xFE;	break;
 	}
 }
 
@@ -223,11 +199,11 @@ void MetaroomSelection::MergeSelection(MetaroomSelection const& it, Bitwise flag
 	{
 		switch(flags)
 		{
-		case Bitwise::SET:  m_array[i]  =  it.m_array[i]; break;
-		case Bitwise::AND:	m_array[i] &=  it.m_array[i]; break;
-		case Bitwise::OR:   m_array[i] |=  it.m_array[i]; break;
-		case Bitwise::XOR:  m_array[i] ^=  it.m_array[i]; break;
-		case Bitwise::NOT:	m_array[i] &= ~it.m_array[i]; break;
+		case Bitwise::SET:  vertex(i)  =  it.vertex(i); break;
+		case Bitwise::AND:	vertex(i) &=  it.vertex(i); break;
+		case Bitwise::OR:   vertex(i) |=  it.vertex(i); break;
+		case Bitwise::XOR:  vertex(i) ^=  it.vertex(i); break;
+		case Bitwise::NOT:	vertex(i) &= ~it.vertex(i); break;
 		}
 
 	}
@@ -252,21 +228,21 @@ void MetaroomSelection::Prepare(GLViewWidget*gl)
     gl->glBindBuffer(GL_ARRAY_BUFFER, m_vbo[0]); GL_ASSERT;
     gl->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_vbo[1]); GL_ASSERT;
 
-	if(m_glalloc < m_alloced)
+	if(m_glalloc < _selection.size())
 	{
-		m_glalloc = m_alloced;
-        gl->glBufferData(GL_ARRAY_BUFFER, m_alloced*4, &m_array[0], GL_DYNAMIC_DRAW);  GL_ASSERT;
-        gl->glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_alloced * 24, nullptr, GL_DYNAMIC_DRAW);  GL_ASSERT;
+		m_glalloc = _selection.size();
+		gl->glBufferData(GL_ARRAY_BUFFER, _selection.byteLength(), data(), GL_DYNAMIC_DRAW);  GL_ASSERT;
+		gl->glBufferData(GL_ELEMENT_ARRAY_BUFFER, _selection.size() * 24, nullptr, GL_DYNAMIC_DRAW);  GL_ASSERT;
 	}
-	else if(m_alloced > 0)
+	else if(_selection.size() > 0)
 	{
-        gl->glBufferSubData(GL_ARRAY_BUFFER, 0, m_alloced*4, &m_array[0]); GL_ASSERT;
+		gl->glBufferSubData(GL_ARRAY_BUFFER, 0, _selection.byteLength(), data()); GL_ASSERT;
 	}
 
 	std::vector<uint32_t> m_indices;
-	m_indices.reserve(m_alloced*6);
+	m_indices.reserve(_selection.size()*6);
 
-	for(uint32_t i = 0; i < m_alloced; ++i)
+	for(uint32_t i = 0; i < _selection.size(); ++i)
 	{
 		if(IsFaceSelected(i))
 		{
@@ -287,7 +263,7 @@ void MetaroomSelection::Prepare(GLViewWidget*gl)
 	m_selectedFaces = m_indices.size()/6;
 	m_selectedEdges = 0;
 
-	for(uint32_t i = 0; i < m_alloced*4; ++i)
+	for(uint32_t i = 0; i < _selection.size()*4; ++i)
 		m_selectedEdges += IsEdgeSelected(i);
 }
 

@@ -381,15 +381,19 @@ bool ControllerFSM::OnLeftDown(glm::vec2 position, Bitwise , bool)
 		return true;
 	case State::BoxSelectSet:
 		m_state = State::BoxSelectBegin;
+		m_parent->document->m_metaroom.BeginMove();
 		return true;
 	case State::TranslateSet:
 		m_state = State::TranslateBegin;
+		m_parent->document->m_metaroom.BeginMove();
 		return false;
 	case State::RotateSet:
-		m_state = State::ScaleBegin;
+		m_state = State::RotateBegin;
+		m_parent->document->m_metaroom.BeginMove();
 		return false;
 	case State::ScaleSet:
 		m_state = State::ScaleBegin;
+		m_parent->document->m_metaroom.BeginMove();
 		return false;
 //dealt with in mouse up...
 	case State::SliceSet:
@@ -501,7 +505,7 @@ bool ControllerFSM::OnLeftUp(glm::vec2 position, Bitwise flags, bool alt)
 
                 m_parent->document->m_metaroom._selection.select_face(face, Bitwise::XOR);
 
-                if(m_parent->document->m_metaroom._selection.IsSelected(face))
+				if(m_parent->document->m_metaroom._selection.IsAnyCornerSelected(face))
 		{
 			m_ordering.push_back(face);
 		}
@@ -684,9 +688,11 @@ bool ControllerFSM::OnMouseMove(glm::vec2 p, Bitwise flags)
 	case State::TranslateSet:
 		mouse_down_pos    = p;
 		m_state = State::TranslateBegin;
+		m_parent->document->m_metaroom.BeginMove();
 		break;
 	case State::RotateSet:
 	case State::ScaleSet:
+		m_parent->document->m_metaroom.BeginMove();
 		break;
 	case State::SliceSet:
 		return true;

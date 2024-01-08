@@ -40,9 +40,9 @@ bool RoomRange::popFront()
 			continue;
 		}
 
-		if(minimum < 0 || (uint32_t)minimum < node.child)
+		if(minimum < 0 || minimum < node.child)
 		{
-			child = node.child;
+			_face = node.child;
 			return true;
 		}
 	}
