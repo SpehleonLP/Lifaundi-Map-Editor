@@ -21,7 +21,7 @@ class GLViewWidget;
 class BackgroundImage
 {
 public:
-	enum { NoLayers = 5, MAX_ARRAY_LAYERS=256 };
+	enum { NoLayers = 5, MAX_ARRAY_LAYERS=256, BASE_LEVEL=1, MAX_LEVEL=2 };
 
 	const static uint32_t g_ImageFormat[NoLayers];
 	const static uint8_t g_BytesPerBlock[NoLayers];
@@ -68,6 +68,13 @@ private:
     std::string		m_filename;
 	Type			m_type;
 	BackgroundLayer m_layer{BackgroundLayer::None};
+
+	bool			havePixelSize() const { return (version&0xFF) > 1; }
+	bool			isLz4Compressed() const { return (version&0xFF) > 3; }
+	bool			isUnlit() const { return !!(version & 0x8000); }
+	bool			isMetallicRoughnessHalfSize() const { return !(version & 0x4000); }
+	bool			haveMetallic() const { return !(version & 0x2000); }
+	bool			haveRoughness() const { return !(version & 0x1000); }
 
 	short			version{};
 	glm::u8vec2		tiles{0, 0};

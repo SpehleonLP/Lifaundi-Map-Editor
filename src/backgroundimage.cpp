@@ -389,16 +389,13 @@ void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file, Backgr
 	file.read((char*)&version, sizeof(version));
 	file.read((char*)&tiles, sizeof(tiles));
 
-	bool is_unlit = !!(version & 0x8000);
-	version &= 0x7FFF;
-
-	if(is_unlit)
+	if(isUnlit())
 		layer = BackgroundLayer::BaseColor;
 
 	if(layer == m_layer)
 		return;
 
-	if(version == 1)
+	if(!havePixelSize())
 		pixels = glm::u16vec2(tiles) * (uint16_t) 256;
 	else
 	{
@@ -437,19 +434,20 @@ void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file, Backgr
 		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_LEVEL, 1);
+		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BASE_LEVEL, BASE_LEVEL);
+		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_LEVEL, MAX_LEVEL);
 
 		if(g_ImageFormat[(int)layer] == GL_R16)
 		{
-			gl->glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_R16, 128, 128, MAX_ARRAY_LAYERS, 0, GL_RED, GL_FLOAT, nullptr);
-			gl->glTexImage3D(GL_TEXTURE_2D_ARRAY, 1, GL_R16, 64, 64, MAX_ARRAY_LAYERS, 0, GL_RED, GL_FLOAT, nullptr);
+			gl->glTexImage3D(GL_TEXTURE_2D_ARRAY, 1, GL_R16, 128, 128, MAX_ARRAY_LAYERS, 0, GL_RED, GL_FLOAT, nullptr);
+			gl->glTexImage3D(GL_TEXTURE_2D_ARRAY, 2, GL_R16, 64, 64, MAX_ARRAY_LAYERS, 0, GL_RED, GL_FLOAT, nullptr);
 			gl->glAssert();
 		}
 		else
 		{
 			auto image_size = MAX_ARRAY_LAYERS * 128*128 / 16 * g_BytesPerBlock[(int)layer];
-			gl->glCompressedTexImage3D(GL_TEXTURE_2D_ARRAY, 0, g_ImageFormat[(int)layer], 128, 128, MAX_ARRAY_LAYERS, 0, image_size, nullptr);
-			gl->glCompressedTexImage3D(GL_TEXTURE_2D_ARRAY, 1, g_ImageFormat[(int)layer], 64, 64, MAX_ARRAY_LAYERS, 0, image_size >> 2, nullptr);
+			gl->glCompressedTexImage3D(GL_TEXTURE_2D_ARRAY, 1, g_ImageFormat[(int)layer], 128, 128, MAX_ARRAY_LAYERS, 0, image_size, nullptr);
+			gl->glCompressedTexImage3D(GL_TEXTURE_2D_ARRAY, 2, g_ImageFormat[(int)layer], 64, 64, MAX_ARRAY_LAYERS, 0, image_size >> 2, nullptr);
 			gl->glAssert();
 		}
 	}
@@ -481,11 +479,12 @@ void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file, Backgr
 		uint32_t blocks_x = (width) / 4;
 		uint32_t blocks_y = (height) / 4;
 
-		for(int mipLevel = 1; mipLevel <= 2; ++mipLevel)
+		for(int mipLevel = BASE_LEVEL; mipLevel <= MAX_LEVEL; ++mipLevel)
 		{
 			blocks_x >>= 1;
 			blocks_y >>= 1;
 			auto bytes  = mip[mipLevel+1] - mip[mipLevel];
+			auto decompressed_bytes = bytes;
 
 			if(bytes == 0)
 				continue;
@@ -495,15 +494,15 @@ void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file, Backgr
 			file.seekg(mip[mipLevel], std::ios_base::beg);
 			file.read((char*) &buffer[0], bytes);
 
-			if(version >= 3)
+			if(isLz4Compressed())
 			{
-				auto total_out = LZ4_decompress_safe(
+				decompressed_bytes = LZ4_decompress_safe(
 					(const char *)&buffer[0], /* src */
 					(char*)&buffer2[0], /* dst */
 					bytes,			/* compressed size */
 					TILE_BYTES) ;   /* decompressed capacity */
 
-				if(total_out < 0)
+				if(decompressed_bytes < 0)
 					throw std::runtime_error("failed to decompress all data");
 
 				std::swap(buffer, buffer2);
@@ -538,7 +537,7 @@ void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file, Backgr
 			{
 
 				gl->glCompressedTexSubImage3D(GL_TEXTURE_2D_ARRAY,
-					mipLevel-1,
+					mipLevel,
 					0, 0, texture_layer,
 					width    / d0,
 					height   / d0,
@@ -549,8 +548,16 @@ void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file, Backgr
 			}
 			else
 			{
+				auto area_px = width*height/d1;
+				auto size_bytes = area_px * 2;
+
+				auto begin = &buffer[texture_offset[(int)BackgroundLayer::Depth] / d1];
+				auto end = begin + size_bytes;
+
+				assert(end - buffer.get() == decompressed_bytes);
+
 				gl->glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
-					mipLevel-1,
+					mipLevel,
 					0, 0, texture_layer,
 					width    / d0,
 					height   / d0,
@@ -558,6 +565,7 @@ void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file, Backgr
 					GL_RED,
 					GL_UNSIGNED_SHORT,	// type
 					&buffer[texture_offset[(int)BackgroundLayer::Depth] / d1]);
+
 			}
 
             gl->glAssert();
