@@ -1,9 +1,9 @@
 #ifndef TRANSPARENCYSHADER_H
 #define TRANSPARENCYSHADER_H
-#include "../glprogram.h"
+#include "qt-gl/simpleshaderbase.h"
 #include <atomic>
 
-class TransparencyShader : public glProgram
+class TransparencyShader : public ShaderBase
 {
 public:
 static TransparencyShader Shader;

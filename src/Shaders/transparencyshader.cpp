@@ -20,14 +20,14 @@ void TransparencyShader::construct(GLViewWidget* gl)
 void TransparencyShader::AddRef()
 {
     glDefaultVAOs::AddRef();
-	glProgram::AddRef();
+	ShaderBase::AddRef();
 }
 
 void TransparencyShader::Release(GLViewWidget* gl)
 {
 	gl->glAssert();
     glDefaultVAOs::Release(gl);
-    glProgram::Release(gl);
+    ShaderBase::Release(gl);
 }
 
 

@@ -1,19 +1,17 @@
 #ifndef UNIFORMCOLORSHADER_H
 #define UNIFORMCOLORSHADER_H
-#include "../glprogram.h"
-#include <atomic>
+#include "qt-gl/simpleshaderbase.h"
 
-
-class UniformColorShader : public glProgram
+class UniformColorShader : public ShaderBase
 {
 public:
 static UniformColorShader Shader;
+	void Bind(QOpenGLFunctions*,float r, float green, float blue, float alpha);
 
-    void Bind(GLViewWidget*,float r, float green, float blue, float alpha);
+	void Initialize(QOpenGLFunctions * gl);
+	void Destroy(QOpenGLFunctions * gl);
 
 private:
-    void construct(GLViewWidget*);
-
 	int32_t u_color;
 };
 

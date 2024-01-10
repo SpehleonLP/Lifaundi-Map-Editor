@@ -1,15 +1,15 @@
 #ifndef SELECTEDROOMSHADER_H
 #define SELECTEDROOMSHADER_H
-#include "../glprogram.h"
+#include "qt-gl/simpleshaderbase.h"
 
-class SelectedRoomShader  : public glProgram
+class SelectedRoomShader  : public ShaderBase
 {
 public:
 static SelectedRoomShader Shader;
-    void Render(GLViewWidget * gl, uint32_t faces);
+	void operator()(QOpenGLFunctions * gl, uint32_t faces);
 
-private:
-    void construct(GLViewWidget *) override;
+	void Initialize(QOpenGLFunctions * gl);
+	void Destroy(QOpenGLFunctions * gl);
 };
 
 #endif // SELECTEDROOMSHADER_H

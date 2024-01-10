@@ -24,6 +24,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 INCLUDEPATH += \
+	../../Libraries/Spehleon/ \
 	../../Libraries/ \
 	../../Libraries/loguru \
 	../../Libraries/Spehleon/lib
@@ -34,6 +35,8 @@ LIBS += -lGLEW -lGL -lGLU -ldrm -lz \
 DEFINES += GLM_EXT_INCLUDED GLM_FORCE_INLINE GLM_ENABLE_EXPERIMENTAL
 
 SOURCES += \
+	../../Libraries/Spehleon/lib/qt-gl/initialize_gl.cpp \
+	../../Libraries/Spehleon/lib/qt-gl/simpleshaderbase.cpp \
 ../../Libraries/loguru/loguru.cpp \
 	colorprogressindicator.cpp \
 	exportoptions.cpp \
@@ -41,6 +44,7 @@ SOURCES += \
         mainwindow.cpp \
 	src/Shaders/arrowshader.cpp \
     src/Shaders/mouseshader.cpp \
+	src/Shaders/shaders.cpp \
 	src/color_rooms.cpp \
     src/document.cpp \
     src/commandlist.cpp \
@@ -50,7 +54,6 @@ SOURCES += \
 	src/glm_iostream.cpp \
     src/glviewwidget.cpp \
     src/backgroundimage.cpp \
-    src/glprogram.cpp \
     src/Shaders/transparencyshader.cpp \
     src/Shaders/defaulttextures.cpp \
     src/Shaders/defaultvaos.cpp \
@@ -81,14 +84,16 @@ HEADERS += \
 	../../Libraries/Spehleon/lib/Support/lockfreequeue.hpp \
 	../../Libraries/Spehleon/lib/Support/numeric_range.hpp \
 	../../Libraries/Spehleon/lib/Support/unsafe_view.hpp \
+	../../Libraries/Spehleon/lib/qt-gl/initialize_gl.h \
+	../../Libraries/Spehleon/lib/qt-gl/simpleshaderbase.h \
 	colorprogressindicator.h \
 	exportoptions.h \
         mainwindow.h \
 	nlohmann/json_detail.hpp \
 	src/Shaders/arrowshader.h \
     src/Shaders/mouseshader.h \
+	src/Shaders/shaders.h \
 	src/color_rooms.h \
-	src/counted_ptr.hpp \
     src/document.h \
     src/commandlist.h \
 	src/edgerange.h \
@@ -101,7 +106,6 @@ HEADERS += \
     src/backgroundlayer.h \
     src/backgroundimage.h \
     src/byte_swap.h \
-    src/glprogram.h \
     src/Shaders/transparencyshader.h \
     src/Shaders/defaulttextures.h \
     src/Shaders/defaultvaos.h \

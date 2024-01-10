@@ -2,9 +2,8 @@
 #include "glviewwidget.h"
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "Shaders/defaultvaos.h"
-#include "Shaders/mouseshader.h"
-#include "Shaders/transparencyshader.h"
+#include "Shaders/shaders.h"
+#include "lib/qt-gl/initialize_gl.h"
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <QPainter>
@@ -20,6 +19,34 @@
 #include <iostream>
 #include <loguru.hpp>
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/ptrace.h>
+#endif
+
+static const char * g_glDebugFilePath = "Log/glDebug.log";
+
+extern "C"
+{
+bool IsBeingDebugged()
+{
+#ifdef _WIN32
+	return IsDebuggerPresent() != 0;
+#else
+	static bool isBeingDebugged = []() {
+		if (ptrace(PTRACE_TRACEME, 0, 1, 0) == -1) {
+			return true;
+		} else {
+			ptrace(PTRACE_DETACH, 0, 0, 0); // Detach if not being traced
+			return false;
+		}
+	}();
+#endif
+	return isBeingDebugged;
+}
+}
+
 struct Matrices
 {
 	glm::mat4 u_projection;
@@ -34,9 +61,6 @@ GLViewWidget::GLViewWidget(QWidget * p) :
 	QOpenGLWidget(p),
 	timer(this)
 {
-	TransparencyShader::Shader.AddRef();
-	MouseShader::Shader.AddRef();
-
 	timer.setSingleShot(false);
 	timer.setInterval(20);
 	connect(&timer, &QTimer::timeout, this, [this]() { repaint(); } );
@@ -44,10 +68,7 @@ GLViewWidget::GLViewWidget(QWidget * p) :
 
 GLViewWidget::~GLViewWidget()
 {
-	glAssert();
 	glDeleteTextures(1, &permeabilities);
-    TransparencyShader::Shader.Release(this);
-	MouseShader::Shader.Release(this);
 }
 
 glm::vec2 GLViewWidget::GetScreenPosition(QMouseEvent * event)
@@ -107,9 +128,11 @@ void GLViewWidget::initializeGL()
 	if(!initialized)
 	{
 		initialized = true;
-		QOpenGLFunctions_3_2_Core::initializeOpenGLFunctions();
-	}
+		QOpenGLFunctions_4_5_Core::initializeOpenGLFunctions();
+		OpenGL.Initialize(this);
 
+		shaders = std::make_unique<Shaders>(this);
+	}
 
     glClearColor(0, 0, 0, 1);
     glDisable(GL_DEPTH_TEST);
@@ -131,7 +154,6 @@ void GLViewWidget::initializeGL()
 	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAX_LEVEL, 0);
 
 	w->loadDefaultWalls();
-	glAssert();
 
 }
 
@@ -320,7 +342,6 @@ void GLViewWidget::upload_permeabilitys(uint8_t * table, int size)
 	glBindTexture(GL_TEXTURE_1D, permeabilities);
 	glTexImage1D(GL_TEXTURE_1D, 0, GL_RED, size, 0, GL_RED, GL_UNSIGNED_BYTE, &table[0]);
 	glActiveTexture(GL_TEXTURE0);
-	glAssert();
 }
 
 void GLViewWidget::paintGL()
@@ -336,7 +357,6 @@ void GLViewWidget::paintGL()
 	glBindTexture(GL_TEXTURE_1D, permeabilities);
 	glActiveTexture(GL_TEXTURE0);
 
-    glAssert();
 	int width = size().width();
 	int height = size().height();
 
@@ -384,29 +404,10 @@ void GLViewWidget::paintGL()
 	
 	MouseShader::Shader.Render(this, GetWorldPosition());
 	MouseShader::Shader.Render(this, w->document->GetScreenCenter(), 5, glm::vec4(0, 1, 0, 1));
-	
-    glAssert();
 }
 
 void 	GLViewWidget::resizeGL(int w, int h)
 {
     QOpenGLWidget::resizeGL(w, h);
     glViewport(0, 0, w, h);
-}
-
-#include <GL/glu.h>
-#include <QMessageBox>
-
-void GLViewWidget::displayOpenGlError(const char * file, const char *, int line)
-{
-    GLenum error = glGetError();
-
-    if(error == GL_NO_ERROR) return;
-
-    do
-    {
-		loguru::log(loguru::Verbosity_ERROR, file, line, "%s", (const char *) gluErrorString(error));
-    } while((error = glGetError()) != GL_NO_ERROR);
-
-    w->close();
 }

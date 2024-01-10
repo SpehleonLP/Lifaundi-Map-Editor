@@ -1,19 +1,24 @@
 #ifndef GLBLITVAO_H
 #define GLBLITVAO_H
+#include <cstdint>
 
-class GLViewWidget;
+typedef class QOpenGLFunctions_4_5_Core QOpenGLFunctions;
 
-namespace glDefaultVAOs
+class glDefaultVAOs
 {
-    void AddRef();
-    void Release(GLViewWidget * gl);
+public:
+	void Initialize(QOpenGLFunctions * gl);
+	void Destroy(QOpenGLFunctions * gl);
 
-    void BindVAO(GLViewWidget * gl);
+	void BindVAO(QOpenGLFunctions * gl);
 
-    void RenderPoint(GLViewWidget * gl);
-    void RenderSquare(GLViewWidget * gl);
-    void RenderCube(GLViewWidget * gl);
-}
+	void RenderPoint(QOpenGLFunctions * gl);
+	void RenderSquare(QOpenGLFunctions * gl);
+	void RenderCube(QOpenGLFunctions * gl);
+
+private:
+	uint32_t _vao, _vbo;
+};
 
 
 #endif // GLBLITVAO_H

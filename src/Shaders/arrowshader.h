@@ -1,27 +1,38 @@
 #ifndef ARROWSHADER_H
 #define ARROWSHADER_H
-#include "../glprogram.h"
+#include "qt-gl/simpleshaderbase.h"
 #include <glm/vec2.hpp>
 #include <glm/gtc/type_precision.hpp>
+#include <vector>
 
-class ArrowShader : public glProgram
+
+class ArrowShader : public ShaderBase
 {
 public:
 static ArrowShader Shader;
+#ifndef PRODUCTION_BUILD
+	static const char Vertex[];
+	static const char Fragment[];
+#endif
 
 	struct Vertex
 	{
-		glm::ivec2 position;
+		glm::ivec2	position;
 		glm::i16vec2  rotation;
 	};
 
-    void Render(GLViewWidget* gl, uint32_t size, glm::vec4 color);
+	void Initialize(QOpenGLFunctions * gl, CompressedShaderSource &);
+	void Destroy(QOpenGLFunctions * gl);
+
+	void operator()(QOpenGLFunctions * gl, std::vector<Vertex> const& arrows, glm::vec4 color);
 
 private:
-    void construct(GLViewWidget* gl);
+	uniform_t u_vertices;
+	uniform_t u_color;
 
-	int32_t u_vertices;
-	int32_t u_color;
+	uint32_t  _vao;
+	uint32_t  _vbo[3];
+	uint32_t  _count;
 };
 
 #endif // ARROWSHADER_H

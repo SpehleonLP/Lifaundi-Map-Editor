@@ -27,14 +27,14 @@ void BlitShader::construct(GLViewWidget * gl)
 void BlitShader::AddRef()
 {
 	glDefaultVAOs::AddRef();
-	glProgram::AddRef();
+	ShaderBase::AddRef();
 }
 
 void BlitShader::Release(GLViewWidget * gl)
 {
 	gl->glAssert();
     glDefaultVAOs::Release(gl);
-    glProgram::Release(gl);
+    ShaderBase::Release(gl);
 }
 
 void BlitShader::bind(GLViewWidget * gl, BackgroundLayer layer)

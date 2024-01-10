@@ -1,17 +1,18 @@
 #ifndef ROOMOUTLINESHADER_H
 #define ROOMOUTLINESHADER_H
-#include "../glprogram.h"
+#include "qt-gl/simpleshaderbase.h"
 
-class RoomOutlineShader : public glProgram
+class RoomOutlineShader : public ShaderBase
 {
 public:
 static RoomOutlineShader Shader;
 
-    void Render(GLViewWidget*gl, uint32_t faces, bool selected);
+	void operator()(QOpenGLFunctions * gl, uint32_t faces, bool selected);
+
+	void Initialize(QOpenGLFunctions * gl);
+	void Destroy(QOpenGLFunctions * gl);
 
 private:
-    void construct(GLViewWidget*gl);
-
 	int32_t u_vertices;
 	int32_t u_selected;
 	int32_t u_renderSelected;

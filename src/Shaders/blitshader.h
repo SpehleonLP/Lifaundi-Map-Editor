@@ -1,27 +1,25 @@
 #ifndef BLITSHADER_H
 #define BLITSHADER_H
-#include "../glprogram.h"
+#include "qt-gl/simpleshaderbase.h"
 #include <glm/mat4x4.hpp>
 
 enum class BackgroundLayer : char;
 
-class BlitShader : public glProgram
+class BlitShader : public ShaderBase
 {
 public:
 static BlitShader Shader;
-    void bind(GLViewWidget *, BackgroundLayer layer);
-    void render(GLViewWidget *);
+	void Bind(QOpenGLFunctions *, BackgroundLayer layer);
+	void operator()(QOpenGLFunctions *);
 
-	void AddRef();
-    void Release(GLViewWidget * gl);
+	void Initialize(QOpenGLFunctions * gl, CompressedShaderSource &);
+	void Destroy(QOpenGLFunctions * gl);
 
 private:
-    void construct(GLViewWidget *);
-
-	int32_t u_projection;
-	int32_t u_modelview;
-	int32_t u_texture;
-	int32_t u_layer;
+	uniform_t u_projection;
+	uniform_t u_modelview;
+	uniform_t u_texture;
+	uniform_t u_layer;
 };
 
 #endif // TRANSPARENCYSHADER_H

@@ -359,6 +359,42 @@ static __unused uint8_t * interleave_BC5(uint8_t * dst, uint8_t * src, int block
 	return src;
 }
 
+static __unused uint8_t * interleave_Depth(uint8_t * dst, uint8_t * src, int blocks)
+{
+	int pixels = blocks * sizeof(DepthBlock) / sizeof(uint16_t);
+	assert(pixels * sizeof(uint16_t) == blocks * sizeof(DepthBlock));
+
+	{
+		int8_t * src0 = (int8_t*)src;
+		for(int i = 1; i < blocks*2-1; ++i)
+		{
+			src0[i] = src0[i] + src0[i-1];
+		}
+	}
+
+	for(int i = 0; i < pixels; ++i)
+	{
+		dst[i*2+0] = (int)src[i];
+	}
+
+	for(int i = 0; i < pixels; ++i)
+	{
+		dst[i*2+1] = (int)src[i+pixels];
+	}
+
+
+//	memcpy(dst, src, pixels * sizeof(uint16_t));
+
+	/*
+
+
+
+	memcpy(dst, ptr, blocks* sizeof(uint16_t));*/
+
+	return src+blocks*2;
+}
+
+
 void BackgroundImage::SetBackgroundLayer(GLViewWidget * gl, BackgroundLayer layer)
 {
 //don't try to load something we already have.
@@ -527,6 +563,7 @@ void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file, Backgr
 				interleave_BC4(&buffer2[0], &buffer[texture_offset[(int)BackgroundLayer::AmbientOcclusion] / d1], blocks_x * blocks_y);
 				break;
 			case BackgroundLayer::Depth:
+				interleave_Depth(&buffer2[0], &buffer[texture_offset[(int)BackgroundLayer::Depth] / d1], blocks_x * blocks_y);
 				break;
 			default:
 				throw std::logic_error("unhandled image format case");
@@ -548,14 +585,6 @@ void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file, Backgr
 			}
 			else
 			{
-				auto area_px = width*height/d1;
-				auto size_bytes = area_px * 2;
-
-				auto begin = &buffer[texture_offset[(int)BackgroundLayer::Depth] / d1];
-				auto end = begin + size_bytes;
-
-				assert(end - buffer.get() == decompressed_bytes);
-
 				gl->glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
 					mipLevel,
 					0, 0, texture_layer,
@@ -564,7 +593,7 @@ void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file, Backgr
 					1,
 					GL_RED,
 					GL_UNSIGNED_SHORT,	// type
-					&buffer[texture_offset[(int)BackgroundLayer::Depth] / d1]);
+					&buffer2[0]);
 
 			}
 

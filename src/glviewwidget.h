@@ -1,15 +1,17 @@
 #ifndef GLVIEWWIDGET_H
 #define GLVIEWWIDGET_H
+#include "Support/counted_ptr.hpp"
 #include "enums.hpp"
+#include "Shaders/shaders.h"
 #include <glm/vec2.hpp>
-#include <QOpenGLFunctions_3_2_Core>
+#include <QOpenGLFunctions_4_5_Core>
 #include <QOpenGLWidget>
 #include <QTimer>
 #include <chrono>
 
 class MainWindow;
 
-class GLViewWidget : public QOpenGLWidget, public QOpenGLFunctions_3_2_Core
+class GLViewWidget : public QOpenGLWidget, public QOpenGLFunctions_4_5_Core
 {
 typedef QOpenGLWidget super;
 //	Q_OBJECT
@@ -29,8 +31,6 @@ public:
 
 	void upload_permeabilitys(uint8_t * table, int size);
 
-    void  displayOpenGlError(const char * file, const char * function, int line);
-
 
 private:
 	void mouseMoveEvent 		(QMouseEvent * event)	Q_DECL_OVERRIDE;
@@ -45,8 +45,8 @@ private:
 	void paintGL() Q_DECL_OVERRIDE;
     void resizeGL(int w, int h) Q_DECL_OVERRIDE;
 
-
 	QTimer timer;
+	counted_ptr<Shaders> shaders;
 
 	std::chrono::time_point<std::chrono::high_resolution_clock> current_time;
 
@@ -59,6 +59,5 @@ private:
 	glm::vec2  m_mouseWorldPosition;
 };
 
-#define glAssert() displayOpenGlError(__FILE__, __FUNCTION__, __LINE__);
 
 #endif // GLVIEWWIDGET_H

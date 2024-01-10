@@ -2,25 +2,19 @@
 #define DEFAULTTEXTURES_H
 #include <atomic>
 
+typedef class QOpenGLFunctions_4_5_Core QOpenGLFunctions;
+
 class GLViewWidget;
 
 class DefaultTextures
 {
 public:
-	static DefaultTextures & GetDefaultTextures()
-	{
-		static DefaultTextures defaults;
-		return defaults;
-	}
-
-	~DefaultTextures();
-
-	inline void AddRef() { ++refCount; }
-    inline void Release(GLViewWidget* gl) { if(--refCount == 0) destroyTextures(gl); }
-
     uint32_t GetWhiteTexture(GLViewWidget*);
     uint32_t GetNormalTexture(GLViewWidget*);
 	uint32_t GetNoiseTexture(GLViewWidget*);
+
+	void Initialize(QOpenGLFunctions * gl);
+	void Destroy(QOpenGLFunctions * gl);
 
 private:
 	enum
@@ -32,13 +26,7 @@ private:
 		TotalTextures
 	};
 
-    std::atomic<int> refCount{};
-    uint32_t textures[TotalTextures]{};
-
-    DefaultTextures() = default;
-
-    void createTextures(GLViewWidget*);
-    void destroyTextures(GLViewWidget*);
+	uint32_t textures[TotalTextures]{};
 };
 
 #endif // DEFAULTTEXTURES_H
