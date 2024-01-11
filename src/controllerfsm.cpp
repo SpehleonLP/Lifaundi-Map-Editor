@@ -1,10 +1,11 @@
-#include "src/glviewwidget.h"
+#include "src/Shaders/shaders.h"
 #include "controllerfsm.h"
 #include "commandlist.h"
 #include "mainwindow.h"
 #include "lf_math.h"
 #include "document.h"
 #include "Shaders/uniformcolorshader.h"
+#include <QOpenGLFunctions_4_5_Core>
 #include "sort_unique.h"
 #include <iostream>
 #include <glm/glm.hpp>
@@ -18,17 +19,15 @@
 ControllerFSM::ControllerFSM(MainWindow * window) :
     m_parent(window)
 {
-    UniformColorShader::Shader.AddRef();
 }
 
 ControllerFSM::~ControllerFSM()
 {
 }
 
-void ControllerFSM::Release(GLViewWidget * gl)
+void ControllerFSM::Release(Shaders * shaders)
 {
-	gl->glAssert();
-     UniformColorShader::Shader.Release(gl);
+	auto gl = shaders->gl;
      gl->glDeleteVertexArrays(2, m_vao);
      gl->glDeleteBuffers(3, m_vbo);
 }
@@ -872,8 +871,10 @@ void ControllerFSM::AddFace()
 	}
 }
 
-void ControllerFSM::Prepare(GLViewWidget *gl)
+void ControllerFSM::Prepare(Shaders * shaders)
 {
+	auto gl = shaders->gl;
+
 	const uint8_t tool_indices[] =
 	{
 //h line1
@@ -982,18 +983,20 @@ void ControllerFSM::Prepare(GLViewWidget *gl)
 	}
 }
 
-void ControllerFSM::Render(GLViewWidget * gl)
+void ControllerFSM::Render(Shaders * shaders)
 {
-    Prepare(gl);
+	auto gl = shaders->gl;
+
+	Prepare(shaders);
 
 	if(m_state == State::BoxSelectBegin)
 	{
         gl->glBindVertexArray(m_vao[0]);
 
         gl->glLineWidth(2);
-        UniformColorShader::Shader.Bind(gl, 0, 0, 1.f, .5f);
+		shaders->uniformColorShader.Bind(gl, 0, 0, 1.f, .5f);
         gl->glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, (void*) (16L));
-        UniformColorShader::Shader.Bind(gl, 0, 0.f, 1.f, .5f);
+		shaders->uniformColorShader.Bind(gl, 0, 0.f, 1.f, .5f);
         gl->glDrawElements(GL_LINES, 16, GL_UNSIGNED_BYTE, (void*) (0));
 	}
 
@@ -1002,7 +1005,7 @@ void ControllerFSM::Render(GLViewWidget * gl)
         gl->glBindVertexArray(m_vao[0]);
 
         gl->glLineWidth(2);
-        UniformColorShader::Shader.Bind(gl, 0, 1.f, 1.f, 1.f);
+		shaders->uniformColorShader.Bind(gl, 0, 1.f, 1.f, 1.f);
         gl->glDrawElements(GL_LINES, 8, GL_UNSIGNED_BYTE, (void*) (22));
 	}
 
@@ -1013,12 +1016,12 @@ void ControllerFSM::Render(GLViewWidget * gl)
 		if(m_state < State::SliceSetGravity)
 		{
 			gl->glLineWidth(1);
-			UniformColorShader::Shader.Bind(gl, 1.f, 0.f, 1.f, 1.f);
+			shaders->uniformColorShader.Bind(gl, 1.f, 0.f, 1.f, 1.f);
 		}
 		else
 		{
 			gl->glLineWidth(2);
-			UniformColorShader::Shader.Bind(gl, 0.f, 1.f, 1.f, 1.f);
+			shaders->uniformColorShader.Bind(gl, 0.f, 1.f, 1.f, 1.f);
 		}
         gl->glDrawArrays(GL_LINES, 0, m_slice.size());
 	}

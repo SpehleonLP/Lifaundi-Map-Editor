@@ -6,16 +6,17 @@
 class DoorShader : public ShaderBase
 {
 public:
-static DoorShader Shader;
+#ifndef PRODUCTION_BUILD
+	static const char Vertex[];
+	static const char Fragment[];
+#endif
 
 	void Bind(QOpenGLFunctions * gl, int selected_door_type);
 
 	void Initialize(QOpenGLFunctions * gl, CompressedShaderSource & source);
 
 private:
-	int32_t u_screensize;
-	int32_t u_vertices;
-	int32_t u_activeType;
+	uniform_t u_activeType;
 };
 
 #endif // DOORSHADER_H

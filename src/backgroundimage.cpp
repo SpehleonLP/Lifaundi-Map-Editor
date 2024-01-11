@@ -1,9 +1,8 @@
 #include "backgroundimage.h"
-#include "Shaders/blitshader.h"
-#include "Shaders/transparencyshader.h"
 #include "enums.hpp"
 #include <QProgressDialog>
-#include "src/glviewwidget.h"
+#include "src/Shaders/shaders.h"
+#include <QOpenGLFunctions_4_5_Core>
 #include <glm/vec2.hpp>
 #include <glm/gtc/type_precision.hpp>
 #include <cassert>
@@ -87,7 +86,7 @@ BackgroundImage::Type BackgroundImage::GetType(std::string const& filename)
 }
 
 
-BackgroundImage::BackgroundImage(GLViewWidget * gl, std::string const& filename) :
+BackgroundImage::BackgroundImage(Shaders * shaders, std::string const& filename) :
 	m_filename(filename)
 {
 	std::ifstream file(m_filename, std::ios::binary);
@@ -100,20 +99,20 @@ BackgroundImage::BackgroundImage(GLViewWidget * gl, std::string const& filename)
 	switch((m_type = GetType(filename)))
 	{
 	case Type::Creatures1:
-		LoadSpr(gl, std::move(file));
+		LoadSpr(shaders, std::move(file));
 		break;
 	case Type::Creatures2:
-		LoadS16(gl, std::move(file));
+		LoadS16(shaders, std::move(file));
 		break;
 	case Type::Creatures3:
-		LoadBlk(gl, std::move(file));
+		LoadBlk(shaders, std::move(file));
 		break;
 	case Type::Lifaundi:
 		//LoadLifaundi(gl, std::move(file));
 		break;
 	case Type::Image:
 		file.close();
-		LoadImage(gl, filename);
+		LoadImage(shaders, filename);
 		break;
 	}
 }
@@ -122,31 +121,33 @@ BackgroundImage::~BackgroundImage()
 {
 }
 
-void BackgroundImage::Release(GLViewWidget * gl)
+void BackgroundImage::Release(Shaders * shaders)
 {
-    gl->glDeleteTextures(size(), &m_textures[0]); gl->glAssert();
-    gl->glDeleteVertexArrays(1, &m_vao); gl->glAssert();
-    gl->glDeleteBuffers(1, &m_vbo); gl->glAssert();
+	shaders->gl->glDeleteTextures(size(), &m_textures[0]);
+	shaders->gl->glDeleteVertexArrays(1, &m_vao);
+	shaders->gl->glDeleteBuffers(1, &m_vbo);
 }
 
-void BackgroundImage::Render(GLViewWidget* gl)
+void BackgroundImage::Render(Shaders * shaders)
 {
-	CreateVBO(gl);
+	auto gl = shaders->gl;
+
+	CreateVBO(shaders);
 
 //	m_transparencyShader.bind(gl);
-//	gl->glDrawArrays(GL_TRIANGLES, size()*6, 6); gl->glAssert();
+//	gl->glDrawArrays(GL_TRIANGLES, size()*6, 6);
 
-    BlitShader::Shader.bind(gl, m_layer); gl->glAssert();
+	shaders->blitShader.Bind(shaders->gl, m_layer);
 
-    gl->glBindVertexArray(m_vao); gl->glAssert();
-    gl->glActiveTexture(GL_TEXTURE0);
+	gl->glBindVertexArray(m_vao);
+	gl->glActiveTexture(GL_TEXTURE0);
 
 	for(uint32_t i = 0, texture = 0; i < m_noQuads; i += MAX_ARRAY_LAYERS, ++texture)
 	{
 		auto no_tris = 6 * std::min<size_t>(m_noQuads - i, MAX_ARRAY_LAYERS);
 
-		gl->glBindTexture(GL_TEXTURE_2D_ARRAY, m_textures[texture]); gl->glAssert();
-		gl->glDrawArrays(GL_TRIANGLES, i*6, no_tris); gl->glAssert();
+		gl->glBindTexture(GL_TEXTURE_2D_ARRAY, m_textures[texture]);
+		gl->glDrawArrays(GL_TRIANGLES, i*6, no_tris);
 	}
 }
 
@@ -170,7 +171,7 @@ bool BackgroundImage::LoadTextures(QWidget *)
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, tiles.x*128, tiles.y*128, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
-    gl->glAssert();;
+	;
 
 	for(size_t i = 0; i < size(); ++i)
 	{
@@ -196,20 +197,22 @@ bool BackgroundImage::LoadTextures(QWidget *)
 			128*128,
 			&deinterleave[0]);
 
-        gl->glAssert();;
+		;
 	}
 
 	CreateVBO();
-    gl->glAssert();;
+	;
 
 	return true;
 }
 #endif
 
-void BackgroundImage::CreateVBO(GLViewWidget* gl)
+void BackgroundImage::CreateVBO(Shaders * shaders)
 {
 	if(m_vao != 0)
 		return;
+
+	auto gl = shaders->gl;
 
 	struct vertex
 	{
@@ -299,7 +302,7 @@ void BackgroundImage::CreateVBO(GLViewWidget* gl)
     gl->glEnableVertexAttribArray(0);
     gl->glEnableVertexAttribArray(3);
 
-	gl->glAssert();
+
 }
 
 template<int bytes, int stride>
@@ -395,7 +398,7 @@ static __unused uint8_t * interleave_Depth(uint8_t * dst, uint8_t * src, int blo
 }
 
 
-void BackgroundImage::SetBackgroundLayer(GLViewWidget * gl, BackgroundLayer layer)
+void BackgroundImage::SetBackgroundLayer(Shaders * shaders, BackgroundLayer layer)
 {
 //don't try to load something we already have.
 	if(m_layer == layer || m_type != Type::Lifaundi)
@@ -410,15 +413,17 @@ void BackgroundImage::SetBackgroundLayer(GLViewWidget * gl, BackgroundLayer laye
 
     file.exceptions ( std::ifstream::failbit | std::ifstream::badbit );
 
-	LoadLifaundi(gl, std::move(file), layer);
+	LoadLifaundi(shaders, std::move(file), layer);
 	m_layer = layer;
 }
 
 struct mip_offsets { uint32_t mip0, mip1, mip2; };
 static_assert(sizeof(mip_offsets) == sizeof(uint32_t)*3);
 
-void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file, BackgroundLayer layer)
+void BackgroundImage::LoadLifaundi(Shaders * shaders, std::ifstream file, BackgroundLayer layer)
 {
+	auto gl = shaders->gl;
+
 	char title[4];
 
 	file.read(&title[0], sizeof(title));
@@ -477,18 +482,18 @@ void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file, Backgr
 		{
 			gl->glTexImage3D(GL_TEXTURE_2D_ARRAY, 1, GL_R16, 128, 128, MAX_ARRAY_LAYERS, 0, GL_RED, GL_FLOAT, nullptr);
 			gl->glTexImage3D(GL_TEXTURE_2D_ARRAY, 2, GL_R16, 64, 64, MAX_ARRAY_LAYERS, 0, GL_RED, GL_FLOAT, nullptr);
-			gl->glAssert();
+
 		}
 		else
 		{
 			auto image_size = MAX_ARRAY_LAYERS * 128*128 / 16 * g_BytesPerBlock[(int)layer];
 			gl->glCompressedTexImage3D(GL_TEXTURE_2D_ARRAY, 1, g_ImageFormat[(int)layer], 128, 128, MAX_ARRAY_LAYERS, 0, image_size, nullptr);
 			gl->glCompressedTexImage3D(GL_TEXTURE_2D_ARRAY, 2, g_ImageFormat[(int)layer], 64, 64, MAX_ARRAY_LAYERS, 0, image_size >> 2, nullptr);
-			gl->glAssert();
+
 		}
 	}
 
-	gl->glAssert();
+
 
 
 
@@ -597,7 +602,7 @@ void BackgroundImage::LoadLifaundi(GLViewWidget * gl, std::ifstream file, Backgr
 
 			}
 
-            gl->glAssert();
+
 		}
 	}
 
@@ -612,8 +617,10 @@ struct spr_header
 	uint16_t width, height;
 };
 
-void BackgroundImage::LoadSpr(GLViewWidget * gl, std::ifstream file)
+void BackgroundImage::LoadSpr(Shaders * shaders, std::ifstream file)
 {
+	auto gl = shaders->gl;
+
 	const static uint8_t PALETTE_DTA[256][3] = {
 		{0x00,0x00,0x00}, {0x3F,0x3F,0x3F}, {0x3F,0x3F,0x3F}, {0x3F,0x3F,0x3F}, {0x3F,0x3F,0x3F}, {0x3F,0x3F,0x3F},
 		{0x3F,0x3F,0x3F}, {0x3F,0x3F,0x3F}, {0x3F,0x3F,0x3F}, {0x3F,0x3F,0x3F}, {0x3F,0x3F,0x3F}, {0x04,0x02,0x02},
@@ -731,7 +738,7 @@ void BackgroundImage::LoadSpr(GLViewWidget * gl, std::ifstream file)
 	file.close();
 }
 
-void BackgroundImage::LoadS16(GLViewWidget * gl, std::ifstream file)
+void BackgroundImage::LoadS16(Shaders * shaders, std::ifstream file)
 {
 	uint32_t RGBformat;
 	uint16_t length;
@@ -744,10 +751,10 @@ void BackgroundImage::LoadS16(GLViewWidget * gl, std::ifstream file)
 	tile_size     = glm::u16vec2(144, 150);
 	pixels        = glm::u16vec2(tiles) * tile_size;
 
-	return ImportS16Frames(gl, std::move(file), length, RGBformat);
+	return ImportS16Frames(shaders, std::move(file), length, RGBformat);
 }
 
-void BackgroundImage::LoadBlk(GLViewWidget * gl, std::ifstream file)
+void BackgroundImage::LoadBlk(Shaders * shaders, std::ifstream file)
 {
 	uint32_t RGBformat;
 	uint16_t width, height, length;
@@ -762,11 +769,13 @@ void BackgroundImage::LoadBlk(GLViewWidget * gl, std::ifstream file)
 	tile_size     = glm::u16vec2(128, 128);
 	pixels        = glm::u16vec2(tiles) * tile_size;
 
-	return ImportS16Frames(gl, std::move(file), length, RGBformat);
+	return ImportS16Frames(shaders, std::move(file), length, RGBformat);
 }
 
-void BackgroundImage::ImportS16Frames(GLViewWidget * gl, std::ifstream file, uint32_t no_tiles, uint32_t gl_type)
+void BackgroundImage::ImportS16Frames(Shaders * shaders, std::ifstream file, uint32_t no_tiles, uint32_t gl_type)
 {
+	auto gl = shaders->gl;
+
 	if(no_tiles != (uint32_t)size())
 		throw std::runtime_error("Number of images in background file is incorrect.");
 
@@ -827,8 +836,10 @@ void BackgroundImage::ImportS16Frames(GLViewWidget * gl, std::ifstream file, uin
 #include <QImage>
 #include <QImageReader>
 
-void BackgroundImage::LoadImage(GLViewWidget * gl, std::string const& filename)
+void BackgroundImage::LoadImage(Shaders * shaders, std::string const& filename)
 {
+	auto gl = shaders->gl;
+
 	QImageReader reader(QString::fromStdString(filename));
 	QImage image = reader.read();
 

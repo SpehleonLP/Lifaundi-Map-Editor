@@ -17,35 +17,7 @@
 #include <cmath>
 #include <chrono>
 #include <iostream>
-#include <loguru.hpp>
 
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <sys/ptrace.h>
-#endif
-
-static const char * g_glDebugFilePath = "Log/glDebug.log";
-
-extern "C"
-{
-bool IsBeingDebugged()
-{
-#ifdef _WIN32
-	return IsDebuggerPresent() != 0;
-#else
-	static bool isBeingDebugged = []() {
-		if (ptrace(PTRACE_TRACEME, 0, 1, 0) == -1) {
-			return true;
-		} else {
-			ptrace(PTRACE_DETACH, 0, 0, 0); // Detach if not being traced
-			return false;
-		}
-	}();
-#endif
-	return isBeingDebugged;
-}
-}
 
 struct Matrices
 {
@@ -131,7 +103,7 @@ void GLViewWidget::initializeGL()
 		QOpenGLFunctions_4_5_Core::initializeOpenGLFunctions();
 		OpenGL.Initialize(this);
 
-		shaders = std::make_unique<Shaders>(this);
+		_shaders = std::make_unique<Shaders>(this);
 	}
 
     glClearColor(0, 0, 0, 1);
@@ -390,20 +362,20 @@ void GLViewWidget::paintGL()
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrices), &mat);
 	glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_ubo);
 
-	TransparencyShader::Shader.bind(this);
-	glDefaultVAOs::BindVAO(this);
-	glDefaultVAOs::RenderSquare(this);
+	_shaders->transparencyShader.Bind(this);
+	_shaders->defaultVaos.Bind(this);
+	_shaders->defaultVaos.RenderSquare(this);
 
-    w->document->RenderBackground(this);
-	w->document->m_metaroom.gl.Render(this, -1);
+	w->document->RenderBackground(_shaders.get());
+	w->document->m_metaroom.gl.Render(_shaders.get(), -1);
 
-    w->toolbox.Render(this);
+	w->toolbox.Render(_shaders.get());
 	
 //	auto center = glm::vec4(w->document->GetScreenCenter(), 0, 1);
 //	auto transformed = mat.u_camera * center;
 	
-	MouseShader::Shader.Render(this, GetWorldPosition());
-	MouseShader::Shader.Render(this, w->document->GetScreenCenter(), 5, glm::vec4(0, 1, 0, 1));
+	_shaders->mouseShader(this, GetWorldPosition());
+	_shaders->mouseShader(this, w->document->GetScreenCenter(), 5, glm::vec4(0, 1, 0, 1));
 }
 
 void 	GLViewWidget::resizeGL(int w, int h)

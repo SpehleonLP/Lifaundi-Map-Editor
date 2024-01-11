@@ -1,69 +1,24 @@
 #include "blitshader.h"
 #include "defaultvaos.h"
-#include "src/glviewwidget.h"
+#include "gl/compressedshadersource.h"
+#include <QOpenGLFunctions_4_5_Core>
 
-#define SHADER(k) "#version 150\n" #k
-static const char * kVert();
-static const char * kFrag();
-
-BlitShader BlitShader::Shader;
-
-void BlitShader::construct(GLViewWidget * gl)
+void BlitShader::Bind(QOpenGLFunctions * gl, BackgroundLayer layer)
 {
-    compile(gl, kVert(), GL_VERTEX_SHADER);
-    compile(gl, kFrag(), GL_FRAGMENT_SHADER);
-    attribute(gl, 0, "a_vertex");
-    attribute(gl, 3, "a_texCoord0");
-    link(gl);
+	gl->glUseProgram(program());
 
-#define UNIFORM(x) uniform(gl, x, #x)
-	UNIFORM(u_texture);
-	UNIFORM(u_layer);
-#undef UNIFORM
+	gl->glDisable(GL_DEPTH_TEST);
+	gl->glDepthMask(GL_FALSE);
+	gl->glEnable(GL_BLEND);
+	gl->glDisable(GL_CULL_FACE);
 
-    uniformBlock(gl, 0, "Matrices");
-}
-
-void BlitShader::AddRef()
-{
-	glDefaultVAOs::AddRef();
-	ShaderBase::AddRef();
-}
-
-void BlitShader::Release(GLViewWidget * gl)
-{
-	gl->glAssert();
-    glDefaultVAOs::Release(gl);
-    ShaderBase::Release(gl);
-}
-
-void BlitShader::bind(GLViewWidget * gl, BackgroundLayer layer)
-{
-    if(bindShader(gl))
-	{
-        gl->glDisable(GL_DEPTH_TEST);
-        gl->glDepthMask(GL_FALSE);
-        gl->glEnable(GL_BLEND);
-        gl->glDisable(GL_CULL_FACE);
-        glDefaultVAOs::BindVAO(gl);
-
-		gl->glUniform1i(u_layer, 0);
-        gl->glUniform1i(u_texture, 0);
-	}
+	gl->glUniform1i(u_layer, 0);
+	gl->glUniform1i(u_texture, 0);
 
 	gl->glUniform1i(u_layer, (int)layer);
-    gl->glAssert();
 }
 
-void BlitShader::render(GLViewWidget * gl)
-{
-    glDefaultVAOs::RenderSquare(gl);
-}
-
-
-static const char * kVert()
-{
-	return SHADER(
+const char BlitShader::Vertex[] = SHADER(150,
 		layout(std140) uniform Matrices
 		{
 			mat4  u_projection;
@@ -83,28 +38,8 @@ static const char * kVert()
 			v_texCoord0 = a_texCoord0;
 			v_layer = (gl_VertexID / 6) % 256;
 		});
-}
 
-/*
-static const char * kVert()
-{
-	return SHADER(
-		in vec3 a_vertex;
-		in vec2 a_uv;
-
-		out vec2 v_uv;
-
-		void main()
-		{
-			gl_Position = vec4(a_vertex, 1.0);
-			v_uv        = a_uv;
-		});
-}
-*/
-
-static const char * kFrag()
-{
-	return SHADER(
+const char BlitShader::Fragment[] = SHADER(150,
 		uniform sampler2DArray u_texture;
 		uniform int u_layer;
 
@@ -135,23 +70,25 @@ static const char * kFrag()
 				break;
 			}
 		});
-}
 
-/*
-static const char * kFrag()
+void BlitShader::Initialize(QOpenGLFunctions* gl, CompressedShaderSource & source)
 {
-	return SHADER(
-		uniform ivec2 u_screensize;
+#ifdef PRODUCTION_BUILD
+	auto vertex = source.pop();
+	auto fragment = source.pop();
+#else
+	auto vertex = source.Push(Vertex, sizeof(Vertex)-1);
+	auto fragment = source.Push(Fragment, sizeof(Fragment)-1);
+#endif
 
-		in vec2 v_uv;
-		out vec4 frag_color;
+	if(!Prepare(gl, "BlitShader", vertex, nullptr, fragment))
+		return;
 
-		void main()
-		{
-			ivec2 coords = ivec2(v_uv * u_screensize);
-			int tile = (int(coords.x / 10) & 0x01) ^ (int(coords.y / 10) & 0x01);
-			float color = (125 + 100 * tile) / 256.f;
-			frag_color = vec4(vec3(color), 1.0);
-		});
-}*/
+	attribute(gl, 0, "a_vertex");
+	attribute(gl, 3, "a_texCoord0");
 
+	OpenGL_LinkProgram(gl, "BlitShader", program());
+
+	uniform(gl, u_texture, "u_texture");
+	uniform(gl, u_layer, "u_layer");
+}

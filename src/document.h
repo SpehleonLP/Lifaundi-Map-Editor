@@ -15,7 +15,7 @@ class BackgroundImage;
 class CommandInterface;
 class MainWindow;
 class DoorTypes;
-class GLViewWidget;
+class Shaders;
 
 class Document
 {
@@ -23,11 +23,11 @@ public:
 	Document(MainWindow * window);
 	~Document();
 
-    void Release(GLViewWidget * gl);
+    void Release(Shaders * shaders);
 
-    void RenderBackground(GLViewWidget * gl);
+    void RenderBackground(Shaders * shaders);
 
-    void OnSelectionChanged(GLViewWidget *gl);
+    void OnSelectionChanged(Shaders * shaders);
 	uint32_t noFacesSelected() const;
 	uint32_t noEdgesSelected() const;
 
@@ -38,8 +38,8 @@ public:
 	QString Name() const { return m_title; };
 
 	bool SaveFile(QFileInfo const& path);
-    bool LoadFile(GLViewWidget *gl, QFileInfo const& path, bool load_rooms, bool load_background, BackgroundLayer);
-	void SetBackgroundLayer(GLViewWidget * gl, BackgroundLayer);
+    bool LoadFile(Shaders * shaders, QFileInfo const& path, bool load_rooms, bool load_background, BackgroundLayer);
+	void SetBackgroundLayer(Shaders * shaders, BackgroundLayer);
 
 	bool Undo();
 	bool Redo();

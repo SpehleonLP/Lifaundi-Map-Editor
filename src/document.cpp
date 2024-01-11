@@ -17,7 +17,6 @@ Document::Document(MainWindow * window) :
 	m_window(window),
 	m_metaroom(this)
 {
-	BlitShader::Shader.AddRef();
 }
 
 
@@ -26,16 +25,12 @@ Document::~Document()
 
 }
 
-void Document::Release(GLViewWidget * gl)
+void Document::Release(Shaders * shaders)
 {
-	gl->glAssert();
-	m_metaroom.gl.Release(gl);
+	m_metaroom.gl.Release(shaders);
 
     if(m_background)
-      m_background->Release(gl);
-
-    BlitShader::Shader.Release(gl);
-	gl->glAssert();
+	  m_background->Release(shaders);
 }
 
 void Document::Delete()
@@ -82,14 +77,14 @@ void Document::Paste(glm::vec2 center)
 	}
 }
 
-void Document::OnSelectionChanged(GLViewWidget *gl)
+void Document::OnSelectionChanged(Shaders * shaders)
 {
 	track        = m_metaroom.GetMusicTrack();
 	room_type    = m_metaroom.GetRoomType();
 //	wall_type    = m_metaroom.GetWallType();
 	permeability = m_metaroom.GetPermeability();
 
-	m_metaroom._selection.Prepare(gl);
+	m_metaroom._selection.Prepare(shaders);
 }
 
 uint32_t Document::noFacesSelected() const
@@ -231,12 +226,12 @@ void Document::SelectLinked()
 }
 
 
-void Document::RenderBackground(GLViewWidget * gl)
+void Document::RenderBackground(Shaders * shaders)
 {
 	if(m_background == nullptr)
 		return;
 
-    m_background->Render(gl);
+	m_background->Render(shaders);
 }
 
 glm::vec2 Document::GetScreenCenter() const
@@ -535,7 +530,7 @@ bool Document::SaveFile(QFileInfo const& Path)
 #endif
 }
 
-bool Document::LoadFile(GLViewWidget * gl, QFileInfo const& Path, bool load_rooms, bool load_background, BackgroundLayer layer)
+bool Document::LoadFile(Shaders * shaders, QFileInfo const& Path, bool load_rooms, bool load_background, BackgroundLayer layer)
 {
 	std::string str = Path.filePath().toStdString();
 
@@ -562,19 +557,19 @@ bool Document::LoadFile(GLViewWidget * gl, QFileInfo const& Path, bool load_room
 	else if(load_background)
 	{
         if(m_background)
-          m_background->Release(gl);
+		  m_background->Release(shaders);
 
 		m_background.reset();
 
-        m_background = std::make_unique<BackgroundImage>(gl, str);
-		m_background->SetBackgroundLayer(gl, layer);
+		m_background = std::make_unique<BackgroundImage>(shaders, str);
+		m_background->SetBackgroundLayer(shaders, layer);
 	}
 
 	return true;
 }
 
-void Document::SetBackgroundLayer(GLViewWidget * gl, BackgroundLayer layer)
+void Document::SetBackgroundLayer(Shaders * shaders, BackgroundLayer layer)
 {
 	if(m_background)
-		m_background->SetBackgroundLayer(gl, layer);
+		m_background->SetBackgroundLayer(shaders, layer);
 }

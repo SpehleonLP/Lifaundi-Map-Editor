@@ -2,7 +2,8 @@
 #include <algorithm>
 #include <cstring>
 #include <cassert>
-#include "src/glviewwidget.h"
+#include "qopenglfunctions_4_5_core.h"
+#include "src/Shaders/shaders.h"
 
 #define GL_ASSERT gl->glAssert()
 
@@ -10,8 +11,9 @@ MetaroomSelection::~MetaroomSelection()
 {
 }
 
-void MetaroomSelection::Release(GLViewWidget *gl)
+void MetaroomSelection::Release(Shaders * shaders)
 {
+	auto gl = shaders->gl;
     gl->glDeleteBuffers(2, m_vbo);
 }
 
@@ -209,8 +211,9 @@ void MetaroomSelection::MergeSelection(MetaroomSelection const& it, Bitwise flag
 	}
 }
 
-void MetaroomSelection::Prepare(GLViewWidget*gl)
+void MetaroomSelection::Prepare(Shaders * shaders)
 {
+	auto gl = shaders->gl;
 
 	if(m_selectionChanged == false)
 	{
@@ -221,22 +224,22 @@ void MetaroomSelection::Prepare(GLViewWidget*gl)
 
 	if(m_vbo[0] == 0)
 	{
-        gl->glGenBuffers(2, m_vbo); GL_ASSERT;
+		gl->glGenBuffers(2, m_vbo);
 	}
 
     gl->glBindVertexArray(0);
-    gl->glBindBuffer(GL_ARRAY_BUFFER, m_vbo[0]); GL_ASSERT;
-    gl->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_vbo[1]); GL_ASSERT;
+	gl->glBindBuffer(GL_ARRAY_BUFFER, m_vbo[0]);
+	gl->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_vbo[1]);
 
 	if(m_glalloc < _selection.size())
 	{
 		m_glalloc = _selection.size();
-		gl->glBufferData(GL_ARRAY_BUFFER, _selection.byteLength(), data(), GL_DYNAMIC_DRAW);  GL_ASSERT;
-		gl->glBufferData(GL_ELEMENT_ARRAY_BUFFER, _selection.size() * 24, nullptr, GL_DYNAMIC_DRAW);  GL_ASSERT;
+		gl->glBufferData(GL_ARRAY_BUFFER, _selection.byteLength(), data(), GL_DYNAMIC_DRAW);
+		gl->glBufferData(GL_ELEMENT_ARRAY_BUFFER, _selection.size() * 24, nullptr, GL_DYNAMIC_DRAW);
 	}
 	else if(_selection.size() > 0)
 	{
-		gl->glBufferSubData(GL_ARRAY_BUFFER, 0, _selection.byteLength(), data()); GL_ASSERT;
+		gl->glBufferSubData(GL_ARRAY_BUFFER, 0, _selection.byteLength(), data());
 	}
 
 	std::vector<uint32_t> m_indices;
@@ -257,7 +260,7 @@ void MetaroomSelection::Prepare(GLViewWidget*gl)
 
 	if(m_indices.size() > 0)
 	{
-        gl->glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, m_indices.size() * sizeof(m_indices[0]), &m_indices[0]); GL_ASSERT;
+		gl->glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, m_indices.size() * sizeof(m_indices[0]), &m_indices[0]);
 	}
 
 	m_selectedFaces = m_indices.size()/6;

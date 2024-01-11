@@ -5,14 +5,17 @@
 class UniformColorShader : public ShaderBase
 {
 public:
-static UniformColorShader Shader;
+#ifndef PRODUCTION_BUILD
+	static const char Vertex[];
+	static const char Fragment[];
+#endif
+
 	void Bind(QOpenGLFunctions*,float r, float green, float blue, float alpha);
 
-	void Initialize(QOpenGLFunctions * gl);
-	void Destroy(QOpenGLFunctions * gl);
+	void Initialize(QOpenGLFunctions * gl, CompressedShaderSource & source);
 
 private:
-	int32_t u_color;
+	uniform_t u_color;
 };
 
 #endif // UNIFORMCOLORSHADER_H

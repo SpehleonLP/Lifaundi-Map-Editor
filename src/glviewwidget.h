@@ -30,7 +30,7 @@ public:
 	Bitwise   GetFlags(QMouseEvent * event);
 
 	void upload_permeabilitys(uint8_t * table, int size);
-
+	Shaders * shaders() const { return _shaders.get(); }
 
 private:
 	void mouseMoveEvent 		(QMouseEvent * event)	Q_DECL_OVERRIDE;
@@ -46,7 +46,7 @@ private:
     void resizeGL(int w, int h) Q_DECL_OVERRIDE;
 
 	QTimer timer;
-	counted_ptr<Shaders> shaders;
+	std::unique_ptr<Shaders> _shaders;
 
 	std::chrono::time_point<std::chrono::high_resolution_clock> current_time;
 

@@ -3,7 +3,7 @@
 #include <QOpenGLFunctions_4_5_Core>
 
 Shaders::Shaders(QOpenGLFunctions_4_5_Core * gl) :
-	_context(gl)
+	gl(gl)
 {
 	CompressedShaderSource source;
 
@@ -18,12 +18,11 @@ Shaders::Shaders(QOpenGLFunctions_4_5_Core * gl) :
 	selectedRoomShader.Initialize(gl, source);
 	transparencyShader.Initialize(gl, source);
 	uniformColorShader.Initialize(gl, source);
+	computeHistogram.Initialize(gl, source);
 }
 
 Shaders::~Shaders()
 {
-	auto gl = _context;
-
 	defaultVaos.Destroy(gl);
 	defaultTextures.Destroy(gl);
 
@@ -35,9 +34,10 @@ Shaders::~Shaders()
 	selectedRoomShader.Destroy(gl);
 	transparencyShader.Destroy(gl);
 	uniformColorShader.Destroy(gl);
+	computeHistogram.Destroy(gl);
 }
 
-void glBindUniformBlocks(QOpenGLFunctions * gl, GLuint program)
+void glBindUniformBlocks(ShaderBase::QOpenGLFunctions * gl, GLuint program)
 {
 	auto glBindUniformBlock = [gl, program](const char * name, int index)
 	{

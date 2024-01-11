@@ -1,4 +1,4 @@
-#include "src/glviewwidget.h"
+#include "src/Shaders/shaders.h"
 #include "mainwindow.h"
 #include "exportoptions.h"
 #include "ui_mainwindow.h"
@@ -232,11 +232,11 @@ enter(Qt::Key_Z, this)
 	ui->layerRoughness->setActionGroup(group);
 	ui->layerDepth->setActionGroup(group);
 
-	connect(ui->layerBaseColor,  &QAction::toggled,		  this, [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget, BackgroundLayer::BaseColor); } );
-	connect(ui->layerOcclusion,  &QAction::toggled,		  this, [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget, BackgroundLayer::AmbientOcclusion); } );
-	connect(ui->layerNormals,    &QAction::toggled,		  this, [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget, BackgroundLayer::Normals); } );
-	connect(ui->layerRoughness,  &QAction::toggled,		  this, [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget, BackgroundLayer::MetallicRoughness); } );
-	connect(ui->layerDepth,      &QAction::toggled,		  this, [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget, BackgroundLayer::Depth); } );
+	connect(ui->layerBaseColor,  &QAction::toggled,		  this, [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget->shaders(), BackgroundLayer::BaseColor); } );
+	connect(ui->layerOcclusion,  &QAction::toggled,		  this, [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget->shaders(), BackgroundLayer::AmbientOcclusion); } );
+	connect(ui->layerNormals,    &QAction::toggled,		  this, [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget->shaders(), BackgroundLayer::Normals); } );
+	connect(ui->layerRoughness,  &QAction::toggled,		  this, [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget->shaders(), BackgroundLayer::MetallicRoughness); } );
+	connect(ui->layerDepth,      &QAction::toggled,		  this, [this](bool value) { if(!updating_fields && value) document->SetBackgroundLayer(ui->viewWidget->shaders(), BackgroundLayer::Depth); } );
 
 	default_page_step = ui->horizontalScrollBar->pageStep();
 	
@@ -274,7 +274,7 @@ MainWindow::~MainWindow()
 	if(!did_release) {
 		did_release = true;
 
-        toolbox.Release(ui->viewWidget);
+		toolbox.Release(ui->viewWidget->shaders());
 	}
 	delete ui;
 }
@@ -323,7 +323,7 @@ void MainWindow::OnSelectionChanged()
 {
 	ui->viewWidget->makeCurrent();
 
-    document->OnSelectionChanged(ui->viewWidget);
+	document->OnSelectionChanged(ui->viewWidget->shaders());
 	bool selected = document->noFacesSelected() != 0;
 
 	glm::vec2 gravity = document->m_metaroom.GetGravity();
@@ -594,7 +594,7 @@ bool MainWindow::fileOpen(bool load_rooms, bool load_background)
 	{
 		try
 		{
-            if(document->LoadFile(ui->viewWidget, QFileInfo(dialog.selectedFiles().first()), load_rooms, load_background, GetBackgroundLayer()))
+			if(document->LoadFile(ui->viewWidget->shaders(), QFileInfo(dialog.selectedFiles().first()), load_rooms, load_background, GetBackgroundLayer()))
 				break;
 		}
 		catch(std::exception & e)
@@ -620,7 +620,7 @@ bool MainWindow::fileOpen(bool load_rooms, bool load_background)
 void MainWindow::SetDocument(std::unique_ptr<Document> && doc)
 {
     if(document != nullptr)
-      document->Release(ui->viewWidget);
+	  document->Release(ui->viewWidget->shaders());
 
 	document = std::move(doc);
 	SetEnabled();

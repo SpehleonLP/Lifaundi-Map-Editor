@@ -4,16 +4,23 @@
 #include <glm/vec4.hpp>
 #include <glm/vec2.hpp>
 
+class DefaultVAOs;
 
 class MouseShader : public ShaderBase
 {
 public:
-static MouseShader Shader;
+#ifndef PRODUCTION_BUILD
+	static const char Vertex[];
+	static const char Fragment[];
+#endif
+	MouseShader(DefaultVAOs & vao) : _vao(vao) {}
+
 	void operator()(QOpenGLFunctions * gl, glm::ivec2 position, uint32_t size = 5, glm::vec4 color = glm::ivec4(1, 0, 1, 1));
 
-	void Initialize(QOpenGLFunctions * gl);
-	void Destroy(QOpenGLFunctions * gl);
+	void Initialize(QOpenGLFunctions * gl, CompressedShaderSource & source);
+
 private:
+	DefaultVAOs & _vao;
 
 	int32_t u_position;
 	int32_t u_color;

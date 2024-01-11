@@ -3,12 +3,14 @@
 #include "src/Shaders/arrowshader.h"
 #include "src/Shaders/blitshader.h"
 #include "src/Shaders/defaulttextures.h"
+#include "src/Shaders/defaultvaos.h"
 #include "src/Shaders/doorshader.h"
 #include "src/Shaders/mouseshader.h"
 #include "src/Shaders/roomoutlineshader.h"
 #include "src/Shaders/selectedroomshader.h"
 #include "src/Shaders/transparencyshader.h"
 #include "src/Shaders/uniformcolorshader.h"
+#include "src/Shaders/computehistogram.h"
 
 class QOpenGLFunctions_4_5_Core;
 
@@ -18,20 +20,23 @@ public:
 	Shaders(QOpenGLFunctions_4_5_Core * gl);
 	~Shaders();
 
+	QOpenGLFunctions_4_5_Core *const gl;
+
 	ArrowShader arrowShader;
 	BlitShader  blitShader;
 	DoorShader	doorShader;
-	MouseShader mouseShader;
+	MouseShader mouseShader{defaultVaos};
 	RoomOutlineShader roomOutlineShader;
 	SelectedRoomShader selectedRoomShader;
 	TransparencyShader transparencyShader;
 	UniformColorShader uniformColorShader;
 
+	ComputeHistogram	computeHistogram;
+
 	DefaultTextures		defaultTextures;
-	DefaultVaos			defaultVaos;
+	DefaultVAOs			defaultVaos;
 
 private:
-	QOpenGLFunctions_4_5_Core * _context;
 };
 
 #endif // SHADERS_H

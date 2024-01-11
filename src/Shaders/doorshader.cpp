@@ -1,49 +1,23 @@
 #include "doorshader.h"
+#include "gl/compressedshadersource.h"
+#include <QOpenGLFunctions_4_5_Core>
 
-#include "src/glviewwidget.h"
-
-#define SHADER(k) "#version 150\n" #k
-static const char * kVert();
-static const char * kFrag();
-
-DoorShader DoorShader::Shader;
-
-
-void DoorShader::construct(GLViewWidget * gl)
+void DoorShader::Bind(QOpenGLFunctions * gl, int selected_door_type)
 {
-    compile(gl, kVert(), GL_VERTEX_SHADER);
-    compile(gl, kFrag(), GL_FRAGMENT_SHADER);
-    attribute(gl, 0, "a_position");
-    attribute(gl, 1, "a_type");
-	attribute(gl, 2, "a_permeability");
-    link(gl);
+	gl->glUseProgram(program());
 
-#define UNIFORM(x) uniform(gl, x, #x)
-	UNIFORM(u_activeType);
-#undef UNIFORM
+	gl->glDisable(GL_DEPTH_TEST);
+	gl->glDepthMask(GL_FALSE);
+	gl->glDisable(GL_CULL_FACE);
 
-    uniformBlock(gl, 0, "Matrices");
-}
-
-void DoorShader::Bind(GLViewWidget * gl, int selected_door_type)
-{
-    if(bindShader(gl))
-	{
-        gl->glDisable(GL_DEPTH_TEST);
-        gl->glDepthMask(GL_FALSE);
-        gl->glDisable(GL_CULL_FACE);
-
-        gl->glEnable(GL_BLEND);
-        gl->glBlendEquation(GL_FUNC_ADD);
-        gl->glBlendFunc(GL_SRC_ALPHA,  GL_ONE_MINUS_SRC_ALPHA);
-	}
+	gl->glEnable(GL_BLEND);
+	gl->glBlendEquation(GL_FUNC_ADD);
+	gl->glBlendFunc(GL_SRC_ALPHA,  GL_ONE_MINUS_SRC_ALPHA);
 
     gl->glUniform1i(u_activeType, selected_door_type);
 }
 
-static const char * kVert()
-{
-	return SHADER(
+const char DoorShader::Vertex[] = SHADER(150,
 		layout(std140) uniform Matrices
 		{
 			mat4 u_projection;
@@ -70,17 +44,37 @@ static const char * kVert()
 
 			v_color = vec4(color, 0, 1);
 		});
-}
 
-static const char * kFrag()
+
+const char DoorShader::Fragment[] = SHADER(150,
+	in vec4 v_color;
+
+	out vec4 frag_color;
+
+	void main()
+	{
+		frag_color = v_color;
+	});
+
+
+void DoorShader::Initialize(QOpenGLFunctions* gl, CompressedShaderSource & source)
 {
-	return SHADER(
-		in vec4 v_color;
+#ifdef PRODUCTION_BUILD
+	auto vertex = source.pop();
+	auto fragment = source.pop();
+#else
+	auto vertex = source.Push(Vertex, sizeof(Vertex)-1);
+	auto fragment = source.Push(Fragment, sizeof(Fragment)-1);
+#endif
 
-		out vec4 frag_color;
+	if(!Prepare(gl, "DoorShader", vertex, nullptr, fragment))
+		return;
 
-		void main()
-		{
-			frag_color = v_color;
-		});
+	attribute(gl, 0, "a_position");
+	attribute(gl, 1, "a_type");
+	attribute(gl, 2, "a_permeability");
+
+	OpenGL_LinkProgram(gl, "DoorShader", program());
+
+	uniform(gl, u_activeType, "u_activeType");
 }

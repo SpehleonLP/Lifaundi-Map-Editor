@@ -35,6 +35,7 @@ LIBS += -lGLEW -lGL -lGLU -ldrm -lz \
 DEFINES += GLM_EXT_INCLUDED GLM_FORCE_INLINE GLM_ENABLE_EXPERIMENTAL
 
 SOURCES += \
+	../../Libraries/Spehleon/lib/gl/compressedshadersource.cpp \
 	../../Libraries/Spehleon/lib/qt-gl/initialize_gl.cpp \
 	../../Libraries/Spehleon/lib/qt-gl/simpleshaderbase.cpp \
 ../../Libraries/loguru/loguru.cpp \
@@ -43,6 +44,7 @@ SOURCES += \
         main.cpp \
         mainwindow.cpp \
 	src/Shaders/arrowshader.cpp \
+	src/Shaders/computehistogram.cpp \
     src/Shaders/mouseshader.cpp \
 	src/Shaders/shaders.cpp \
 	src/color_rooms.cpp \
@@ -84,6 +86,7 @@ HEADERS += \
 	../../Libraries/Spehleon/lib/Support/lockfreequeue.hpp \
 	../../Libraries/Spehleon/lib/Support/numeric_range.hpp \
 	../../Libraries/Spehleon/lib/Support/unsafe_view.hpp \
+	../../Libraries/Spehleon/lib/gl/compressedshadersource.h \
 	../../Libraries/Spehleon/lib/qt-gl/initialize_gl.h \
 	../../Libraries/Spehleon/lib/qt-gl/simpleshaderbase.h \
 	colorprogressindicator.h \
@@ -91,6 +94,7 @@ HEADERS += \
         mainwindow.h \
 	nlohmann/json_detail.hpp \
 	src/Shaders/arrowshader.h \
+	src/Shaders/computehistogram.h \
     src/Shaders/mouseshader.h \
 	src/Shaders/shaders.h \
 	src/color_rooms.h \

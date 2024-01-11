@@ -1,58 +1,34 @@
 #include "defaultvaos.h"
-#include "src/glviewwidget.h"
 #include <glm/gtc/type_precision.hpp>
-#include <atomic>
+#include <QOpenGLFunctions_4_5_Core>
 #include <vector>
-#include <mutex>
 
-namespace glDefaultVAOs
+
+void DefaultVAOs::Destroy(QOpenGLFunctions * gl)
 {
+	gl->glDeleteVertexArrays(1, &_vao);
+	gl->glDeleteBuffers(1, &_vbo);
 
-
-struct DefaultVAOs
-{
-	GLuint vao{};
-	GLuint vbo{};
-
-	mutable std::mutex       mutex;
-	mutable std::atomic<int> refCount{0};
-};
-
-static DefaultVAOs s_BlitStruct;
-
-void AddRef()
-{
-	++s_BlitStruct.refCount;
+	_vao = 0;
+	_vbo = 0;
 }
 
-void Release(GLViewWidget * gl)
+void DefaultVAOs::Bind(QOpenGLFunctions * gl)
 {
-	if(--s_BlitStruct.refCount && s_BlitStruct.vao)
-	{
-		std::lock_guard<std::mutex> lock(s_BlitStruct.mutex);
-
-		if(s_BlitStruct.refCount == 0 && s_BlitStruct.vao)
-		{
-            gl->glDeleteVertexArrays(1, &s_BlitStruct.vao);
-            gl->glDeleteBuffers(1, &s_BlitStruct.vbo);
-
-			s_BlitStruct.vao = 0;
-			s_BlitStruct.vbo = 0;
-		}
-	}
+	gl->glBindVertexArray(_vao);
 }
 
-void RenderPoint(GLViewWidget * gl)
+void DefaultVAOs::RenderPoint(QOpenGLFunctions * gl)
 {
     gl->glDrawArrays(GL_POINTS, 0, 1);
 }
 
-void RenderSquare(GLViewWidget * gl)
+void DefaultVAOs::RenderSquare(QOpenGLFunctions * gl)
 {
     gl->glDrawArrays(GL_TRIANGLES, 1, 6);
 }
 
-void RenderCube(GLViewWidget * gl)
+void DefaultVAOs::RenderCube(QOpenGLFunctions * gl)
 {
     gl->glDrawArrays(GL_TRIANGLES, 7, 36);
 }
@@ -64,19 +40,8 @@ struct gltfVertex
 	glm::i8vec4 texCoord0;
 };
 
-void BindVAO(GLViewWidget * gl)
+void DefaultVAOs::Initialize(QOpenGLFunctions * gl)
 {
-	assert(s_BlitStruct.refCount != 0);
-
-	if(s_BlitStruct.vao)
-	{
-        gl->glBindVertexArray(s_BlitStruct.vao);
-		return;
-	}
-
-	std::lock_guard<std::mutex> lock(s_BlitStruct.mutex);
-	assert(s_BlitStruct.refCount != 0);
-
 	const glm::i8vec4 positions[] =
 	{
 		{ -1,-1, 0, 1 },  {  1,-1, 0, 1 },  { -1, 1, 0, 1 },
@@ -129,11 +94,11 @@ void BindVAO(GLViewWidget * gl)
 		}
 	}
 
-    gl->glGenVertexArrays(1, &s_BlitStruct.vao);
-    gl->glGenBuffers(1, &s_BlitStruct.vbo);
+	gl->glGenVertexArrays(1, &_vao);
+	gl->glGenBuffers(1, &_vbo);
 
-    gl->glBindVertexArray(s_BlitStruct.vao);
-    gl->glBindBuffer(GL_ARRAY_BUFFER, s_BlitStruct.vbo);
+	gl->glBindVertexArray(_vao);
+	gl->glBindBuffer(GL_ARRAY_BUFFER, _vbo);
 
     gl->glBufferData(GL_ARRAY_BUFFER, vert_array.size() * sizeof(gltfVertex), &vert_array[0], GL_STATIC_DRAW);
 
@@ -148,7 +113,4 @@ void BindVAO(GLViewWidget * gl)
     gl->glEnableVertexAttribArray(0);
     gl->glEnableVertexAttribArray(1);
     gl->glEnableVertexAttribArray(3);
-}
-
-
 }

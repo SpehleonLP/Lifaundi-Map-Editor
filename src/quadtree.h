@@ -8,7 +8,7 @@
 #include <memory>
 
 class Metaroom;
-class GLViewWidget;
+class Shaders;
 class EdgeRange;
 
 class QuadTree
@@ -17,7 +17,7 @@ public:
     QuadTree(Metaroom * room);
 	~QuadTree();
 
-    void Release(GLViewWidget *gl);
+    void Release(Shaders * shaders);
 
 	struct Node
 	{
@@ -78,8 +78,8 @@ public:
 	void ReadTree(std::ifstream & fp);
 	void WriteTree(std::ofstream & fp);
 
-    void Prepare(GLViewWidget *gl);
-    void Render(GLViewWidget *gl, int selected_door_type);
+    void Prepare(Shaders * shaders);
+    void Render(Shaders * shaders, int selected_door_type);
 
 	void GetWriteDoors(std::vector<Door> & doors, std::vector<DoorList> & indices, bool make_halls = false, int typeId = -1);
 	void GetHallDoors(std::vector<int> & doors, std::vector<std::pair<int, int>> & indices);

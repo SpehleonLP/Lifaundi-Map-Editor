@@ -1,6 +1,6 @@
 #ifndef MetaroomDoors_H
 #define MetaroomDoors_H
-#include "src/glviewwidget.h"
+#include "src/Shaders/shaders.h"
 #include <vector>
 #include <cstdint>
 
@@ -27,11 +27,11 @@ class Metaroom;
 class MetaroomDoors
 {
 public:
-    MetaroomDoors(GLViewWidget * gl);
+	MetaroomDoors();
 	~MetaroomDoors();
 
 	void UpdateDoors(Metaroom * metaroom);
-	void Release(GLViewWidget * gl);
+	void Release(Shaders * shaders);
 
 	void AddEdges(std::vector<Edge> & e);
 
@@ -39,7 +39,7 @@ public:
 	size_t RemoveFaces(std::vector<int> const& vec);
 	size_t RemoveFace(uint32_t i);
 
-    void   Prerender(GLViewWidget *gl);
+    void   Prerender(Shaders * shaders);
 	void   Render(uint32_t vertex_texture);
 
     std::vector<Edge> m_edges;

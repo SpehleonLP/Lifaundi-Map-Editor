@@ -5,17 +5,22 @@
 
 enum class BackgroundLayer : char;
 
+class DefaultVAOs;
+
 class BlitShader : public ShaderBase
 {
 public:
-static BlitShader Shader;
+#ifndef PRODUCTION_BUILD
+	static const char Vertex[];
+	static const char Fragment[];
+#endif
+
 	void Bind(QOpenGLFunctions *, BackgroundLayer layer);
-	void operator()(QOpenGLFunctions *);
 
 	void Initialize(QOpenGLFunctions * gl, CompressedShaderSource &);
-	void Destroy(QOpenGLFunctions * gl);
 
 private:
+
 	uniform_t u_projection;
 	uniform_t u_modelview;
 	uniform_t u_texture;

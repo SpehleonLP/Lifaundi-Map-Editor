@@ -3,7 +3,8 @@
 #include "lf_math.h"
 #include "edgerange.h"
 #include "mvsf_sampler.h"
-#include "src/glviewwidget.h"
+#include "qopenglfunctions_4_5_core.h"
+#include "src/Shaders/shaders.h"
 #include "Shaders/doorshader.h"
 #include <climits>
 #include <fstream>
@@ -14,16 +15,16 @@
 QuadTree::QuadTree(Metaroom * room) :
     m_metaroom(room)
 {
-	DoorShader::Shader.AddRef();
 }
 
 QuadTree::~QuadTree()
 {
 }
 
-void QuadTree::Release(GLViewWidget *gl)
+void QuadTree::Release(Shaders * shaders)
 {
-    DoorShader::Shader.Release(gl);
+	auto gl = shaders->gl;
+
     gl->glDeleteVertexArrays(1, &m_vao);
     gl->glDeleteBuffers(1, &m_vbo);
 
@@ -647,8 +648,10 @@ void QuadTree::GetOverlappingRooms(glm::ivec2 min, glm::ivec2 max, std::vector<i
 	}
 }
 
-void QuadTree::Prepare(GLViewWidget *gl)
+void QuadTree::Prepare(Shaders * shaders)
 {
+	auto gl = shaders->gl;
+
 	if(IsDirty()) Rebuild();
 
 	if(m_vbo_dirty == false)
@@ -690,14 +693,16 @@ void QuadTree::Prepare(GLViewWidget *gl)
 	}
 }
 
-void QuadTree::Render(GLViewWidget *gl, int selected_door_type)
+void QuadTree::Render(Shaders * shaders, int selected_door_type)
 {
-    Prepare(gl);
+	auto gl = shaders->gl;
+
+	Prepare(shaders);
 
 	if(gl_size > 0)
 	{
         gl->glBindVertexArray(m_vao);
-        DoorShader::Shader.Bind(gl, selected_door_type);
+		shaders->doorShader.Bind(gl, selected_door_type);
         gl->glDrawArrays(GL_LINES, 0, gl_size);
 	}
 }

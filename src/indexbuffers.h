@@ -3,7 +3,7 @@
 #include "entitysystem.h"
 #include <cstdint>
 
-class GLViewWidget;
+class Shaders;
 
 class IndexBuffers
 {
@@ -11,8 +11,8 @@ public:
 	IndexBuffers() = default;
 	~IndexBuffers();
 
-    void Release(GLViewWidget * gl);
-	void Prepare(GLViewWidget *gl, EntitySystem::Range);
+    void Release(Shaders * shaders);
+	void Prepare(Shaders * shaders, EntitySystem::Range);
 
 	uint32_t EdgeVBO() const { return m_vbo[0]; }
 	uint32_t FaceVBO() const { return m_vbo[1]; }

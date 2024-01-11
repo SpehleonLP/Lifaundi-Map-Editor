@@ -14,7 +14,7 @@
 #include <climits>
 
 class QWidget;
-class GLViewWidget;
+class Shaders;
 
 //TODO: atlas textures with GL_TEXTURE_2D_ARRAY
 
@@ -38,11 +38,11 @@ public:
 	static Type GetType(std::string const& filename);
 
 	BackgroundImage() = default;
-    BackgroundImage(GLViewWidget * gl, std::string const& filename);
+    BackgroundImage(Shaders * shaders, std::string const& filename);
 	~BackgroundImage();
 
-    void Release(GLViewWidget * gl);
-    void Render(GLViewWidget* gl);
+    void Release(Shaders * shaders);
+    void Render(Shaders * gl);
 
 	uint32_t   noTextures() const { return ((size() + MAX_ARRAY_LAYERS-1) / MAX_ARRAY_LAYERS); }
 	glm::ivec2 dimensions() const { return pixels.x == 0? glm::ivec2(SHRT_MAX, SHRT_MAX) : glm::ivec2(pixels); }
@@ -50,20 +50,20 @@ public:
 	int        width() const { return pixels.x; }
 	int        height() const { return pixels.y; }
 
-    void CreateVBO(GLViewWidget* gl);
+    void CreateVBO(Shaders * gl);
 
 	std::string const& GetFilename() const { return m_filename; }
 	Type               GetType()     const { return m_type; }
 
-	void SetBackgroundLayer(GLViewWidget * gl, BackgroundLayer);
+	void SetBackgroundLayer(Shaders * shaders, BackgroundLayer);
 
 private:
-	void LoadLifaundi(GLViewWidget * gl, std::ifstream file, BackgroundLayer layer);
-	void LoadSpr(GLViewWidget * gl, std::ifstream file);
-	void LoadBlk(GLViewWidget * gl, std::ifstream file);
-	void LoadS16(GLViewWidget * gl, std::ifstream file);
-	void LoadImage(GLViewWidget * gl, std::string const& filename);
-	void ImportS16Frames(GLViewWidget * gl, std::ifstream file, uint32_t no_tiles, uint32_t gl_type);
+	void LoadLifaundi(Shaders * shaders, std::ifstream file, BackgroundLayer layer);
+	void LoadSpr(Shaders * shaders, std::ifstream file);
+	void LoadBlk(Shaders * shaders, std::ifstream file);
+	void LoadS16(Shaders * shaders, std::ifstream file);
+	void LoadImage(Shaders * shaders, std::string const& filename);
+	void ImportS16Frames(Shaders * shaders, std::ifstream file, uint32_t no_tiles, uint32_t gl_type);
 
     std::string		m_filename;
 	Type			m_type;

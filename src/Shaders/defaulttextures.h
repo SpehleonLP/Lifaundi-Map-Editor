@@ -2,16 +2,19 @@
 #define DEFAULTTEXTURES_H
 #include <atomic>
 
-typedef class QOpenGLFunctions_4_5_Core QOpenGLFunctions;
-
-class GLViewWidget;
+class Shaders;
 
 class DefaultTextures
 {
 public:
-    uint32_t GetWhiteTexture(GLViewWidget*);
-    uint32_t GetNormalTexture(GLViewWidget*);
-	uint32_t GetNoiseTexture(GLViewWidget*);
+	typedef class QOpenGLFunctions_4_5_Core QOpenGLFunctions;
+
+	~DefaultTextures();
+
+	uint32_t GetWhiteTexture(QOpenGLFunctions*) const { return _textures[WhiteTexture]; }
+	uint32_t GetNormalTexture(QOpenGLFunctions*) const { return _textures[WhiteTexture]; }
+	uint32_t GetTransparencyTexture(QOpenGLFunctions*) const { return _textures[TransparencyTexture]; }
+	uint32_t GetNoiseTexture(QOpenGLFunctions*) const { return _textures[WhiteTexture]; }
 
 	void Initialize(QOpenGLFunctions * gl);
 	void Destroy(QOpenGLFunctions * gl);
@@ -26,7 +29,7 @@ private:
 		TotalTextures
 	};
 
-	uint32_t textures[TotalTextures]{};
+	uint32_t _textures[TotalTextures]{};
 };
 
 #endif // DEFAULTTEXTURES_H

@@ -1,22 +1,20 @@
 #include "metaroomdoors.h"
 #include "metaroomselection.h"
 #include "metaroom.h"
-#include "Shaders/doorshader.h"
+#include <QOpenGLFunctions_4_5_Core>
 #include <algorithm>
 
-MetaroomDoors::MetaroomDoors(GLViewWidget *gl)
+MetaroomDoors::MetaroomDoors()
 {
-	DoorShader::Shader.AddRef();
 }
 
 MetaroomDoors::~MetaroomDoors()
 {
 }
 
-void MetaroomDoors::Release(GLViewWidget * gl)
+void MetaroomDoors::Release(Shaders * shaders)
 {
-	DoorShader::Shader.Release(gl);
-
+	auto gl = shaders->gl;
     gl->glDeleteVertexArrays(1, &m_vao);
     gl->glDeleteBuffers(1, &m_vbo);
 
@@ -175,13 +173,14 @@ void MetaroomDoors::AddEdges(std::vector<Edge> & e)
 		*insertion = *i;
 }
 
-void MetaroomDoors::Prerender(GLViewWidget *gl)
+void MetaroomDoors::Prerender(Shaders * shaders)
 {
 	if(m_dirty == false)
 		return;
 
 	m_dirty = false;
 
+	auto gl = shaders->gl;
 	if(m_vao == 0)
 	{
         gl->glGenVertexArrays(1, &m_vao);

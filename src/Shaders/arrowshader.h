@@ -5,6 +5,11 @@
 #include <glm/gtc/type_precision.hpp>
 #include <vector>
 
+struct Arrow
+{
+	glm::ivec2	position;
+	glm::i16vec2  rotation;
+};
 
 class ArrowShader : public ShaderBase
 {
@@ -15,16 +20,10 @@ static ArrowShader Shader;
 	static const char Fragment[];
 #endif
 
-	struct Vertex
-	{
-		glm::ivec2	position;
-		glm::i16vec2  rotation;
-	};
-
 	void Initialize(QOpenGLFunctions * gl, CompressedShaderSource &);
 	void Destroy(QOpenGLFunctions * gl);
 
-	void operator()(QOpenGLFunctions * gl, std::vector<Vertex> const& arrows, glm::vec4 color);
+	void operator()(QOpenGLFunctions * gl, std::vector<Arrow> const& arrows, glm::vec4 color);
 
 private:
 	uniform_t u_vertices;

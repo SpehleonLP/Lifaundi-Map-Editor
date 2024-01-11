@@ -5,11 +5,14 @@
 class SelectedRoomShader  : public ShaderBase
 {
 public:
-static SelectedRoomShader Shader;
+#ifndef PRODUCTION_BUILD
+	static const char Vertex[];
+	static const char Fragment[];
+#endif
+
 	void operator()(QOpenGLFunctions * gl, uint32_t faces);
 
-	void Initialize(QOpenGLFunctions * gl);
-	void Destroy(QOpenGLFunctions * gl);
+	void Initialize(QOpenGLFunctions * gl, CompressedShaderSource & source);
 };
 
 #endif // SELECTEDROOMSHADER_H

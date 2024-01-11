@@ -1,47 +1,22 @@
 #include "defaulttextures.h"
-#include <atomic>
-#include <stdexcept>
 #include <cstring>
-#include "src/glviewwidget.h"
-#include <iostream>
+#include <QOpenGLFunctions_4_5_Core>
 
 DefaultTextures::~DefaultTextures()
 {
-	if(textures[0] !=  0)
-        std::cerr << "Default textures not cleaned up..." << std::endl;
+	if(_textures[0] !=  0)
+		qFatal("Default textures not cleaned up...");
 }
 
-uint32_t DefaultTextures::GetWhiteTexture(GLViewWidget* gl)
+void DefaultTextures::Destroy(QOpenGLFunctions * gl)
 {
-	if(textures[WhiteTexture] == 0)
-        createTextures(gl);
-
-	return textures[WhiteTexture];
+	gl->glDeleteTextures(TotalTextures, _textures);
+	memset(_textures, 0, sizeof(_textures));
 }
 
-uint32_t DefaultTextures::GetNormalTexture(GLViewWidget* gl)
+void DefaultTextures::Initialize(QOpenGLFunctions * gl)
 {
-	if(textures[NormalTexture] == 0)
-        createTextures(gl);
-
-	return textures[NormalTexture];
-}
-
-uint32_t DefaultTextures::GetNoiseTexture(GLViewWidget* gl)
-{
-	if(textures[NoiseTexture] == 0)
-        createTextures(gl);
-
-	return textures[NoiseTexture];
-
-}
-
-void DefaultTextures::createTextures(GLViewWidget* gl)
-{
-	if(refCount.load() == 0)
-		throw std::runtime_error("Tried to create default textures without incing refcount...");
-
-    gl->glGenTextures(TotalTextures, textures);
+	gl->glGenTextures(TotalTextures, _textures);
 
 	uint32_t pixels[TotalTextures] =
 	{
@@ -52,7 +27,7 @@ void DefaultTextures::createTextures(GLViewWidget* gl)
 
 	for(int i = 0; i < TotalTextures; ++i)
 	{
-        gl->glBindTexture(GL_TEXTURE_2D, textures[i]);
+		gl->glBindTexture(GL_TEXTURE_2D, _textures[i]);
 
         gl->glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
         gl->glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
@@ -65,7 +40,7 @@ void DefaultTextures::createTextures(GLViewWidget* gl)
 
 	for(int i = 0; i < 2; ++i)
 	{
-		gl->glBindTexture(GL_TEXTURE_2D, textures[i]);
+		gl->glBindTexture(GL_TEXTURE_2D, _textures[i]);
 
         gl->glTexImage2D(
 			GL_TEXTURE_2D,  //target
@@ -79,7 +54,7 @@ void DefaultTextures::createTextures(GLViewWidget* gl)
 			&pixels[i]);
 	}
 
-	gl->glBindTexture(GL_TEXTURE_2D, textures[2]);
+	gl->glBindTexture(GL_TEXTURE_2D, _textures[2]);
 
 	gl->glTexImage2D(
 		GL_TEXTURE_2D,  //target
@@ -90,7 +65,7 @@ void DefaultTextures::createTextures(GLViewWidget* gl)
 		0, //border must be 0
 		GL_RED, //format of incoming source
 		GL_UNSIGNED_BYTE, //specific format
-		&textures[2]);
+		&pixels[2]);
 
 
 	std::unique_ptr<uint8_t[]> noise(new uint8_t[512*512]);
@@ -98,7 +73,7 @@ void DefaultTextures::createTextures(GLViewWidget* gl)
 	for(int i = 0; i < 512*512; ++i)
 		noise[i] = rand() & 0xFF;
 
-	gl->glBindTexture(GL_TEXTURE_2D, textures[3]);
+	gl->glBindTexture(GL_TEXTURE_2D, _textures[3]);
 
 	gl->glTexImage2D(
 		GL_TEXTURE_2D,  //target
@@ -111,10 +86,4 @@ void DefaultTextures::createTextures(GLViewWidget* gl)
 		GL_UNSIGNED_BYTE, //specific format
 		&noise[0]);
 
-}
-
-void DefaultTextures::destroyTextures(GLViewWidget* gl)
-{
-    gl->glDeleteTextures(TotalTextures, textures);
-	memset(textures, 0, sizeof(textures));
 }

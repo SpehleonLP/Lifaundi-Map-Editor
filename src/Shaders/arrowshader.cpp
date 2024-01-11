@@ -3,14 +3,6 @@
 #include <QOpenGLFunctions_4_5_Core>
 #include <glm/gtc/type_precision.hpp>
 
-static const char * kVert();
-static const char * kGeometry();
-static const char * kFrag();
-
-ArrowShader ArrowShader::Shader;
-
-
-
 void ArrowShader::Destroy(QOpenGLFunctions * gl)
 {
 	ShaderBase::Destroy(gl);
@@ -48,7 +40,7 @@ const char ArrowShader::Vertex[] = SHADER(330,
 
 	uniform vec4 u_color;
 
-	in vec2  a_vertex;
+	in vec3  a_vertex;
 
 // instanced
 	in ivec2 a_position;
@@ -61,14 +53,14 @@ const char ArrowShader::Vertex[] = SHADER(330,
 
 
 		mat2 rotation = mat2(1);
-		rotation[0] = vec2(a_rotation[0].x, -a_rotation[0].y);
-		rotation[1] = vec2(a_rotation[0].y,  a_rotation[0].x);
+		rotation[0] = vec2(a_rotation.x, -a_rotation.y);
+		rotation[1] = vec2(a_rotation.y,  a_rotation.x);
 
 		vec4 position = u_modelview * vec4(a_position, 0, 1);
-		position   += vec4(rotation * (a_vertex * (a_scale / 2.0 * u_misc.y)), 0, 0) + position;
+		position   += vec4(rotation * (a_vertex.xy * u_misc.y), 0, 0) + position;
 
-		gl_Position = u_projection * (pos);
-		g_color     = mix(vec4(1), u_color, a_color);
+		gl_Position = u_projection * position;
+		g_color     = mix(vec4(1), u_color, a_vertex.z);
 	});
 
 
@@ -97,30 +89,29 @@ void ArrowShader::Initialize(QOpenGLFunctions* gl, CompressedShaderSource & sour
 		return;
 
 	attribute(gl, 0, "a_vertex");
-	attribute(gl, 1, "a_position");
-	attribute(gl, 2, "a_rotation");
+	attribute(gl, 3, "a_position");
+	attribute(gl, 4, "a_rotation");
 
 	OpenGL_LinkProgram(gl, "ArrowShader", program());
 
 	uniform(gl, u_color, "u_color");
 
-	const glm::i8vec2 vertices[] ={
-		{-10,  4}, //0
-		{- 8,  0}, //1
-		{-10, -4}, //2
-		{  2, -6}, //3
-		{ 10,  0}, //4
-		{  2,  6}, //5
-		{  5,  0}, //6
+	const glm::i8vec4 vertices[] ={
+		{-10,  4, 0, 0}, //0
+		{- 8,  0, 0, 0}, //1
+		{-10, -4, 0, 0}, //2
+		{  2, -6, 0, 0}, //3
+		{ 10,  0, 0, 0}, //4
+		{  2,  6, 0, 0}, //5
+		{  5,  0, 0, 0}, //6
 
-		{3,  0}, //7
-		{0, -6}, //8
-		{0,  6},  //9
-		{0, 0},
+		{3,  0, 0, 0}, //7
+		{0, -6, 0, 0}, //8
+		{0,  6, 0, 0},  //9
+		{0, 0, 0, 0},
 };
 
 const int indices[] = {
-0,
 0, 4, 1, 2, 2,
 3, 3, 4, 6, 5,
 0, 4, 1, 2, 2,
@@ -129,7 +120,7 @@ const int indices[] = {
 // DrawArrow(position, rotation, 2* vec2(1.25, 1.5) * u_misc.y, vec4(1), 11);
 // DrawArrow(position, rotation, 2* vec2(1) * u_misc.y, u_color, 0);
 	gl->glGenVertexArrays(1, &_vao);
-	gl->glGenBuffers(1, _vbo);
+	gl->glGenBuffers(3, _vbo);
 
 	gl->glBindVertexArray(_vao);
 
@@ -139,18 +130,10 @@ const int indices[] = {
 	gl->glBindBuffer(GL_ARRAY_BUFFER, _vbo[0]);
 	gl->glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-	gl->glVertexAttribPointer(0, 2, GL_BYTE, GL_FALSE, 4, (void*)0);
-	gl->glVertexAttribPointer(1, 1, GL_BYTE, GL_FALSE, 4, (void*)2);
-	gl->glVertexAttribPointer(2, 1, GL_BYTE, GL_FALSE, 4, (void*)3);
-
+	gl->glVertexAttribPointer(0, 3, GL_BYTE, GL_FALSE, 4, (void*)0);
 	gl->glEnableVertexAttribArray(0);
-	gl->glEnableVertexAttribArray(1);
-	gl->glEnableVertexAttribArray(2);
 
 	gl->glBindBuffer(GL_ARRAY_BUFFER, _vbo[2]);
-
-	gl->glVertexAttribDivisor(1, 2);
-	gl->glVertexAttribDivisor(2, 2);
 
 	gl->glVertexAttribPointer(3, 2, GL_INT, GL_FALSE, sizeof(Arrow), (void*)offsetof(Arrow,position));
 	gl->glVertexAttribPointer(4, 2, GL_SHORT, GL_FALSE, sizeof(Arrow), (void*)offsetof(Arrow,rotation));
@@ -158,6 +141,6 @@ const int indices[] = {
 	gl->glEnableVertexAttribArray(3);
 	gl->glEnableVertexAttribArray(4);
 
-	gl->glVertexAttribDivisor(3, 2);
-	gl->glVertexAttribDivisor(4, 2);
+	gl->glVertexAttribDivisor(3, 1);
+	gl->glVertexAttribDivisor(4, 1);
 }

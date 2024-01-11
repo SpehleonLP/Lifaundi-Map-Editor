@@ -6,16 +6,15 @@
 class TransparencyShader : public ShaderBase
 {
 public:
-static TransparencyShader Shader;
-    void bind(GLViewWidget* gl);
+#ifndef PRODUCTION_BUILD
+	static const char Vertex[];
+	static const char Fragment[];
+#endif
 
-    void AddRef();
-    void Release(GLViewWidget* gl);
+	void Bind(QOpenGLFunctions * gl);
+	void Initialize(QOpenGLFunctions * gl, CompressedShaderSource & source);
 
 private:
-	std::atomic<int> refCount{0};
-
-    void construct(GLViewWidget* gl);
 };
 
 #endif // TRANSPARENCYSHADER_H

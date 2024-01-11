@@ -90,7 +90,7 @@ public:
 
 private:
 friend class ui_BackgroundsWindow;
-friend class GLViewWidget;
+friend class Shaders;
 friend class Document;
 
 	bool aboutHelp() { return false; }

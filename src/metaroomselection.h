@@ -7,7 +7,7 @@
 #include <vector>
 #include <cstdint>
 
-class GLViewWidget;
+class Shaders;
 class Metaroom;
 
 class MetaroomSelection
@@ -20,14 +20,14 @@ public:
 	MetaroomSelection(uint32_t size) { resize(size); }
 	~MetaroomSelection();
 
-    void Release(GLViewWidget *gl);
+	void Release(Shaders * shaders);
 
 	bool ToggleSelectAll(Range faces, Bitwise flags);
 
 	bool Changed() const { return m_selectionChanged; }
 
 	void MergeSelection(MetaroomSelection const&, Bitwise flags);
-    void Prepare(GLViewWidget *gl);
+	void Prepare(Shaders * shaders);
 	uint32_t GetBuffer() const { return m_vbo[0]; }
 	uint32_t GetIndices() const { return m_vbo[1]; }
 	uint32_t NoSelectedFaces() const { return m_selectedFaces; }

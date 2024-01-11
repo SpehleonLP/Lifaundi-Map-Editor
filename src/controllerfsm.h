@@ -32,7 +32,7 @@ struct SliceInfo
 	}
 };
 
-class GLViewWidget;
+class Shaders;
 
 class ControllerFSM
 {
@@ -40,10 +40,10 @@ public:
 	ControllerFSM(MainWindow * window);
 	~ControllerFSM();
 
-    void Release(GLViewWidget * gl);
+    void Release(Shaders * shaders);
 
-    void Prepare(GLViewWidget * gl);
-    void Render(GLViewWidget * gl);
+    void Prepare(Shaders * shaders);
+    void Render(Shaders * shaders);
 	void clear();
 	void ClearTool();
 

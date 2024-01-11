@@ -1,48 +1,21 @@
 #include "roomoutlineshader.h"
+#include "gl/compressedshadersource.h"
+#include <QOpenGLFunctions_4_5_Core>
 
-#include "src/glviewwidget.h"
-
-#define SHADER(k) "#version 150\n" #k
-static const char * kVert();
-static const char * kFrag();
-
-RoomOutlineShader RoomOutlineShader::Shader;
-
-
-void RoomOutlineShader::construct(GLViewWidget*gl)
+void RoomOutlineShader::operator()(QOpenGLFunctions*gl, uint32_t faces, bool selected)
 {
-    compile(gl, kVert(), GL_VERTEX_SHADER);
-    compile(gl, kFrag(), GL_FRAGMENT_SHADER);
-    attribute(gl, 0, "a_position");
-    attribute(gl, 1, "a_selected");
-    link(gl);
+	gl->glUseProgram(program());
 
-#define UNIFORM(x) uniform(gl, x, #x)
-	UNIFORM(u_renderSelected);
-#undef UNIFORM
+	gl->glDisable(GL_DEPTH_TEST);
+	gl->glDepthMask(GL_FALSE);
 
-    uniformBlock(gl, 0, "Matrices");
-}
-
-void RoomOutlineShader::Render(GLViewWidget*gl, uint32_t faces, bool selected)
-{
-    gl->glAssert();
-
-    if(bindShader(gl))
-	{
-        gl->glDisable(GL_DEPTH_TEST);
-        gl->glDepthMask(GL_FALSE);
-
-        gl->glEnable(GL_BLEND);
-	}
+	gl->glEnable(GL_BLEND);
 
     gl->glUniform1i(u_renderSelected, selected);
     gl->glDrawElements(GL_LINES, faces*8, GL_UNSIGNED_INT, 0L);
 }
 
-static const char * kVert()
-{
-	return SHADER(
+const char RoomOutlineShader::Vertex[] = SHADER(150,
 		layout(std140) uniform Matrices
 		{
 			mat4 u_projection;
@@ -62,11 +35,9 @@ static const char * kVert()
 			int s = a_selected * u_renderSelected;
 			v_color = vec4(s, 1, 1-s, (1 - u_renderSelected) + s);
 		});
-}
 
-static const char * kFrag()
-{
-	return SHADER(
+
+const char RoomOutlineShader::Fragment[] = SHADER(150,
 		in vec4 v_color;
 
 		out vec4 frag_color;
@@ -75,5 +46,25 @@ static const char * kFrag()
 		{
 			frag_color = v_color;
 		});
-}
 
+
+void RoomOutlineShader::Initialize(QOpenGLFunctions* gl, CompressedShaderSource & source)
+{
+#ifdef PRODUCTION_BUILD
+	auto vertex = source.pop();
+	auto fragment = source.pop();
+#else
+	auto vertex = source.Push(Vertex, sizeof(Vertex)-1);
+	auto fragment = source.Push(Fragment, sizeof(Fragment)-1);
+#endif
+
+	if(!Prepare(gl, "RoomOutlineShader", vertex, nullptr, fragment))
+		return;
+
+	attribute(gl, 0, "a_position");
+	attribute(gl, 1, "a_selected");
+
+	OpenGL_LinkProgram(gl, "RoomOutlineShader", program());
+
+	uniform(gl, u_renderSelected, "u_renderSelected");
+}
