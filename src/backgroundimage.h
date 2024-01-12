@@ -46,6 +46,8 @@ public:
 
 	uint32_t   noTextures() const { return ((size() + MAX_ARRAY_LAYERS-1) / MAX_ARRAY_LAYERS); }
 	glm::ivec2 dimensions() const { return pixels.x == 0? glm::ivec2(SHRT_MAX, SHRT_MAX) : glm::ivec2(pixels); }
+	glm::ivec4 AABB() const { return {-dimensions()/2, dimensions() - dimensions()/2}; }
+	uint32_t  noTiles() const { return _noTiles; }
 	int        size() const { return (int)tiles.x * tiles.y; }
 	int        width() const { return pixels.x; }
 	int        height() const { return pixels.y; }
@@ -57,8 +59,13 @@ public:
 
 	void SetBackgroundLayer(Shaders * shaders, BackgroundLayer);
 
+	shared_array<uint32_t> depth() const { return m_depth; };
+	uint32_t depthTileBuffer() const { return _depthTileBuffer; }
+
 private:
-	void LoadLifaundi(Shaders * shaders, std::ifstream file, BackgroundLayer layer);
+	shared_array<uint32_t> LoadLifaundiLayer(Shaders * shaders, std::ifstream & file, BackgroundLayer layer) const;
+
+	void LoadLifaundi(Shaders * shaders, std::ifstream file);
 	void LoadSpr(Shaders * shaders, std::ifstream file);
 	void LoadBlk(Shaders * shaders, std::ifstream file);
 	void LoadS16(Shaders * shaders, std::ifstream file);
@@ -83,6 +90,7 @@ private:
 
 	std::unique_ptr<uint16_t[]> m_flags;
 	shared_array<uint32_t> m_textures;
+	shared_array<uint32_t> m_depth;
 
 	size_t m_texels{};
 	size_t m_offset{};
@@ -91,6 +99,9 @@ private:
 	uint32_t m_vbo{};
 	uint32_t m_noQuads{};
 
+// ivec4 for each tile's position
+	uint32_t _depthTileBuffer{};
+	uint32_t _noTiles{};
 //	TransparencyShader m_transparencyShader;
 };
 

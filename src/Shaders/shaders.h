@@ -31,7 +31,7 @@ public:
 	TransparencyShader transparencyShader;
 	UniformColorShader uniformColorShader;
 
-	ComputeHistogram	computeHistogram;
+	ComputeHistogram	histogram;
 
 	DefaultTextures		defaultTextures;
 	DefaultVAOs			defaultVaos;

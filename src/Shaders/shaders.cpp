@@ -18,7 +18,7 @@ Shaders::Shaders(QOpenGLFunctions_4_5_Core * gl) :
 	selectedRoomShader.Initialize(gl, source);
 	transparencyShader.Initialize(gl, source);
 	uniformColorShader.Initialize(gl, source);
-	computeHistogram.Initialize(gl, source);
+	histogram.Initialize(gl, source);
 }
 
 Shaders::~Shaders()
@@ -34,7 +34,7 @@ Shaders::~Shaders()
 	selectedRoomShader.Destroy(gl);
 	transparencyShader.Destroy(gl);
 	uniformColorShader.Destroy(gl);
-	computeHistogram.Destroy(gl);
+	histogram.Destroy(gl);
 }
 
 void glBindUniformBlocks(ShaderBase::QOpenGLFunctions * gl, GLuint program)
@@ -48,4 +48,5 @@ void glBindUniformBlocks(ShaderBase::QOpenGLFunctions * gl, GLuint program)
 	};
 
 	glBindUniformBlock("Matrices", 0);
+	glBindUniformBlock("HistogramHeight", 1);
 }

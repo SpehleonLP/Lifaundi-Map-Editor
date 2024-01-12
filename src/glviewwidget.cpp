@@ -95,16 +95,15 @@ void GLViewWidget::need_repaint()
 
 void GLViewWidget::initializeGL()
 {
-	static bool initialized = false;
+	if(_initialized) return;
+	_initialized = true;
 
-	if(!initialized)
-	{
-		initialized = true;
-		QOpenGLFunctions_4_5_Core::initializeOpenGLFunctions();
-		OpenGL.Initialize(this);
+	makeCurrent();
+	QOpenGLFunctions_4_5_Core::initializeOpenGLFunctions();
+	OpenGL.Initialize(this);
+	super::initializeGL();
 
-		_shaders = std::make_unique<Shaders>(this);
-	}
+	_shaders = std::make_shared<Shaders>(this);
 
     glClearColor(0, 0, 0, 1);
     glDisable(GL_DEPTH_TEST);
@@ -325,12 +324,15 @@ void GLViewWidget::paintGL()
 
 	w->SetStatusBarMessage(GetWorldPosition());
 
+
 	glActiveTexture(GL_TEXTURE10);
 	glBindTexture(GL_TEXTURE_1D, permeabilities);
 	glActiveTexture(GL_TEXTURE0);
 
 	int width = size().width();
 	int height = size().height();
+
+	glViewport(0, 0, width, height);
 
 	Matrices mat;
 
@@ -380,6 +382,5 @@ void GLViewWidget::paintGL()
 
 void 	GLViewWidget::resizeGL(int w, int h)
 {
-    QOpenGLWidget::resizeGL(w, h);
-    glViewport(0, 0, w, h);
+	QOpenGLWidget::resizeGL(w, h);
 }

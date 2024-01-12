@@ -1,6 +1,7 @@
 #include "src/Shaders/shaders.h"
 #include "mainwindow.h"
 #include "exportoptions.h"
+#include "src/backgroundimage.h"
 #include "ui_mainwindow.h"
 #include "src/document.h"
 #include "src/walltype_db.h"
@@ -57,6 +58,7 @@ enter(Qt::Key_Z, this)
 	enter.setContext(Qt::ApplicationShortcut);
 
 	ui->viewWidget->w = this;
+	ui->histogramWidget->w = this;
 
 	connect(ui->aboutAbout,      &QAction::triggered, &QApplication::aboutQt);
 
@@ -594,8 +596,19 @@ bool MainWindow::fileOpen(bool load_rooms, bool load_background)
 	{
 		try
 		{
+			ui->viewWidget->makeCurrent();
 			if(document->LoadFile(ui->viewWidget->shaders(), QFileInfo(dialog.selectedFiles().first()), load_rooms, load_background, GetBackgroundLayer()))
+			{
+				if(load_background)
+				{
+					ui->histogramWidget->_histogram.Update(
+								ui->viewWidget->shaders(),
+								document.get(),
+								document->m_background->AABB());
+				}
+
 				break;
+			}
 		}
 		catch(std::exception & e)
 		{

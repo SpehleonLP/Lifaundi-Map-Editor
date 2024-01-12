@@ -2,7 +2,6 @@
 #define GLVIEWWIDGET_H
 #include "Support/counted_ptr.hpp"
 #include "enums.hpp"
-#include "Shaders/shaders.h"
 #include <glm/vec2.hpp>
 #include <QOpenGLFunctions_4_5_Core>
 #include <QOpenGLWidget>
@@ -10,6 +9,7 @@
 #include <chrono>
 
 class MainWindow;
+class Shaders;
 
 class GLViewWidget : public QOpenGLWidget, public QOpenGLFunctions_4_5_Core
 {
@@ -33,6 +33,7 @@ public:
 	Shaders * shaders() const { return _shaders.get(); }
 
 private:
+friend class HistogramWidget;
 	void mouseMoveEvent 		(QMouseEvent * event)	Q_DECL_OVERRIDE;
 	void mousePressEvent		(QMouseEvent * event)	Q_DECL_OVERRIDE;
 	void mouseReleaseEvent		(QMouseEvent * event)	Q_DECL_OVERRIDE;
@@ -46,13 +47,14 @@ private:
     void resizeGL(int w, int h) Q_DECL_OVERRIDE;
 
 	QTimer timer;
-	std::unique_ptr<Shaders> _shaders;
+	std::shared_ptr<Shaders> _shaders;
 
 	std::chrono::time_point<std::chrono::high_resolution_clock> current_time;
 
 	uint32_t m_ubo{};
 	uint32_t permeabilities{};
 
+	bool		_initialized{false};
 	bool       m_canvasDrag{false};
 	glm::vec2  m_scrollPos{0,0};
 	glm::vec2  m_screenPos{0,0};

@@ -108,7 +108,7 @@ BackgroundImage::BackgroundImage(Shaders * shaders, std::string const& filename)
 		LoadBlk(shaders, std::move(file));
 		break;
 	case Type::Lifaundi:
-		//LoadLifaundi(gl, std::move(file));
+		LoadLifaundi(shaders, std::move(file));
 		break;
 	case Type::Image:
 		file.close();
@@ -123,9 +123,17 @@ BackgroundImage::~BackgroundImage()
 
 void BackgroundImage::Release(Shaders * shaders)
 {
-	shaders->gl->glDeleteTextures(size(), &m_textures[0]);
+	if(m_textures.size())
+		shaders->gl->glDeleteTextures(size(), &m_textures[0]);
+
+	if(m_depth.size() && m_depth != m_textures)
+		shaders->gl->glDeleteTextures(size(), &m_depth[0]);
+
 	shaders->gl->glDeleteVertexArrays(1, &m_vao);
 	shaders->gl->glDeleteBuffers(1, &m_vbo);
+
+	if(_depthTileBuffer)
+		shaders->gl->glDeleteBuffers(1, &_depthTileBuffer);
 }
 
 void BackgroundImage::Render(Shaders * shaders)
@@ -401,7 +409,7 @@ static __unused uint8_t * interleave_Depth(uint8_t * dst, uint8_t * src, int blo
 void BackgroundImage::SetBackgroundLayer(Shaders * shaders, BackgroundLayer layer)
 {
 //don't try to load something we already have.
-	if(m_layer == layer || m_type != Type::Lifaundi)
+	if(m_layer == layer || m_type != Type::Lifaundi || isUnlit())
 	{
 		return;
 	}
@@ -413,35 +421,39 @@ void BackgroundImage::SetBackgroundLayer(Shaders * shaders, BackgroundLayer laye
 
     file.exceptions ( std::ifstream::failbit | std::ifstream::badbit );
 
-	LoadLifaundi(shaders, std::move(file), layer);
+	if(m_textures.size() && m_textures != m_depth)
+	{
+		shaders->gl->glDeleteTextures(m_textures.size(), &m_textures[0]);
+	}
+
+	if(layer == BackgroundLayer::Depth)
+	{
+		m_textures = m_depth;
+	}
+	else
+	{
+		m_textures = LoadLifaundiLayer(shaders, file, layer);
+	}
+
+	file.close();
 	m_layer = layer;
 }
 
 struct mip_offsets { uint32_t mip0, mip1, mip2; };
 static_assert(sizeof(mip_offsets) == sizeof(uint32_t)*3);
 
-void BackgroundImage::LoadLifaundi(Shaders * shaders, std::ifstream file, BackgroundLayer layer)
+void BackgroundImage::LoadLifaundi(Shaders * shaders, std::ifstream file)
 {
-	auto gl = shaders->gl;
-
 	char title[4];
 
 	file.read(&title[0], sizeof(title));
 	file.read((char*)&version, sizeof(version));
 	file.read((char*)&tiles, sizeof(tiles));
 
-	if(isUnlit())
-		layer = BackgroundLayer::BaseColor;
-
-	if(layer == m_layer)
-		return;
-
 	if(!havePixelSize())
 		pixels = glm::u16vec2(tiles) * (uint16_t) 256;
 	else
-	{
 		file.read((char*)&pixels, sizeof(pixels));
-	}
 
 	if(m_flags == nullptr)
 	{
@@ -451,26 +463,58 @@ void BackgroundImage::LoadLifaundi(Shaders * shaders, std::ifstream file, Backgr
 	if(memcmp(title, "lbck", 4))
 		throw std::runtime_error("Bad File");
 
-	auto offsets		 = std::vector<mip_offsets>(size()+1);
-
 	file.read((char*)&m_flags[0], size() * sizeof(m_flags[0]));
+	m_offset = file.tellg();
+
+	if(isUnlit() == false)
+		m_depth = LoadLifaundiLayer(shaders, file, BackgroundLayer::Depth);
+	else
+		m_textures = LoadLifaundiLayer(shaders, file, BackgroundLayer::BaseColor);
+
+	file.close();
+
+	if(m_depth == nullptr)
+		return;
+
+	std::vector<glm::ivec4> tile_data(256 * m_depth.size());
+
+	for(auto i = 0u; i < tile_data.size(); ++i)
+	{
+		if(m_flags && m_flags[i] == 0)
+			continue;
+
+		auto x = i % tiles.x;
+		auto y = i / tiles.y;
+
+		glm::ivec2 offset(x * tile_size.x - pixels.x/2, y * tile_size.y - pixels.y/2);
+		tile_data[_noTiles++] = glm::ivec4(offset, offset + glm::ivec2(tile_size));
+	}
+
+	memset(&tile_data[_noTiles], 0, (tile_data.size() - _noTiles) * sizeof(glm::ivec4));
+
+	auto gl = shaders->gl;
+	gl->glCreateBuffers(1, &_depthTileBuffer);
+	gl->glNamedBufferStorage(_depthTileBuffer, tile_data.size() * sizeof(glm::ivec4), tile_data.data(), 0);
+}
+
+shared_array<uint32_t> BackgroundImage::LoadLifaundiLayer(Shaders * shaders, std::ifstream & file, BackgroundLayer layer) const
+{
+	auto gl = shaders->gl;
+
+	file.seekg(m_offset, std::ifstream::beg);
+	auto offsets = std::vector<mip_offsets>(size()+1);
 	file.read((char*)&offsets[0], (size()*3 + 1) * sizeof(uint32_t));
 
 	std::unique_ptr<uint8_t[]> buffer(new uint8_t[TILE_BYTES]);
 	std::unique_ptr<uint8_t[]> buffer2(new uint8_t[TILE_BYTES]);
 
-	if(m_textures.size())
+	auto textures = shared_array<uint32_t>(noTextures(), 0);
+
+	gl->glGenTextures(textures.size(), &textures[0]);
+
+	for(auto i = 0u; i < textures.size(); ++i)
 	{
-		gl->glDeleteTextures(m_textures.size(), &m_textures[0]);
-	}
-
-	m_textures  = shared_array<uint32_t>(noTextures(), 0);
-
-	gl->glGenTextures(m_textures.size(), &m_textures[0]);
-
-	for(auto i = 0u; i < m_textures.size(); ++i)
-	{
-		gl->glBindTexture(GL_TEXTURE_2D_ARRAY, m_textures[i]);
+		gl->glBindTexture(GL_TEXTURE_2D_ARRAY, textures[i]);
 		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		gl->glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -493,10 +537,6 @@ void BackgroundImage::LoadLifaundi(Shaders * shaders, std::ifstream file, Backgr
 		}
 	}
 
-
-
-
-
 	for(int i = 0, texture = 0; i < size(); ++i, ++texture)
 	{
 		if(m_flags[i] == 0)
@@ -505,7 +545,7 @@ void BackgroundImage::LoadLifaundi(Shaders * shaders, std::ifstream file, Backgr
 			continue;
 		}
 
-		gl->glBindTexture(GL_TEXTURE_2D_ARRAY, m_textures[texture / MAX_ARRAY_LAYERS]);
+		gl->glBindTexture(GL_TEXTURE_2D_ARRAY, textures[texture / MAX_ARRAY_LAYERS]);
 		auto texture_layer = texture % MAX_ARRAY_LAYERS;
 
 		uint32_t * mip = (uint32_t*)&offsets[i];
@@ -606,7 +646,7 @@ void BackgroundImage::LoadLifaundi(Shaders * shaders, std::ifstream file, Backgr
 		}
 	}
 
-	file.close();
+	return textures;
 }
 
 std::vector<uint16_t> GetC1Pallette();

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>972</width>
-    <height>677</height>
+    <height>913</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -559,6 +559,32 @@
         </widget>
        </item>
        <item>
+        <widget class="QGroupBox" name="groupBox_4">
+         <property name="title">
+          <string>Depth</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_5">
+          <item>
+           <widget class="QLabel" name="label">
+            <property name="text">
+             <string>Histogram</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="HistogramWidget" name="histogramWidget">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>100</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <spacer name="verticalSpacer">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -785,8 +811,7 @@
   </widget>
   <action name="fileNew">
    <property name="icon">
-    <iconset theme="document-new">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset theme="document-new"/>
    </property>
    <property name="text">
     <string>New</string>
@@ -797,8 +822,7 @@
   </action>
   <action name="fileOpen">
    <property name="icon">
-    <iconset theme="document-open">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset theme="document-open"/>
    </property>
    <property name="text">
     <string>Open</string>
@@ -809,8 +833,7 @@
   </action>
   <action name="fileSaveAs">
    <property name="icon">
-    <iconset theme="document-save-as">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset theme="document-save-as"/>
    </property>
    <property name="text">
     <string>Save As</string>
@@ -821,8 +844,7 @@
   </action>
   <action name="fileSave">
    <property name="icon">
-    <iconset theme="document-save">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset theme="document-save"/>
    </property>
    <property name="text">
     <string>Save</string>
@@ -833,8 +855,7 @@
   </action>
   <action name="fileClose">
    <property name="icon">
-    <iconset theme="document-close">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset theme="document-close"/>
    </property>
    <property name="text">
     <string>Close</string>
@@ -845,8 +866,7 @@
   </action>
   <action name="appExit">
    <property name="icon">
-    <iconset theme="application-exit">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset theme="application-exit"/>
    </property>
    <property name="text">
     <string>Exit</string>
@@ -857,8 +877,7 @@
     <bool>false</bool>
    </property>
    <property name="icon">
-    <iconset theme="edit-undo">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset theme="edit-undo"/>
    </property>
    <property name="text">
     <string>Undo</string>
@@ -872,8 +891,7 @@
     <bool>false</bool>
    </property>
    <property name="icon">
-    <iconset theme="edit-redo">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset theme="edit-redo"/>
    </property>
    <property name="text">
     <string>Redo</string>
@@ -887,8 +905,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset theme="select">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset theme="select"/>
    </property>
    <property name="text">
     <string>Select All</string>
@@ -899,8 +916,7 @@
   </action>
   <action name="zoomIn">
    <property name="icon">
-    <iconset theme="zoom-in">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset theme="zoom-in"/>
    </property>
    <property name="text">
     <string>Zoom In</string>
@@ -911,8 +927,7 @@
   </action>
   <action name="zoomOut">
    <property name="icon">
-    <iconset theme="zoom-out">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset theme="zoom-out"/>
    </property>
    <property name="text">
     <string>Zoom Out</string>
@@ -923,8 +938,7 @@
   </action>
   <action name="zoomActual">
    <property name="icon">
-    <iconset theme="zoom">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset theme="zoom"/>
    </property>
    <property name="text">
     <string>Actual Size</string>
@@ -946,8 +960,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset theme="edit-cut">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset theme="edit-cut"/>
    </property>
    <property name="text">
     <string>Cut</string>
@@ -961,8 +974,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset theme="edit-copy">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset theme="edit-copy"/>
    </property>
    <property name="text">
     <string>Copy</string>
@@ -976,8 +988,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset theme="edit-paste">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset theme="edit-paste"/>
    </property>
    <property name="text">
     <string>Paste</string>
@@ -991,8 +1002,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset theme="edit-delete">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset theme="edit-delete"/>
    </property>
    <property name="text">
     <string>Delete</string>
@@ -1358,6 +1368,11 @@
    <class>GLViewWidget</class>
    <extends>QOpenGLWidget</extends>
    <header location="global">src/glviewwidget.h</header>
+  </customwidget>
+  <customwidget>
+   <class>HistogramWidget</class>
+   <extends>QOpenGLWidget</extends>
+   <header>src/histogramwidget.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

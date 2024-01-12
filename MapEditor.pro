@@ -36,6 +36,7 @@ DEFINES += GLM_EXT_INCLUDED GLM_FORCE_INLINE GLM_ENABLE_EXPERIMENTAL
 
 SOURCES += \
 	../../Libraries/Spehleon/lib/gl/compressedshadersource.cpp \
+	../../Libraries/Spehleon/lib/gl/renderdoc.cpp \
 	../../Libraries/Spehleon/lib/qt-gl/initialize_gl.cpp \
 	../../Libraries/Spehleon/lib/qt-gl/simpleshaderbase.cpp \
 ../../Libraries/loguru/loguru.cpp \
@@ -60,6 +61,8 @@ SOURCES += \
     src/Shaders/defaulttextures.cpp \
     src/Shaders/defaultvaos.cpp \
     src/Shaders/blitshader.cpp \
+	src/histogram.cpp \
+	src/histogramwidget.cpp \
     src/metaroom.cpp \
     src/lf_math.cpp \
 	src/metaroom_gl.cpp \
@@ -87,6 +90,7 @@ HEADERS += \
 	../../Libraries/Spehleon/lib/Support/numeric_range.hpp \
 	../../Libraries/Spehleon/lib/Support/unsafe_view.hpp \
 	../../Libraries/Spehleon/lib/gl/compressedshadersource.h \
+	../../Libraries/Spehleon/lib/gl/renderdoc.h \
 	../../Libraries/Spehleon/lib/qt-gl/initialize_gl.h \
 	../../Libraries/Spehleon/lib/qt-gl/simpleshaderbase.h \
 	colorprogressindicator.h \
@@ -114,6 +118,8 @@ HEADERS += \
     src/Shaders/defaulttextures.h \
     src/Shaders/defaultvaos.h \
     src/Shaders/blitshader.h \
+	src/histogram.h \
+	src/histogramwidget.h \
     src/metaroom.h \
     src/lf_math.h \
 	src/metaroom_gl.h \
