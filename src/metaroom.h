@@ -39,7 +39,12 @@ class Metaroom : public MetaroomMemory
 public:
 	enum
 	{
-		VERSION = 5
+		VERSION_STILL_HAVE_SIZE=2,
+		VERSION_ADDED_MUSIC=3,
+		VERSION_ADDED_MVSF=4,
+		VERSION_ADDED_SHADE=5,
+		VERSION_ADDED_DEPTH=6,
+		VERSION = 6
 	};
 
 	static int NextInEdge(int id) { return (id & 0xFFFFFFFC) + ((id+1) & 0x03); }

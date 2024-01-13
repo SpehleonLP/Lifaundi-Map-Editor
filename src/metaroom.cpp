@@ -50,12 +50,12 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 	fp.read((char*)&no_tracks, 2);
 	fp.read((char*)&no_faces, 4);
 
-	if(version == 2)
+	if(version == VERSION_STILL_HAVE_SIZE)
 	{
 		fp.read((char*)&width, 2);
 		fp.read((char*)&height, 2);
 	}
-	if(version >= 3)
+	if(version >= VERSION_ADDED_MUSIC)
 	{
 		fp.seekg(8, std::ios::cur);
 	}
@@ -86,14 +86,14 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 	fp.read((char*)&_gravity[0],  4* no_faces);
 	fp.read((char*)&_roomType[0], 1* no_faces);
 
-	if(version < 5)
+	if(version < VERSION_ADDED_SHADE)
 	{
 		fp.seekg(4 * no_faces, std::ios_base::cur);
 	}
 
 	fp.read((char*)&_music[0], 1* no_faces);
 
-	if(version >= 5)
+	if(version >= VERSION_ADDED_SHADE)
 	{
 		fp.read((char*)&_directionalShade[0], 4 * no_faces);
 		fp.read((char*)&_ambientShade[0], no_faces);
@@ -106,7 +106,17 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 		memset(&_audio[0], 0, 4 * no_faces);
 	}
 
-	if(version <= 3)
+	if(version >= VERSION_ADDED_DEPTH)
+	{
+		fp.read((char*)&_depth[0], sizeof(_depth[0]) * no_faces);
+	}
+	else
+	{
+		for(auto & item : _depth)
+			item = glm::u16vec2(0, USHRT_MAX);
+	}
+
+	if(version <= VERSION_ADDED_MUSIC)
 	{
 		fp.seekg(8 * no_tracks, std::ios::cur);
 	}
@@ -153,7 +163,7 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 		}
 	}
 
-	if(version >= 4)
+	if(version >= VERSION_ADDED_MVSF)
 		_tree.ReadTree(fp);
 
 	PruneDegenerate();
@@ -222,6 +232,7 @@ uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 	fp.write((char*)&mta._directionalShade[0], 4 * no_faces);
 	fp.write((char*)&mta._ambientShade[0], no_faces);
 	fp.write((char*)&mta._audio[0], 4 * no_faces);
+	fp.write((char*)&_depth[0], sizeof(_depth[0]) * no_faces);
 
 
 	for(uint32_t i = 0; i < tracks.size();++i)
@@ -449,9 +460,10 @@ void Metaroom::AddFace(glm::ivec2 min, glm::ivec2 max)
 	_music[face]     = -1;
 	_roomType[face]  = 0;
 
-	_directionalShade[0]	= 0;
-	_ambientShade[0]		= 0;
-	_audio[0]				= glm::vec4(0);
+	_directionalShade[face]	= 0;
+	_ambientShade[face]		= 0;
+	_audio[face]			= glm::vec4(0);
+	_depth[face]			= glm::u16vec2(0, USHRT_MAX);
 
 	memcpy_s(&_prev[face], &_verts[face]);
 
@@ -912,6 +924,9 @@ std::vector<uint32_t> Metaroom::Duplicate(std::vector<uint32_t> const& faces)
 
 	for(size_t i = 0; i < faces.size(); ++i)
 		memcpy_s(&_audio[*(first+i)], &_audio[faces[i]]);
+
+	for(size_t i = 0; i < faces.size(); ++i)
+		memcpy_s(&_depth[*(first+i)],    &_depth[faces[i]]);
 
 	for(size_t i = 0; i < faces.size(); ++i)
 		memcpy_s(&_roomType[*(first+i)],     &_roomType[faces[i]]);

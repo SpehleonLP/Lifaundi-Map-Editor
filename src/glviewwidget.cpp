@@ -368,7 +368,14 @@ void GLViewWidget::paintGL()
 	_shaders->defaultVaos.Bind(this);
 	_shaders->defaultVaos.RenderSquare(this);
 
-	w->document->RenderBackground(_shaders.get());
+	auto displayRange = w->ui->backgroundDepthSlider;
+
+	auto range = glm::uvec2(
+		displayRange->GetLowerValue() * 65535 / 256,
+		displayRange->GetUpperValue() * 65535 / 256
+	);
+
+	w->document->RenderBackground(_shaders.get(), range);
 	w->document->m_metaroom.gl.Render(_shaders.get(), -1);
 
 	w->toolbox.Render(_shaders.get());

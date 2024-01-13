@@ -16,6 +16,7 @@ struct Room
 	uint32_t	directionalShade;
 	float		ambientShade;
 	glm::u8vec4 audio;
+	glm::u16vec2 depth;
 };
 
 class Metaroom;

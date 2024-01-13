@@ -81,7 +81,8 @@ SOURCES += \
 	src/reseatalgorithm.cpp \
 	src/roomrange.cpp \
 	src/sort_unique.cpp \
-	src/walltype_db.cpp
+	src/walltype_db.cpp \
+	src/widget_rangeslider.cpp
 
 HEADERS += \
 	../../Libraries/Spehleon/lib/Support/counted_ptr.hpp \
@@ -138,7 +139,8 @@ HEADERS += \
 	src/reseatalgorithm.h \
 	src/roomrange.h \
 	src/sort_unique.h \
-	src/walltype_db.h
+	src/walltype_db.h \
+	src/widget_rangeslider.h
 
 FORMS += \
         colorprogressindicator.ui \
@@ -149,3 +151,6 @@ FORMS += \
 #qnx: target.path = /tmp/$${TARGET}/bin
 #else: unix:!android: target.path = /opt/$${TARGET}/bin
 #!isEmpty(target.path): INSTALLS += target
+
+RESOURCES += \
+	resources.qrc

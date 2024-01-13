@@ -19,8 +19,8 @@ public:
 		struct Buffer
 		{
 			uint32_t buffer;
-			uint16_t offset;
-			uint16_t size;
+			uint32_t offset;
+			uint32_t size;
 		};
 
 		struct Settings
@@ -63,6 +63,7 @@ public:
 			glm::uvec2 displayRange;
 			glm::uvec2 highlightRange;
 			uint32_t   outputWidth;
+			glm::vec4  color;
 		};
 
 		void operator()(QOpenGLFunctions * gl, Settings const& settings);

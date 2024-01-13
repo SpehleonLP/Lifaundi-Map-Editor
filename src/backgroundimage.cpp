@@ -136,16 +136,15 @@ void BackgroundImage::Release(Shaders * shaders)
 		shaders->gl->glDeleteBuffers(1, &_depthTileBuffer);
 }
 
-void BackgroundImage::Render(Shaders * shaders)
+void BackgroundImage::Render(Shaders * shaders,  glm::uvec2 range)
 {
 	auto gl = shaders->gl;
 
+//	shaders->transparencyShader(shaders);
+
 	CreateVBO(shaders);
 
-//	m_transparencyShader.bind(gl);
-//	gl->glDrawArrays(GL_TRIANGLES, size()*6, 6);
-
-	shaders->blitShader.Bind(shaders->gl, m_layer);
+	shaders->blitShader.Bind(shaders->gl, m_layer, range);
 
 	gl->glBindVertexArray(m_vao);
 	gl->glActiveTexture(GL_TEXTURE0);
@@ -215,6 +214,32 @@ bool BackgroundImage::LoadTextures(QWidget *)
 }
 #endif
 
+immutable_array<glm::u8vec2> BackgroundImage::idToTile() const
+{
+	if(_idToTile != nullptr)
+		return _idToTile;
+
+	std::vector<glm::u8vec2> r(size());
+
+	int counter[2] = {0, 0};
+	for(auto i = 0; i < size(); ++i)
+	{
+		if(m_flags && m_flags[i] == 0)
+			r[i] = glm::u8vec2(255, 255);
+
+		r[i] = glm::u8vec2(counter[0], counter[1]++);
+
+		if(counter[1] == 256)
+		{
+			counter[0] += 1;
+			counter[1] = 0;
+		}
+	}
+
+	_idToTile = shared_array<glm::u8vec2>::FromArray(r.data(), r.size());
+	return _idToTile;
+}
+
 void BackgroundImage::CreateVBO(Shaders * shaders)
 {
 	if(m_vao != 0)
@@ -232,11 +257,11 @@ void BackgroundImage::CreateVBO(Shaders * shaders)
 
 	vertex * corner = &buffer[0];
 
-	for(uint8_t y = 0; y < tiles.y; ++y)
+	for(uint8_t y = 0; y < _tiles.y; ++y)
 	{
-		for(uint8_t x = 0; x < tiles.x; ++x)
+		for(uint8_t x = 0; x < _tiles.x; ++x)
 		{
-			auto i          = (int) y * tiles.x + x;
+			auto i          = (int) y * _tiles.x + x;
 
 			if(m_flags && m_flags[i] == 0)
 				continue;
@@ -448,10 +473,10 @@ void BackgroundImage::LoadLifaundi(Shaders * shaders, std::ifstream file)
 
 	file.read(&title[0], sizeof(title));
 	file.read((char*)&version, sizeof(version));
-	file.read((char*)&tiles, sizeof(tiles));
+	file.read((char*)&_tiles, sizeof(_tiles));
 
 	if(!havePixelSize())
-		pixels = glm::u16vec2(tiles) * (uint16_t) 256;
+		pixels = glm::u16vec2(_tiles) * (uint16_t) 256;
 	else
 		file.read((char*)&pixels, sizeof(pixels));
 
@@ -483,8 +508,8 @@ void BackgroundImage::LoadLifaundi(Shaders * shaders, std::ifstream file)
 		if(m_flags && m_flags[i] == 0)
 			continue;
 
-		auto x = i % tiles.x;
-		auto y = i / tiles.y;
+		auto x = i % _tiles.x;
+		auto y = i / _tiles.y;
 
 		glm::ivec2 offset(x * tile_size.x - pixels.x/2, y * tile_size.y - pixels.y/2);
 		tile_data[_noTiles++] = glm::ivec4(offset, offset + glm::ivec2(tile_size));
@@ -726,9 +751,9 @@ void BackgroundImage::LoadSpr(Shaders * shaders, std::ifstream file)
 	}
 
 	version       = -1;
-	tiles         = glm::u8vec2(58, 8);
+	_tiles         = glm::u8vec2(58, 8);
 	tile_size     = glm::u16vec2(144, 150);
-	pixels        = glm::u16vec2(tiles) * tile_size;
+	pixels        = glm::u16vec2(_tiles) * tile_size;
 
 	m_flags		  = std::unique_ptr<uint16_t[]> (new uint16_t[size()]);
 	memset(&m_flags[0], 0xFF, sizeof(m_flags[0]) * size());
@@ -753,10 +778,10 @@ void BackgroundImage::LoadSpr(Shaders * shaders, std::ifstream file)
 
 	for(int i = 0; i < size(); ++i)
 	{
-		int x = i / tiles.y;
-		int y = i % tiles.y;
+		int x = i / _tiles.y;
+		int y = i % _tiles.y;
 
-		int j = ((tiles.y-1) - y) * tiles.x + x;
+		int j = ((_tiles.y-1) - y) * _tiles.x + x;
 
 //decode image
 		file.read((char*)raw_data, sizeof(raw_data));
@@ -787,9 +812,9 @@ void BackgroundImage::LoadS16(Shaders * shaders, std::ifstream file)
 	file.read((char*)&length, 2);
 
 	version       = -1;
-	tiles         = glm::u8vec2(58, 16);
+	_tiles         = glm::u8vec2(58, 16);
 	tile_size     = glm::u16vec2(144, 150);
-	pixels        = glm::u16vec2(tiles) * tile_size;
+	pixels        = glm::u16vec2(_tiles) * tile_size;
 
 	return ImportS16Frames(shaders, std::move(file), length, RGBformat);
 }
@@ -805,9 +830,9 @@ void BackgroundImage::LoadBlk(Shaders * shaders, std::ifstream file)
 	file.read((char*)&length, 2);
 
 	version       = -1;
-	tiles         = glm::u8vec2(width, height);
+	_tiles         = glm::u8vec2(width, height);
 	tile_size     = glm::u16vec2(128, 128);
-	pixels        = glm::u16vec2(tiles) * tile_size;
+	pixels        = glm::u16vec2(_tiles) * tile_size;
 
 	return ImportS16Frames(shaders, std::move(file), length, RGBformat);
 }
@@ -857,10 +882,10 @@ void BackgroundImage::ImportS16Frames(Shaders * shaders, std::ifstream file, uin
 
 	for(uint32_t i = 0; i < no_tiles; ++i)
 	{
-		int x = i / tiles.y;
-		int y = i % tiles.y;
+		int x = i / _tiles.y;
+		int y = i % _tiles.y;
 
-		int j = ((tiles.y-1) - y) * tiles.x + x;
+		int j = ((_tiles.y-1) - y) * _tiles.x + x;
 
 		file.seekg(header[i].offset, std::ios_base::beg);
 		file.read((char*)&buffer[0], tile_size.x*tile_size.y*2);
@@ -884,7 +909,7 @@ void BackgroundImage::LoadImage(Shaders * shaders, std::string const& filename)
 	QImage image = reader.read();
 
 	version       = -1;
-	tiles = (glm::ivec2(image.width(), image.height()) + 255) / 256;
+	_tiles = (glm::ivec2(image.width(), image.height()) + 255) / 256;
 	tile_size     = glm::u16vec2(256, 256);
 	pixels        = glm::u16vec2(image.width(), image.height());
 
@@ -907,10 +932,10 @@ void BackgroundImage::LoadImage(Shaders * shaders, std::string const& filename)
 
 	for(int i = 0; i < size(); ++i)
 	{
-		int x = i / tiles.y;
-		int y = i % tiles.y;
+		int x = i / _tiles.y;
+		int y = i % _tiles.y;
 
-		int j = ((tiles.y-1) - y) * tiles.x + x;
+		int j = ((_tiles.y-1) - y) * _tiles.x + x;
 
 		for(int px = 0; px < 65536; ++px)
 		{

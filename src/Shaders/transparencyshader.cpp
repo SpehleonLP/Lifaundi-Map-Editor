@@ -1,6 +1,7 @@
 #include "transparencyshader.h"
 #include "defaultvaos.h"
 #include "gl/compressedshadersource.h"
+#include "src/Shaders/shaders.h"
 #include <QOpenGLFunctions_4_5_Core>
 
 void TransparencyShader::Bind(QOpenGLFunctions* gl)
@@ -11,6 +12,15 @@ void TransparencyShader::Bind(QOpenGLFunctions* gl)
 	gl->glDepthMask(GL_FALSE);
 	gl->glDisable(GL_BLEND);
 	gl->glDisable(GL_CULL_FACE);
+}
+
+void TransparencyShader::operator()(Shaders * shaders)
+{
+	auto gl = shaders->gl;
+
+	Bind(gl);
+	shaders->defaultVaos.Bind(gl);
+	shaders->defaultVaos.RenderSquare(gl);
 }
 
 const char TransparencyShader::Vertex[] = SHADER(150,

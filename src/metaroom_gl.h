@@ -20,6 +20,9 @@ public:
 	void SetDirty() const { _dirty = true; }
 	void SetIndicesDirty() const { _dirty = true; _indicesDirty = true; }
 
+	uint32_t GetVertVbo() const { return _buffers; }
+	uint32_t GetVertBufferSize() const;
+
 private:
 	mutable bool _dirty{true};
 	mutable bool _indicesDirty{true};

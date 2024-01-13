@@ -42,15 +42,17 @@ public:
 	~BackgroundImage();
 
     void Release(Shaders * shaders);
-    void Render(Shaders * gl);
+	void Render(Shaders * gl, glm::uvec2 range);
 
 	uint32_t   noTextures() const { return ((size() + MAX_ARRAY_LAYERS-1) / MAX_ARRAY_LAYERS); }
 	glm::ivec2 dimensions() const { return pixels.x == 0? glm::ivec2(SHRT_MAX, SHRT_MAX) : glm::ivec2(pixels); }
 	glm::ivec4 AABB() const { return {-dimensions()/2, dimensions() - dimensions()/2}; }
 	uint32_t  noTiles() const { return _noTiles; }
-	int        size() const { return (int)tiles.x * tiles.y; }
+	immutable_array<glm::u8vec2>  idToTile() const;
+	int        size() const { return (int)_tiles.x * _tiles.y; }
 	int        width() const { return pixels.x; }
 	int        height() const { return pixels.y; }
+	glm::ivec2 tiles() const { return _tiles; }
 
     void CreateVBO(Shaders * gl);
 
@@ -84,13 +86,14 @@ private:
 	bool			haveRoughness() const { return !(version & 0x1000); }
 
 	short			version{};
-	glm::u8vec2		tiles{0, 0};
+	glm::u8vec2		_tiles{0, 0};
 	glm::u16vec2	pixels{0, 0};
 	glm::u16vec2	tile_size{256, 256};
 
 	std::unique_ptr<uint16_t[]> m_flags;
 	shared_array<uint32_t> m_textures;
 	shared_array<uint32_t> m_depth;
+	mutable shared_array<glm::u8vec2>  _idToTile;
 
 	size_t m_texels{};
 	size_t m_offset{};

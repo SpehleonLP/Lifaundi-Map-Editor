@@ -2,6 +2,7 @@
 #include "mainwindow.h"
 #include "qtimer.h"
 #include "ui_mainwindow.h"
+#include "widget_rangeslider.h"
 #include <QHelpEvent>
 #include <QToolTip>
 
@@ -70,7 +71,12 @@ void HistogramWidget::paintGL()
 	glClearColor(color.redF(), color.greenF(), color.blueF(), color.alphaF());
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	_histogram(_shaders.get(), glm::uvec2{0, 15000}, width);
+	auto range = glm::uvec2(
+		_displayRange->GetLowerValue() * 65535 / 256,
+		_displayRange->GetUpperValue() * 65535 / 256
+	);
+
+	_histogram(_shaders.get(), range, width);
 }
 
 void HistogramWidget::resizeGL(int w, int h)

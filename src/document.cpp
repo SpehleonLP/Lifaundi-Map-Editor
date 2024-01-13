@@ -226,12 +226,12 @@ void Document::SelectLinked()
 }
 
 
-void Document::RenderBackground(Shaders * shaders)
+void Document::RenderBackground(Shaders * shaders, glm::uvec2 range)
 {
 	if(m_background == nullptr)
 		return;
 
-	m_background->Render(shaders);
+	m_background->Render(shaders, range);
 }
 
 glm::vec2 Document::GetScreenCenter() const
@@ -346,6 +346,14 @@ void  Document::SetShadeDirection(float v)
 }
 #endif
 
+void  Document::SetDepth(glm::vec2 range)
+{
+	glm::ivec2 adjusted = glm::round(range * (USHRT_MAX / 64.f));
+	glm::u16vec2 depth = glm::clamp(adjusted, 0, USHRT_MAX);
+	uint32_t value = std::bit_cast<uint32_t>(depth);
+	PushSettingCommand(value, SettingCommand::Type::Depth);
+}
+
 void  Document::SetAmbientShade(uint32_t value)
 {
 	PushSettingCommand(value, SettingCommand::Type::AmbientShade);
@@ -400,6 +408,7 @@ void Document::PushSettingCommand(uint32_t value, SettingCommand::Type type)
 	case SettingCommand::Type::Shade:
 	case SettingCommand::Type::AmbientShade:
 	case SettingCommand::Type::Audio:
+	case SettingCommand::Type::Depth:
 		selection = m_metaroom._selection.GetFaceSelection();
 		break;
 	default:

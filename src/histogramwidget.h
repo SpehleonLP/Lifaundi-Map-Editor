@@ -8,6 +8,7 @@
 
 class MainWindow;
 class Shaders;
+class RangeSlider;
 
 class HistogramWidget : public QOpenGLWidget, public QOpenGLFunctions_4_5_Core
 {
@@ -19,6 +20,7 @@ public:
 	void need_repaint();
 
 	MainWindow * w{};
+	RangeSlider * _displayRange{};
 	Histogram _histogram;
 
 private:

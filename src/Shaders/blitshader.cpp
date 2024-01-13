@@ -3,7 +3,7 @@
 #include "gl/compressedshadersource.h"
 #include <QOpenGLFunctions_4_5_Core>
 
-void BlitShader::Bind(QOpenGLFunctions * gl, BackgroundLayer layer)
+void BlitShader::Bind(QOpenGLFunctions * gl, BackgroundLayer layer, glm::uvec2 range)
 {
 	gl->glUseProgram(program());
 
@@ -14,6 +14,7 @@ void BlitShader::Bind(QOpenGLFunctions * gl, BackgroundLayer layer)
 
 	gl->glUniform1i(u_layer, 0);
 	gl->glUniform1i(u_texture, 0);
+	gl->glUniform2f(u_range, range.x / (float)USHRT_MAX, range.y / (float)USHRT_MAX);
 
 	gl->glUniform1i(u_layer, (int)layer);
 }
@@ -40,36 +41,42 @@ const char BlitShader::Vertex[] = SHADER(150,
 		});
 
 const char BlitShader::Fragment[] = SHADER(150,
-		uniform sampler2DArray u_texture;
-		uniform int u_layer;
+	uniform sampler2DArray u_texture;
+	uniform int u_layer;
+	uniform vec2 u_range;
 
-		in vec2 v_texCoord0;
-		flat in int v_layer;
 
-		out vec4 frag_color;
+	in vec2 v_texCoord0;
+	flat in int v_layer;
 
-		void main()
+	out vec4 frag_color;
+
+	void main()
+	{
+		switch(u_layer)
 		{
-			switch(u_layer)
-			{
-			case 2:
-			{ // normals
-				frag_color = texture(u_texture, vec3(v_texCoord0, v_layer));
-				vec2 rg = frag_color.rg * 2.0 - 1.0;
-				frag_color.b = (1.0 - dot(rg, rg)) * 0.5 + 0.5;
-				break;
-			}
-			//AO/depth
-			case 3:
-			case 4:
-				frag_color = texture(u_texture, vec3(v_texCoord0, v_layer));
-				frag_color.rgb = vec3(frag_color.r);
-				break;
-			default:
-				frag_color = texture(u_texture, vec3(v_texCoord0, v_layer));
-				break;
-			}
-		});
+		case 2:
+		{ // normals
+			frag_color = texture(u_texture, vec3(v_texCoord0, v_layer));
+			vec2 rg = frag_color.rg * 2.0 - 1.0;
+			frag_color.b = (1.0 - dot(rg, rg)) * 0.5 + 0.5;
+			break;
+		}
+		//AO/depth
+		case 3:
+			frag_color = texture(u_texture, vec3(v_texCoord0, v_layer));
+			frag_color.rgb = vec3(frag_color.r);
+			break;
+		case 4:
+			frag_color = texture(u_texture, vec3(v_texCoord0, v_layer));
+
+			frag_color.rgb = vec3((frag_color.r - u_range.x) / (u_range.y - u_range.x));
+			break;
+		default:
+			frag_color = texture(u_texture, vec3(v_texCoord0, v_layer));
+			break;
+		}
+	});
 
 void BlitShader::Initialize(QOpenGLFunctions* gl, CompressedShaderSource & source)
 {
@@ -91,4 +98,5 @@ void BlitShader::Initialize(QOpenGLFunctions* gl, CompressedShaderSource & sourc
 
 	uniform(gl, u_texture, "u_texture");
 	uniform(gl, u_layer, "u_layer");
+	uniform(gl, u_range, "u_range");
 }

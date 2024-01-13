@@ -61,7 +61,6 @@ layout(std430, binding=3) readonly buffer tileBuffer { ivec4 u_tilePosition[]; }
 // can this be sped up with an intermediary shared buffer?
 layout(std430, binding=4) buffer histogramBuffer { uint histogram[]; };
 
-
 layout(location=5) uniform uvec2 u_taskRange;
 
 bool IsInQuad(int quad, vec2 position)
@@ -104,10 +103,13 @@ void main() {
 	{
 		uvec2 coords = gl_LocalInvocationID.xy*4 + uvec2(i % 4, i / 4);
 
-		float depth = imageLoad(s_image, ivec3(coords, tile)).r;
+		if(IsInQuad(tile, vec2(coords)))
+		{
+			float depth = imageLoad(s_image, ivec3(coords, tile)).r;
 
-		if(depth < 1)
-			atomicAdd(histogram[int(depth * 65535)], 1);
+			if(0 < depth && depth < 1)
+				atomicAdd(histogram[int(depth * 8192)], 1);
+		}
 	}
 
 });
@@ -127,7 +129,7 @@ void ComputeHistogram::TasksToHistogram::Initialize(QOpenGLFunctions * gl, Compr
 
 
 // goal here is to the biggest bar in the histogram so we can normalize it while rendering
-const char ComputeHistogram::HistogramBounds::Source[] = COMPUTE_HEADER_xy(16, 16)
+const char ComputeHistogram::HistogramBounds::Source[] = COMPUTE_HEADER_x(256)
 "#define GROUP_SIZE 256\n"
 TEXT(
 layout(std430, binding=0) readonly buffer histogramBuffer { uint histogram[]; };
@@ -139,7 +141,7 @@ layout(location=2) uniform uvec2 u_taskRange;
 void main() {
 // 	linearize Id
 	const uint globalId =(gl_WorkGroupID.z * gl_NumWorkGroups.y + gl_WorkGroupID.y) * gl_NumWorkGroups.x + gl_WorkGroupID.x;
-	const uint localIndex = gl_LocalInvocationID.y * 16 + gl_LocalInvocationID.x;
+	const uint localIndex = gl_LocalInvocationID.x;
 	const uint threadId = GROUP_SIZE * globalId + localIndex;
 
 #if 1
@@ -181,8 +183,8 @@ void ComputeHistogram::HistogramBounds::operator()(QOpenGLFunctions * gl, uint32
 
 	gl->glBindBufferRange(GL_SHADER_STORAGE_BUFFER, 0, histogram, 0, sizeof(uint32_t) * 65536);
 	gl->glBindBufferRange(GL_SHADER_STORAGE_BUFFER, 1, output, 0, 16);
-	gl->glUniform2ui(2, range.x, range.y);
-	gl->glDispatchCompute(16, 16, 1);
+	gl->glUniform2ui(2, range.x/8, range.y/8);
+	gl->glDispatchCompute(16, 2, 1);
 }
 
 void ComputeHistogram::HistogramBounds::Initialize(QOpenGLFunctions * gl, CompressedShaderSource & source)
@@ -205,11 +207,15 @@ void ComputeHistogram::DisplayHistogram::operator()(QOpenGLFunctions * gl, Setti
 	gl->glBindTextureUnit(0, settings.histogramTexture);
 	gl->glBindBufferRange(GL_UNIFORM_BUFFER, 1, settings.histogramMaxValue, 0, 16);
 
+	auto range = settings.displayRange/8u;
+	auto highlightRange = settings.highlightRange/8u;
+
 	gl->glUniform1i(0, 0);
-	gl->glUniform1f(1, float(settings.displayRange.y - settings.displayRange.x) / settings.outputWidth);
+	gl->glUniform1f(1, float(range.y - range.x) / settings.outputWidth);
 	gl->glUniform1ui(2, settings.outputWidth);
-	gl->glUniform2f(3, settings.highlightRange.x, settings.highlightRange.y);
-	gl->glUniform2f(4, settings.displayRange.x, settings.displayRange.y);
+	gl->glUniform2f(3, highlightRange.x, highlightRange.y);
+	gl->glUniform2f(4, range.x, range.y);
+	gl->glUniform4fv(5, 1, &settings.color.x);
 
 	gl->glBindVertexArray(settings.vao);
 	gl->glDrawArrays(GL_LINES, 0, settings.outputWidth*2);
@@ -223,6 +229,7 @@ const char ComputeHistogram::DisplayHistogram::Vertex[] = SHADER(450,
 	layout(location=2) uniform uint			  u_noLines;
 	layout(location=3) uniform vec2		      u_highlightRange;
 	layout(location=4) uniform vec2		      u_displayRange;
+	layout(location=5) uniform vec4			u_color;
 
 	out vec4 _color;
 
@@ -232,7 +239,7 @@ const char ComputeHistogram::DisplayHistogram::Vertex[] = SHADER(450,
 		int   line    = gl_VertexID / 2;
 		float x_coord = (line / float(u_noLines)) * 2.0 - 1.0;
 
-		_color      = vec4(1);
+		_color      = u_color;
 
 		if((gl_VertexID & 0x01) == 0)
 		{
@@ -253,7 +260,7 @@ const char ComputeHistogram::DisplayHistogram::Vertex[] = SHADER(450,
 		}
 
 		float y_coord = (weightedSum / (float(u_maxHeight)));
-		y_coord = sqrt(y_coord);
+		y_coord = log2(y_coord+1);
 		gl_Position = vec4(x_coord, y_coord * 2.0 - 1.0, 0, 1.0);
 	});
 

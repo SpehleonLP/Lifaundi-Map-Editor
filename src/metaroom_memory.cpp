@@ -25,6 +25,7 @@ void MetaroomMemory::Realloc(size_t size)
 	_directionalShade	= realloc(_directionalShade, size);
 	_ambientShade		= realloc(_ambientShade, size);
 	_audio				= realloc(_audio, size);
+	_depth				= realloc(_depth, size);
 
 	_selection.resize(size);
 }
@@ -38,6 +39,7 @@ void MetaroomMemory::SetRoom(int index, Room const& room)
 	_directionalShade[index]	= room.directionalShade;
 	_ambientShade[index]		= room.ambientShade;
 	_audio[index]				= room.audio;
+	_depth[index]				= room.depth;
 
 	for(int j = 0; j < 4; ++j)
 		_verts[index][j] = room.verts[j];
@@ -55,6 +57,7 @@ void  MetaroomMemory::CopyRoom(int dst, int src)
 	_directionalShade[dst] = _directionalShade[src];
 	_ambientShade[dst] = _ambientShade[src];
 	_audio[dst] = _audio[src];
+	_depth[dst]		= _depth[src];
 
 	for(int j = 0; j < 4; ++j)
 		_verts[dst*4 + j] = _verts[src*4 + j];
@@ -67,6 +70,15 @@ glm::vec2 MetaroomMemory::GetGravity(int room) const
 		throw std::runtime_error("tried to get gravity of room which doesn't exist");
 
 	return glm::unpackHalf2x16(_gravity[room]);
+}
+
+
+glm::vec2 MetaroomMemory::GetDepth(int room) const
+{
+	if((uint32_t)room >= _entitySystem.used())
+		throw std::runtime_error("tried to get depth of room which doesn't exist");
+
+	return glm::vec2(_depth[room]) * (64.f / 65536);
 }
 
 glm::vec2 MetaroomMemory::GetCenter(int room) const
@@ -319,6 +331,27 @@ glm::vec2 MetaroomMemory::GetGravity() const
 	}
 
 	return glm::vec2(length, angle) / (count? count : 1.f);
+}
+
+glm::vec2 MetaroomMemory::GetDepth() const
+{
+	glm::vec2 depth{64.f, 0.f};
+
+	for(auto i : range())
+	{
+		if(!_selection.IsFaceSelected(i))
+			continue;
+
+		glm::vec2 vec = glm::vec2(_depth[i]) * (64 / 65536.f);
+
+		depth.x = std::min(depth.x, vec.x);
+		depth.y = std::max(depth.y, vec.y);
+	}
+
+	if(depth.x > depth.y)
+		return glm::vec2(0, 64);
+
+	return depth;
 }
 
 glm::vec3 MetaroomMemory::GetShade() const

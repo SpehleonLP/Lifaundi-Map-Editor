@@ -39,6 +39,7 @@ public:
 	void CopyRoom(int dst, int src);
 
 	glm::vec2 GetGravity(int room) const;
+	glm::vec2 GetDepth(int room) const;
 	glm::vec2 GetCenter(int room) const;
 	int GetPermeability(int a, int b) const;
 
@@ -61,6 +62,7 @@ public:
 
 	glm::vec2 GetGravity() const;
 	glm::vec3 GetShade() const;
+	glm::vec2 GetDepth() const;
 	glm::vec4 GetAudio() const;
 
 	int GetMusicTrack() const;
@@ -90,6 +92,7 @@ public:
 	shared_array<uint32_t>    _directionalShade;  // 2 half floats
 	shared_array<uint8_t >    _ambientShade;
 	shared_array<glm::u8vec4> _audio;  // 2 half floats
+	shared_array<glm::u16vec2> _depth;
 
 // needed for realloc
 	MetaroomSelection			_selection;

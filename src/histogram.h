@@ -26,6 +26,7 @@ private:
 	{
 		HistogramBuffer,
 		HistogramUBO,
+		HistogramRawRange,
 		Total,
 	};
 

@@ -57,6 +57,11 @@ void MetaroomGL::Render(Shaders * shaders, int selected_door_type)
 	}
 }
 
+uint32_t MetaroomGL::GetVertBufferSize() const
+{
+	return me._verts.size();
+}
+
 void MetaroomGL::Prepare(Shaders * shaders)
 {
 	me._selection.Prepare(shaders);

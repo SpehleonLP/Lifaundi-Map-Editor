@@ -133,6 +133,7 @@ public:
 		Shade,
 		AmbientShade,
 		Audio,
+		Depth,
 	};
 
 	SettingCommand(Document * document, std::vector<uint32_t> && list, uint32_t value, Type type);
@@ -174,6 +175,7 @@ public:
 		ShadeAngle,
 		ShadeStrength,
 		Audio,
+		Depth,
 	};
 
 	static std::unique_ptr<CommandInterface> GravityCommand(Document * document, std::vector<uint32_t> && list, float value, Type type);

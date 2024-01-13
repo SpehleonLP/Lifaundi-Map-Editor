@@ -18,6 +18,7 @@ void Histogram::Initialize(QOpenGLFunctions* gl)
 
 	gl->glNamedBufferStorage(_buffers[HistogramBuffer], sizeof(uint32_t)*65536, buffer.data(), GL_DYNAMIC_STORAGE_BIT);
 	gl->glNamedBufferStorage(_buffers[HistogramUBO], sizeof(uint32_t)*4, &default_value,  GL_DYNAMIC_STORAGE_BIT);
+	gl->glNamedBufferStorage(_buffers[HistogramRawRange], sizeof(uint32_t)*4, &default_value,  GL_DYNAMIC_STORAGE_BIT);
 	gl->glTextureBuffer(_texture, GL_R32UI, _buffers[HistogramBuffer]);
 }
 
@@ -33,12 +34,13 @@ void Histogram::clear(QOpenGLFunctions* gl)
 	_histogramDirty = true;
 	gl->glClearNamedBufferData(_buffers[HistogramBuffer], GL_R32UI, GL_RED, GL_UNSIGNED_INT, nullptr);
 	gl->glClearNamedBufferData(_buffers[HistogramUBO], GL_R32UI, GL_RED, GL_UNSIGNED_INT, nullptr);
+	gl->glClearNamedBufferData(_buffers[HistogramRawRange], GL_R32UI, GL_RED, GL_UNSIGNED_INT, nullptr);
 
 }
 
 void Histogram::Update(Shaders * shaders, Document * document, glm::ivec4 AABB)
 {
-	RenderDocCaptureRAII raii("Compute Histogram", true);
+//	RenderDocCaptureRAII raii("Compute Histogram", true);
 
 	auto gl = shaders->gl;
 
@@ -74,7 +76,7 @@ void Histogram::Update(Shaders * shaders, Document * document, glm::ivec4 AABB)
 
 	for(auto i = 0u; i < depth.size(); ++i)
 	{
-		uint16_t tilesInBatch = std::min<int>(256, totalTiles - i*256);
+		uint32_t tilesInBatch = std::min<int>(256, totalTiles - i*256);
 
 		shaders->histogram.compute(gl, ComputeHistogram::TasksToHistogram::Settings{
 			.texture=depth[i],
@@ -102,14 +104,104 @@ void Histogram::Update(Shaders * shaders, Document * document, glm::ivec4 AABB)
 
 void Histogram::Update(Shaders * shaders, Document * document)
 {
-	return;
+	auto gl = shaders->gl;
+
+	clear(gl);
+
+	if(document->m_background == nullptr
+	|| document->m_metaroom.empty()
+	|| document->m_metaroom._selection.NoSelectedFaces() == 0)
+		return;
+
+	auto depth = document->m_background->depth();
+	auto depthBuffer = document->m_background->depthTileBuffer();
+
+	if(depth == nullptr)
+		return;
+
+	auto bgHalfSize = document->m_background->dimensions() / 2;
+	auto idToTile =document->m_background->idToTile();
+
+	std::vector<std::vector<glm::ivec2>> tasks(depth.size());
+
+	auto no_faces =  document->m_metaroom.noFaces();
+	auto & selection = document->m_metaroom._selection;
+	auto tilesInc = document->m_background->tiles()-1;
+
+	for(auto i = 0u; i < no_faces; ++i)
+	{
+		if(selection.IsFaceSelected(i) == false)
+			continue;
+
+		glm::i16vec2  tl, br;
+		document->m_metaroom.GetFaceAABB(i, tl, br);
+		tl = glm::clamp((glm::ivec2(tl) + bgHalfSize) / 256, glm::ivec2(0), tilesInc);
+		br = glm::clamp(((glm::ivec2(br) + bgHalfSize) + 255) / 256, glm::ivec2(0), tilesInc);
+
+		for(auto x = tl.x; x <= br.x; ++x)
+		{
+			for(auto y = tl.y; y <= br.y; ++y)
+			{
+				int j = y * (tilesInc.x+1) + x;
+				auto id = idToTile[j];
+
+				if(id.x < tasks.size())
+				{
+					tasks[id.x].push_back({id.y, i});
+				}
+			}
+		}
+	}
+
+	uint32_t taskBuffer;
+	gl->glCreateBuffers(1, &taskBuffer);
+
+	for(auto i = 0u; i < depth.size(); ++i)
+	{
+		if(tasks[i].empty()) continue;
+
+		gl->glBindBuffer(GL_SHADER_STORAGE_BUFFER, taskBuffer);
+		gl->glBufferData(GL_SHADER_STORAGE_BUFFER, tasks[i].size() * sizeof(glm::ivec2), tasks[i].data(), GL_STREAM_DRAW);
+
+		uint32_t tasksInBatch =tasks[i].size();
+		uint32_t noQuads = document->m_metaroom._verts.size();
+
+		if(tasksInBatch != tasks[i].size())
+			throw std::runtime_error("need more bits in buffer!!");
+
+		shaders->histogram.compute(gl, ComputeHistogram::TasksToHistogram::Settings{
+			.texture=depth[i],
+			.histogram=_buffers[HistogramBuffer],
+			.quads={
+			   .buffer=document->m_metaroom.gl.GetVertVbo(),
+			   .offset=0,
+			   .size=noQuads,
+			},
+		   .tasks={
+			  .buffer=taskBuffer,
+			  .offset=0,
+			  .size=tasksInBatch,
+		   },
+		   .tiles={
+			  .buffer=depthBuffer,
+			  .offset=0,
+			  .size=256,
+		   },
+		});
+	}
+
+	gl->glDeleteBuffers(1, &taskBuffer);
 }
 
 void Histogram::operator()(Shaders * shaders, glm::uvec2 input_range, uint32_t output_width)
 {
-	RenderDocCaptureRAII raii("Histogram", true);
+	//RenderDocCaptureRAII raii("Histogram", true);
 
-#if 1
+	if(_histogramDirty)
+	{
+		shaders->histogram.computeBounds(shaders->gl, _buffers[HistogramBuffer], _buffers[HistogramRawRange], {0, 65536});
+	}
+
 	if(input_range != _inputRange)
 	{
 		_inputRange = input_range;
@@ -121,9 +213,16 @@ void Histogram::operator()(Shaders * shaders, glm::uvec2 input_range, uint32_t o
 		_histogramDirty = false;
 		shaders->histogram.computeBounds(shaders->gl, _buffers[HistogramBuffer], _buffers[HistogramUBO], _inputRange);
 	}
-#endif
 
-
+	shaders->histogram.display(shaders->gl,
+		ComputeHistogram::DisplayHistogram::Settings{
+		   .vao = _vao,
+		   .histogramTexture=_texture,
+		   .histogramMaxValue=_buffers[HistogramRawRange],
+		   .displayRange={0, 65535},
+		   .outputWidth=output_width,
+		   .color=glm::vec4(0.5, 0.5, 0.5, 1)
+	   });
 
 	shaders->histogram.display(shaders->gl,
 		ComputeHistogram::DisplayHistogram::Settings{
@@ -133,5 +232,6 @@ void Histogram::operator()(Shaders * shaders, glm::uvec2 input_range, uint32_t o
 		   .displayRange=input_range,
 		   .highlightRange=input_range,
 		   .outputWidth=output_width,
+		   .color=glm::vec4(1, 1, 1, 1)
 	   });
 }

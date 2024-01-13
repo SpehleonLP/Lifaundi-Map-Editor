@@ -25,7 +25,7 @@ public:
 
     void Release(Shaders * shaders);
 
-    void RenderBackground(Shaders * shaders);
+	void RenderBackground(Shaders * shaders, glm::uvec2 range);
 
     void OnSelectionChanged(Shaders * shaders);
 	uint32_t noFacesSelected() const;
@@ -65,6 +65,7 @@ public:
 	void SetRoomType(int);
 	void SetGravity(float angle, float strength);
 	void SetShade(float angle, float strength);
+	void SetDepth(glm::vec2 range);
 
 	void SetAmbientShade(uint32_t angle);
 	void SetAudio(glm::u8vec4);

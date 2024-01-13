@@ -3,6 +3,8 @@
 #include "qt-gl/simpleshaderbase.h"
 #include <atomic>
 
+class Shaders;
+
 class TransparencyShader : public ShaderBase
 {
 public:
@@ -11,6 +13,8 @@ public:
 	static const char Fragment[];
 #endif
 
+
+	void operator()(Shaders * gl);
 	void Bind(QOpenGLFunctions * gl);
 	void Initialize(QOpenGLFunctions * gl, CompressedShaderSource & source);
 

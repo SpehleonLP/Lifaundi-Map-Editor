@@ -58,7 +58,21 @@ enter(Qt::Key_Z, this)
 	enter.setContext(Qt::ApplicationShortcut);
 
 	ui->viewWidget->w = this;
-	ui->histogramWidget->w = this;
+	ui->backgroundHistogram->w = this;
+	ui->roomDepthHistogram->w = this;
+
+	ui->backgroundHistogram->_displayRange = ui->backgroundDepthSlider;
+	ui->roomDepthHistogram->_displayRange = ui->roomDepthSlider;
+
+	connect(ui->backgroundDepthSlider, &RangeSlider::valueChanged, this, [this]() {
+		ui->viewWidget->need_repaint();
+		ui->backgroundHistogram->need_repaint();
+		ui->backgroundDepthLabel->setText(tr("%1 to %2 meters").arg(ui->backgroundDepthSlider->GetLowerValue() / 4.f).arg(ui->backgroundDepthSlider->GetUpperValue() / 4.f));
+	});
+	connect(ui->roomDepthSlider, &RangeSlider::valueChanged, this, [this]() {
+		ui->roomDepthHistogram->need_repaint();
+		ui->roomDepthLabel->setText(tr("%1 to %2 meters").arg(ui->roomDepthSlider->GetLowerValue() / 4.f).arg(ui->roomDepthSlider->GetUpperValue() / 4.f));
+	} );
 
 	connect(ui->aboutAbout,      &QAction::triggered, &QApplication::aboutQt);
 
@@ -190,6 +204,13 @@ enter(Qt::Key_Z, this)
 	connect(ui->shadeStrength,    QDoubleSpinBoxChanged(),  this, [this]() { if(!updating_fields) document->SetShade((ui->shadeDir->value() + 900) * M_PI / 1800.f, ui->shadeStrength->value()); } );
     connect(ui->shadeDir,         QSpinDialChanged(),		  this, [this]() { if(!updating_fields) document->SetShade((ui->shadeDir->value() + 900) * M_PI / 1800.f, ui->shadeStrength->value()); } );
 	connect(ui->ambientShade,    &QSlider::valueChanged,  this, [this]() { if(!updating_fields) document->SetAmbientShade(ui->ambientShade->value()); } );
+	connect(ui->roomDepthSlider, &RangeSlider::valueChanged,  this, [this]() {
+		if(!updating_fields)
+		{
+			auto conv = 64.f * (ui->roomDepthSlider->GetMaximun());
+			document->SetDepth({ui->roomDepthSlider->GetLowerValue() * conv, ui->roomDepthSlider->GetUpperValue() * conv});
+		}}
+	);
 
     connect(ui->audio0,         &QSlider::valueChanged,		  this, [this]() { if(!updating_fields) document->SetAudio(glm::u8vec4(ui->audio0->value(), ui->audio1->value(),ui->audio2->value(), ui->audio3->value())); } );
 	connect(ui->audio1,         &QSlider::valueChanged,		  this, [this]() { if(!updating_fields) document->SetAudio(glm::u8vec4(ui->audio0->value(), ui->audio1->value(),ui->audio2->value(), ui->audio3->value())); } );
@@ -325,6 +346,12 @@ void MainWindow::OnSelectionChanged()
 {
 	ui->viewWidget->makeCurrent();
 
+	ui->roomDepthHistogram->_histogram.Update(
+				ui->viewWidget->shaders(),
+				document.get());
+
+	ui->roomDepthHistogram->need_repaint();
+
 	document->OnSelectionChanged(ui->viewWidget->shaders());
 	bool selected = document->noFacesSelected() != 0;
 
@@ -353,6 +380,10 @@ void MainWindow::OnSelectionChanged()
 	ui->shadeDir->setValue(convertDialValue(shade.y));
 	ui->ambientShade->setValue(shade.z);
 
+	auto depth = document->m_metaroom.GetDepth();
+	auto distance = (ui->roomDepthSlider->GetMaximun() / 64.f) ;
+	ui->roomDepthSlider->setValue(std::round(depth.x * distance), std::round(depth.y * distance));
+
 	glm::vec4 audio = document->m_metaroom.GetAudio();
 
 	ui->audio0->setValue(audio.x);
@@ -368,6 +399,8 @@ void MainWindow::OnSelectionChanged()
 	ui->audio1->setEnabled(selected);
 	ui->audio2->setEnabled(selected);
 	ui->audio3->setEnabled(selected);
+
+	ui->roomDepthSlider->setEnabled(selected);
 
 #if HAVE_WALL_TYPE
 	ui->door_type->setCurrentIndex(document->wall_type);
@@ -601,10 +634,17 @@ bool MainWindow::fileOpen(bool load_rooms, bool load_background)
 			{
 				if(load_background)
 				{
-					ui->histogramWidget->_histogram.Update(
+					ui->backgroundHistogram->_histogram.Update(
 								ui->viewWidget->shaders(),
 								document.get(),
 								document->m_background->AABB());
+
+					ui->roomDepthHistogram->_histogram.Update(
+								ui->viewWidget->shaders(),
+								document.get());
+
+					ui->roomDepthHistogram->need_repaint();
+					ui->backgroundHistogram->need_repaint();
 				}
 
 				break;
