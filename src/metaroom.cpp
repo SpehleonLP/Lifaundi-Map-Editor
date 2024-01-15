@@ -83,8 +83,8 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 	}
 
 
-	fp.read((char*)&_gravity[0],  4* no_faces);
-	fp.read((char*)&_roomType[0], 1* no_faces);
+	fp.read((char*)&_gravity[0],  _gravity.byteLength());
+	fp.read((char*)&_roomType[0], _roomType.byteLength());
 
 	if(version < VERSION_ADDED_SHADE)
 	{
@@ -95,15 +95,15 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 
 	if(version >= VERSION_ADDED_SHADE)
 	{
-		fp.read((char*)&_directionalShade[0], 4 * no_faces);
-		fp.read((char*)&_ambientShade[0], no_faces);
-		fp.read((char*)&_audio[0], 4 * no_faces);
+		fp.read((char*)&_directionalShade[0], _directionalShade.byteLength());
+		fp.read((char*)&_ambientShade[0], _ambientShade.byteLength());
+		fp.read((char*)&_audio[0], _audio.byteLength());
 	}
 	else
 	{
-		memset(&_directionalShade[0], 0, 4 * no_faces);
-		memset(&_ambientShade[0], 0, 4 * no_faces);
-		memset(&_audio[0], 0, 4 * no_faces);
+		memset(&_directionalShade[0], 0, _directionalShade.byteLength());
+		memset(&_ambientShade[0], 0, _ambientShade.byteLength());
+		memset(&_audio[0], 0, _audio.byteLength());
 	}
 
 	if(version >= VERSION_ADDED_DEPTH)
@@ -113,7 +113,7 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 	else
 	{
 		for(auto & item : _depth)
-			item = glm::u16vec2(0, USHRT_MAX);
+			item = glm::u16vec2(0, 4 * USHRT_MAX / 64);
 	}
 
 	if(version <= VERSION_ADDED_MUSIC)
@@ -152,7 +152,7 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 	{
 		int  index = (&list - &door_indices[0]) / 4;
 		auto begin = &door_list[list.index];
-		auto end   = begin + list.length;
+		auto end   = std::min(begin + list.length, door_list.data() + door_list.size());
 
 		for(auto i = begin; i < end; ++i)
 		{

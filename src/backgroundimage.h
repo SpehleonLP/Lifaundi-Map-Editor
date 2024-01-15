@@ -90,7 +90,7 @@ private:
 	glm::u16vec2	pixels{0, 0};
 	glm::u16vec2	tile_size{256, 256};
 
-	std::unique_ptr<uint16_t[]> m_flags;
+	shared_array<uint16_t> m_flags;
 	shared_array<uint32_t> m_textures;
 	shared_array<uint32_t> m_depth;
 	mutable shared_array<glm::u8vec2>  _idToTile;

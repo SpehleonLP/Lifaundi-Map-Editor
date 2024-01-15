@@ -150,6 +150,18 @@ static glm::u8vec4 GetAverageU8vec4(glm::u8vec4 const* array, std::vector<uint32
 	return accumulator /(float) selection.size();
 }
 
+static glm::u16vec2 GetAverageU16vec2(glm::u16vec2 const* array, std::vector<uint32_t> const& selection)
+{
+	glm::ivec2 accumulator{0};
+
+	for(size_t i = 0; i < selection.size(); ++i)
+	{
+		accumulator += array[selection[i]];
+	}
+
+	return accumulator / (int)selection.size();
+}
+
 bool ControllerFSM::AutoReseat()
 {
 	auto doc = m_parent->document.get();
@@ -254,6 +266,8 @@ bool ControllerFSM::SetTool(Tool tool)
 		room.directionalShade	= GetAverageHalf2x16(&metaroom._directionalShade[0], faces);
 		room.ambientShade		= GetAverage(&metaroom._ambientShade[0], faces);
 		room.audio				= GetAverageU8vec4(&metaroom._audio[0], faces);
+		room.depth			  = GetAverageU16vec2(&metaroom._depth[0], faces);
+
 
 		memcpy(&room.verts[0], verts, sizeof(verts));
 
@@ -675,6 +689,7 @@ bool ControllerFSM::OnMouseMove(glm::vec2 p, Bitwise flags)
 	case State::MouseDownOnSelected:
 		xy_filter = glm::ivec2(1, 1);
 		m_state = State::TranslateBegin;
+		m_parent->document->m_metaroom.BeginMove();
 		return true;
 	case State::MouseDownOnUnselected:
 	case State::MouseDownOnNothing:
@@ -864,6 +879,7 @@ void ControllerFSM::AddFace()
 		room.ambientShade     = 0;
 		room.directionalShade = glm::packHalf2x16(glm::vec2(0, 0));
 		room.audio			  = glm::u8vec4(0);
+		room.depth			  = glm::u16vec2(0, 4 * USHRT_MAX / 64);
 
 //		memset(room.wall_types, 0, 4);
 

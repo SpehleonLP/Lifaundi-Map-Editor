@@ -224,7 +224,7 @@ immutable_array<glm::u8vec2> BackgroundImage::idToTile() const
 	int counter[2] = {0, 0};
 	for(auto i = 0; i < size(); ++i)
 	{
-		if(m_flags && m_flags[i] == 0)
+		if(m_flags.size() && m_flags[i] == 0)
 			r[i] = glm::u8vec2(255, 255);
 
 		r[i] = glm::u8vec2(counter[0], counter[1]++);
@@ -263,7 +263,7 @@ void BackgroundImage::CreateVBO(Shaders * shaders)
 		{
 			auto i          = (int) y * _tiles.x + x;
 
-			if(m_flags && m_flags[i] == 0)
+			if(m_flags.size() && m_flags[i] == 0)
 				continue;
 
 			if(tile_size.x == 256)
@@ -482,7 +482,7 @@ void BackgroundImage::LoadLifaundi(Shaders * shaders, std::ifstream file)
 
 	if(m_flags == nullptr)
 	{
-		m_flags		= std::unique_ptr<uint16_t[]> (new uint16_t[size()]);
+		m_flags		= shared_array<uint16_t>(size());
 	}
 
 	if(memcmp(title, "lbck", 4))
@@ -503,9 +503,9 @@ void BackgroundImage::LoadLifaundi(Shaders * shaders, std::ifstream file)
 
 	std::vector<glm::ivec4> tile_data(256 * m_depth.size());
 
-	for(auto i = 0u; i < tile_data.size(); ++i)
+	for(auto i = 0u; i < m_flags.size(); ++i)
 	{
-		if(m_flags && m_flags[i] == 0)
+		if(m_flags.size() && m_flags[i] == 0)
 			continue;
 
 		auto x = i % _tiles.x;
@@ -755,8 +755,7 @@ void BackgroundImage::LoadSpr(Shaders * shaders, std::ifstream file)
 	tile_size     = glm::u16vec2(144, 150);
 	pixels        = glm::u16vec2(_tiles) * tile_size;
 
-	m_flags		  = std::unique_ptr<uint16_t[]> (new uint16_t[size()]);
-	memset(&m_flags[0], 0xFF, sizeof(m_flags[0]) * size());
+	m_flags		  = shared_array<uint16_t>(size(), ~0u);
 
 	m_textures  = shared_array<uint32_t>(noTextures(), 0);
 	gl->glGenTextures(m_textures.size(), &m_textures[0]);
@@ -862,8 +861,7 @@ void BackgroundImage::ImportS16Frames(Shaders * shaders, std::ifstream file, uin
 	gl_type = gl_type? GL_UNSIGNED_SHORT_5_6_5 :  GL_UNSIGNED_SHORT_5_5_5_1;
 	uint8_t buffer[144*150*2];
 
-	m_flags		  = std::unique_ptr<uint16_t[]> (new uint16_t[size()]);
-	memset(&m_flags[0], 0xFF, sizeof(m_flags[0]) * size());
+	m_flags		  = shared_array<uint16_t>(size(), ~0u);
 
 	m_textures  = shared_array<uint32_t>(noTextures(), 0);
 	gl->glGenTextures(m_textures.size(), &m_textures[0]);
