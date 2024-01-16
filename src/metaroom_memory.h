@@ -25,12 +25,12 @@ public:
 	__always_inline static int GetOppositeEdge(int id) { return id ^ 0x02; }
 	__always_inline static uint64_t GetDoorKey(uint32_t a, uint32_t b) { return a < b? ((uint64_t)a << 32) | b : ((uint64_t)b << 32) | a; }
 
-	inline glm::ivec2 GetNextVertex(int i) const { return raw()[(i & 0xFFFFFFFC) + ((i+1)&0x03)]; }
-	inline glm::ivec2 GetVertex(int i) const { return raw()[i]; }
-	inline glm::ivec2 GetEdge(int i) const { return _verts[i >> 2][(i+1)&3] - _verts[i >> 2][i&3]; }
+	__always_inline glm::ivec2 GetNextVertex(int i) const { return raw()[(i & 0xFFFFFFFC) + ((i+1)&0x03)]; }
+	__always_inline glm::ivec2 GetVertex(int i) const { return raw()[i]; }
+	__always_inline glm::ivec2 GetEdge(int i) const { return _verts[i >> 2][(i+1)&3] - _verts[i >> 2][i&3]; }
 
-	inline glm::ivec2 GetVertex(int i, int j) const { return _verts[i][j&0x03]; }
-	inline glm::ivec2 GetEdge(int i, int j) const { return GetVertex(i, j+1) - GetVertex(i, j); }
+	__always_inline glm::ivec2 GetVertex(int i, int j) const { return _verts[i][j&0x03]; }
+	__always_inline glm::ivec2 GetEdge(int i, int j) const { return GetVertex(i, j+1) - GetVertex(i, j); }
 
 	__always_inline glm::ivec2 * raw() { return &_verts[0][0]; };
 	__always_inline glm::ivec2 const* raw() const { return &_verts[0][0]; };
@@ -75,13 +75,13 @@ public:
 	shared_array<std::array<glm::ivec2, 4>> _scratch;
 	shared_array<std::array<glm::ivec2, 4>> _prev;
 
-	auto & verts(int i) const { return _verts[i>>2][i&0x03]; }
-	auto & scratch(int i) const { return _scratch[i>>2][i&0x03]; }
-	auto & prev(int i) const { return _prev[i>>2][i&0x03]; }
+	__always_inline auto & verts(int i) const { return _verts[i>>2][i&0x03]; }
+	__always_inline auto & scratch(int i) const { return _scratch[i>>2][i&0x03]; }
+	__always_inline auto & prev(int i) const { return _prev[i>>2][i&0x03]; }
 
-	auto & verts(int i) { return _verts[i>>2][i&0x03]; }
-	auto & scratch(int i) { return _scratch[i>>2][i&0x03]; }
-	auto & prev(int i) { return _prev[i>>2][i&0x03]; }
+	__always_inline auto & verts(int i) { return _verts[i>>2][i&0x03]; }
+	__always_inline auto & scratch(int i) { return _scratch[i>>2][i&0x03]; }
+	__always_inline auto & prev(int i) { return _prev[i>>2][i&0x03]; }
 
 //room properties
 	shared_array<uint32_t>  _gravity;  // 2 half floats

@@ -51,6 +51,7 @@ public:
 	bool HaveTool() const { return m_state != State::None; }
 
 	void AddFace();
+	void AddFace(glm::ivec2 min, glm::ivec2 max);
 
 	bool OnDoubleClick(glm::ivec2, Bitwise);
 	bool OnFinish();

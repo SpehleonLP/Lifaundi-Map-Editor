@@ -23,11 +23,15 @@ public:
 
 	QSize minimumSizeHint() const override;
 
-	int GetMinimun() const;
+	int GetMinimum() const;
 	void SetMinimum(int aMinimum);
 
-	int GetMaximun() const;
+	int GetMaximum() const;
 	void SetMaximum(int aMaximum);
+	int GetRange() const { return mMaximum - mMinimum; }
+
+	float lerp(float t) const { return mMinimum + (mMaximum - mMinimum) * t; }
+	float unlerp(float t) const { return (t - mMinimum) / (mMaximum - mMinimum); }
 
 	int GetLowerValue() const;
 	void SetLowerValue(int aLowerValue);
@@ -36,6 +40,13 @@ public:
 	void SetUpperValue(int aUpperValue);
 
 	void setValue(int aLowerValue, int aUpperValue);
+	void setValueNormalized(float x, float y) { setValue(std::round(lerp(x)), std::round(lerp(y))); }
+
+	std::pair<float, float> getValueNormalized() const
+	{
+		return {unlerp(GetLowerValue()), unlerp(GetUpperValue())};
+	}
+
 	void SetRange(int aMinimum, int aMaximum);
 
 	void setTickInterval(int) {};

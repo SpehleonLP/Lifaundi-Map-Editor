@@ -1,11 +1,15 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
+#include "qtimer.h"
 #include "src/enums.hpp"
 #include "src/controllerfsm.h"
 #include <memory>
 #include <QMainWindow>
 #include <QShortcut>
 #include <glm/vec2.hpp>
+
+class QLabel;
+class RangeSlider;
 
 enum
 {
@@ -50,6 +54,7 @@ public:
 
 	void documentNew();
     void documentOpen();
+	void OnTransformed();
 
 	void OnSelectionChanged();
 	void loadDefaultWalls();
@@ -126,6 +131,9 @@ friend class Document;
 	bool m_haveMessage{false};
 	
 	float default_page_step{64};
+	void UpdateDepthLabel(QLabel * label, RangeSlider * slider);
+
+	QTimer	  _updateRoomHistogram;
 
 	QShortcut escape;
 

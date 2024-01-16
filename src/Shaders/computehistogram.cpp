@@ -63,20 +63,22 @@ layout(std430, binding=4) buffer histogramBuffer { uint histogram[]; };
 
 layout(location=5) uniform uvec2 u_taskRange;
 
-bool IsInQuad(int quad, vec2 position)
+bool IsInQuad(int quad, int tile, vec2 localPosition)
 {
+	vec2 position = vec2(u_tilePosition[tile].xy) + localPosition;
+
 	for(int itr = 0; itr < 4; ++itr)
 	{
 		vec2 corner0 = u_vertex[quad*4 + itr];
 		vec2 corner1 = u_vertex[quad*4 + ((itr+1) & 0x03)];
 
-	// quad is always wound clockwise so can just check against each normal to determine if inside quad
+	// quad is always wound counter clockwise so can just check against each normal to determine if inside quad
 		vec2 normal = vec2(corner0.y - corner1.y, corner1.x - corner0.x);
 	// do either of these need to be normalized?
 		float projection = dot(normal, position - corner0);
 
 	// on wrong side of side ergo not in quad
-		if(projection < 0)
+		if(projection > 0)
 			return false;
 	}
 
@@ -94,16 +96,12 @@ void main() {
 	int tile = u_combinations[WorkGroupID].x;
 	int quad = u_combinations[WorkGroupID].y;
 
-	vec2 localPosition = vec2(gl_LocalInvocationID) / vec2(gl_WorkGroupSize);
-	ivec2 globalPosition = ivec2(mix(vec2(u_tilePosition[tile].xy), vec2(u_tilePosition[tile].zw), localPosition));
-
-// read depth information
-	//int i = 0;
 	for(int i = 0; i < 16; ++i)
 	{
 		uvec2 coords = gl_LocalInvocationID.xy*4 + uvec2(i % 4, i / 4);
-
-		if(IsInQuad(tile, vec2(coords)))
+// coords are 16*4 = 64 per meter (b/c reading mip layer 2)
+// coordinate space is in 256 per meter
+		if(IsInQuad(quad, tile, vec2(coords*4)))
 		{
 			float depth = imageLoad(s_image, ivec3(coords, tile)).r;
 

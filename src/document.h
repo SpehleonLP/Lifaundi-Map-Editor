@@ -40,6 +40,7 @@ public:
 	bool SaveFile(QFileInfo const& path);
     bool LoadFile(Shaders * shaders, QFileInfo const& path, bool load_rooms, bool load_background, BackgroundLayer);
 	void SetBackgroundLayer(Shaders * shaders, BackgroundLayer);
+	inline void OnTransformed() const { m_window->OnTransformed(); }
 
 	bool Undo();
 	bool Redo();

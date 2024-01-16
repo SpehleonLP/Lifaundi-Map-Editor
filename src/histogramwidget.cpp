@@ -25,7 +25,7 @@ HistogramWidget::HistogramWidget(QWidget * p) :
 	QOpenGLWidget(p),
 	_timer(this)
 {
-	_timer.setSingleShot(false);
+	_timer.setSingleShot(true);
 	_timer.setInterval(20);
 	connect(&_timer, &QTimer::timeout, this, [this]() { repaint(); } );
 }

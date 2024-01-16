@@ -204,7 +204,7 @@ QSize RangeSlider::minimumSizeHint() const
 	return QSize(scHandleSideLength * 2 + scLeftRightMargin * 2, scHandleSideLength);
 }
 
-int RangeSlider::GetMinimun() const
+int RangeSlider::GetMinimum() const
 {
 	return mMinimum;
 }
@@ -214,7 +214,7 @@ void RangeSlider::SetMinimum(int aMinimum)
 	setMinimum(aMinimum);
 }
 
-int RangeSlider::GetMaximun() const
+int RangeSlider::GetMaximum() const
 {
 	return mMaximum;
 }
@@ -267,6 +267,8 @@ void RangeSlider::setValue(int aLowerValue, int aUpperValue)
 {
 	mLowerValue = std::clamp(aLowerValue, mMinimum, mMaximum);
 	mUpperValue = std::clamp(aUpperValue, mMinimum, mMaximum);
+
+	update();
 }
 
 void RangeSlider::setUpperValue(int aUpperValue)

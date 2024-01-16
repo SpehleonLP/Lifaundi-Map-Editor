@@ -293,17 +293,20 @@ bool ControllerFSM::SetTool(Tool tool)
 		m_parent->SetMouseTracking(true);
 		xy_filter = glm::ivec2(1, 1);
 		m_parent->SetStatusBarMessage(XY_FILTER);
+		m_parent->document->m_metaroom.BeginMove();
 		break;
 	case Tool::Rotate:
 		m_state = State::RotateBegin;
 		m_parent->SetMouseTracking(true);
 		xy_filter = glm::ivec2(1, 1);
+		m_parent->document->m_metaroom.BeginMove();
 		break;
 	case Tool::Scale:
 		m_state = State::ScaleBegin;
 		m_parent->SetMouseTracking(true);
 		xy_filter = glm::ivec2(1, 1);
 		m_parent->SetStatusBarMessage(XY_FILTER);
+		m_parent->document->m_metaroom.BeginMove();
 		break;
 	case Tool::Slice:
 		m_state = State::SliceSet;
@@ -398,15 +401,15 @@ bool ControllerFSM::OnLeftDown(glm::vec2 position, Bitwise , bool)
 		return true;
 	case State::TranslateSet:
 		m_state = State::TranslateBegin;
-		m_parent->document->m_metaroom.BeginMove();
+	//	m_parent->document->m_metaroom.BeginMove();
 		return false;
 	case State::RotateSet:
 		m_state = State::RotateBegin;
-		m_parent->document->m_metaroom.BeginMove();
+	//	m_parent->document->m_metaroom.BeginMove();
 		return false;
 	case State::ScaleSet:
 		m_state = State::ScaleBegin;
-		m_parent->document->m_metaroom.BeginMove();
+	//	m_parent->document->m_metaroom.BeginMove();
 		return false;
 //dealt with in mouse up...
 	case State::SliceSet:
@@ -728,6 +731,7 @@ bool ControllerFSM::OnMouseMove(glm::vec2 p, Bitwise flags)
 		}
 
 		m_parent->document->m_metaroom.Translate(distance * glm::ivec2(xy_filter), m_parent->document->GetDimensions() / 2.f);
+		m_parent->document->OnTransformed();
 		return true;
 	}
 	case State::RotateBegin:
@@ -748,6 +752,7 @@ bool ControllerFSM::OnMouseMove(glm::vec2 p, Bitwise flags)
 		}
 
 		m_parent->document->m_metaroom.Rotate(selection_center, distance);
+		m_parent->document->OnTransformed();
 		return true;
 	}
 	case State::ScaleBegin:
@@ -783,6 +788,7 @@ bool ControllerFSM::OnMouseMove(glm::vec2 p, Bitwise flags)
 		}
 
 		m_parent->document->m_metaroom.Scale(selection_center, scaling);
+		m_parent->document->OnTransformed();
 	} return true;
 
 
@@ -792,6 +798,7 @@ bool ControllerFSM::OnMouseMove(glm::vec2 p, Bitwise flags)
 	case State::WeldBegin:
 	{
 		m_parent->document->m_metaroom.Scale(selection_center, glm::vec2(0, 0));
+		m_parent->document->OnTransformed();
 		return true;
 	}
 
@@ -862,6 +869,11 @@ void ControllerFSM::AddFace()
 	min = glm::max(-half_dimensions, glm::min(min, half_dimensions));
 	max = glm::max(-half_dimensions, glm::min(max, half_dimensions));
 
+	AddFace(min, max);
+}
+
+void ControllerFSM::AddFace(glm::ivec2 min, glm::ivec2 max)
+{
 	m_state = State::None;
 
 	if(math::length2(max - min) > 16
@@ -886,6 +898,7 @@ void ControllerFSM::AddFace()
 		m_parent->document->PushCommand(new InsertCommand(m_parent->document.get(), {room}));
 	}
 }
+
 
 void ControllerFSM::Prepare(Shaders * shaders)
 {

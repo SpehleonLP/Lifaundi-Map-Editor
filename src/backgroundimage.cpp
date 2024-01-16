@@ -124,10 +124,10 @@ BackgroundImage::~BackgroundImage()
 void BackgroundImage::Release(Shaders * shaders)
 {
 	if(m_textures.size())
-		shaders->gl->glDeleteTextures(size(), &m_textures[0]);
+		shaders->gl->glDeleteTextures(m_textures.size(), &m_textures[0]);
 
 	if(m_depth.size() && m_depth != m_textures)
-		shaders->gl->glDeleteTextures(size(), &m_depth[0]);
+		shaders->gl->glDeleteTextures(m_depth.size(), &m_depth[0]);
 
 	shaders->gl->glDeleteVertexArrays(1, &m_vao);
 	shaders->gl->glDeleteBuffers(1, &m_vbo);
@@ -225,7 +225,10 @@ immutable_array<glm::u8vec2> BackgroundImage::idToTile() const
 	for(auto i = 0; i < size(); ++i)
 	{
 		if(m_flags.size() && m_flags[i] == 0)
+		{
 			r[i] = glm::u8vec2(255, 255);
+			continue;
+		}
 
 		r[i] = glm::u8vec2(counter[0], counter[1]++);
 
@@ -502,6 +505,8 @@ void BackgroundImage::LoadLifaundi(Shaders * shaders, std::ifstream file)
 		return;
 
 	std::vector<glm::ivec4> tile_data(256 * m_depth.size());
+	glm::ivec2 tileSize = tile_size;
+	auto halfSize = glm::ivec2(pixels)/2;
 
 	for(auto i = 0u; i < m_flags.size(); ++i)
 	{
@@ -509,10 +514,11 @@ void BackgroundImage::LoadLifaundi(Shaders * shaders, std::ifstream file)
 			continue;
 
 		auto x = i % _tiles.x;
-		auto y = i / _tiles.y;
+		auto y = i / _tiles.x;
 
-		glm::ivec2 offset(x * tile_size.x - pixels.x/2, y * tile_size.y - pixels.y/2);
-		tile_data[_noTiles++] = glm::ivec4(offset, offset + glm::ivec2(tile_size));
+		glm::ivec2 offset = {x, y};
+		offset = offset * tileSize - halfSize;
+		tile_data[_noTiles++] = glm::ivec4(offset, offset + tileSize);
 	}
 
 	memset(&tile_data[_noTiles], 0, (tile_data.size() - _noTiles) * sizeof(glm::ivec4));

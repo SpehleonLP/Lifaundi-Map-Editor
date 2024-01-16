@@ -27,6 +27,10 @@ void Histogram::Destroy(QOpenGLFunctions* gl)
 	gl->glDeleteVertexArrays(1, &_vao);
 	gl->glDeleteTextures(1, &_texture);
 	gl->glDeleteBuffers(Total, _buffers);
+
+	_vao = 0;
+	_texture = 0;
+	memset(_buffers, 0, sizeof(_buffers));
 }
 
 void Histogram::clear(QOpenGLFunctions* gl)
@@ -59,9 +63,9 @@ void Histogram::Update(Shaders * shaders, Document * document, glm::ivec4 AABB)
 	assert(totalTiles != 0);
 
 	glm::ivec2 quad[4];
-	quad[0] = glm::ivec2(AABB.x, AABB.y);
+	quad[0] = glm::ivec2(AABB.z, AABB.w);
 	quad[1] = glm::ivec2(AABB.z, AABB.y);
-	quad[2] = glm::ivec2(AABB.z, AABB.w);
+	quad[2] = glm::ivec2(AABB.x, AABB.y);
 	quad[3] = glm::ivec2(AABB.x, AABB.w);
 
 	std::vector<glm::ivec2> tasks{256};
@@ -93,7 +97,7 @@ void Histogram::Update(Shaders * shaders, Document * document, glm::ivec4 AABB)
 		   },
 		   .tiles={
 			  .buffer=depthBuffer,
-			  .offset=0,
+			  .offset=i*256,
 			  .size=256,
 		   },
 		});
@@ -104,6 +108,8 @@ void Histogram::Update(Shaders * shaders, Document * document, glm::ivec4 AABB)
 
 void Histogram::Update(Shaders * shaders, Document * document)
 {
+	RenderDocCaptureRAII raii("Compute Room Histogram", true);
+
 	auto gl = shaders->gl;
 
 	clear(gl);
@@ -124,25 +130,26 @@ void Histogram::Update(Shaders * shaders, Document * document)
 
 	std::vector<std::vector<glm::ivec2>> tasks(depth.size());
 
-	auto no_faces =  document->m_metaroom.noFaces();
+	const auto N =  document->m_metaroom._entitySystem.size();
 	auto & selection = document->m_metaroom._selection;
-	auto tilesInc = document->m_background->tiles()-1;
+	auto no_tiles = document->m_background->tiles();
 
-	for(auto i = 0u; i < no_faces; ++i)
+	for(auto i = 0u; i < N; ++i)
 	{
 		if(selection.IsFaceSelected(i) == false)
 			continue;
 
 		glm::i16vec2  tl, br;
 		document->m_metaroom.GetFaceAABB(i, tl, br);
-		tl = glm::clamp((glm::ivec2(tl) + bgHalfSize) / 256, glm::ivec2(0), tilesInc);
-		br = glm::clamp(((glm::ivec2(br) + bgHalfSize) + 255) / 256, glm::ivec2(0), tilesInc);
 
-		for(auto x = tl.x; x <= br.x; ++x)
+		tl = glm::clamp((glm::ivec2(tl) + bgHalfSize) / 256, glm::ivec2(0), no_tiles);
+		br = glm::clamp(((glm::ivec2(br) + bgHalfSize) + 255) / 256, glm::ivec2(0), no_tiles);
+
+		for(auto y = tl.y; y < br.y; ++y)
 		{
-			for(auto y = tl.y; y <= br.y; ++y)
+			for(auto x = tl.x; x < br.x; ++x)
 			{
-				int j = y * (tilesInc.x+1) + x;
+				int j = y * (no_tiles.x) + x;
 				auto id = idToTile[j];
 
 				if(id.x < tasks.size())
@@ -184,7 +191,7 @@ void Histogram::Update(Shaders * shaders, Document * document)
 		   },
 		   .tiles={
 			  .buffer=depthBuffer,
-			  .offset=0,
+			  .offset=i*256,
 			  .size=256,
 		   },
 		});
@@ -220,6 +227,7 @@ void Histogram::operator()(Shaders * shaders, glm::uvec2 input_range, uint32_t o
 		   .histogramTexture=_texture,
 		   .histogramMaxValue=_buffers[HistogramRawRange],
 		   .displayRange={0, 65535},
+		   .highlightRange={0, 65535},
 		   .outputWidth=output_width,
 		   .color=glm::vec4(0.5, 0.5, 0.5, 1)
 	   });

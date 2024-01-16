@@ -529,6 +529,7 @@ void Metaroom::CommitMove(bool update_mvsf)
 	_prev = _verts.clone();
 	_tree.SetDirty(update_mvsf);
 	gl.SetDirty();
+	document->OnTransformed();
 }
 
 
