@@ -307,7 +307,6 @@ enter(Qt::Key_Z, this)
 	SetDocument(std::unique_ptr<Document>(new Document(this)));
 	setWindowTitle(tr("%1 - Map Editor").arg(document->Name()));
 
-	toolbox.AddFace({-552, -374}, {265, 419});
 // Load default walls
 }
 

@@ -33,7 +33,7 @@ GLViewWidget::GLViewWidget(QWidget * p) :
 	QOpenGLWidget(p),
 	timer(this)
 {
-	timer.setSingleShot(false);
+	timer.setSingleShot(true);
 	timer.setInterval(20);
 	connect(&timer, &QTimer::timeout, this, [this]() { repaint(); } );
 }
@@ -236,6 +236,13 @@ void GLViewWidget::wheelEvent(QWheelEvent * wheel)
 		super::wheelEvent(wheel);
 		return;
 	}
+
+	if(w->toolbox.wheelEvent(wheel))
+	{
+		need_repaint();
+		return;
+	}
+
 
 	if(wheel->modifiers() & Qt::ControlModifier)
 	{

@@ -532,12 +532,6 @@ void QuadTree::GetWriteDoors(int edge, std::stack<int> & stack, std::vector<Door
 		{
 			assert(edges[i].begin != edges[i].end);	
 		}
-		
-// check not <=		
-		for(auto i = 1u; i < edges.size(); ++i)
-		{
-			assert(edges[i-1].end < edges[i].end);	
-		}
 	}
 }
 

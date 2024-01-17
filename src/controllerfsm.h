@@ -7,6 +7,7 @@
 #include <cstdint>
 
 class MainWindow;
+class QWheelEvent;
 
 struct SliceInfo
 {
@@ -40,6 +41,7 @@ public:
 	ControllerFSM(MainWindow * window);
 	~ControllerFSM();
 
+	bool wheelEvent(QWheelEvent*event);
     void Release(Shaders * shaders);
 
     void Prepare(Shaders * shaders);
@@ -61,7 +63,7 @@ public:
 
 	bool OnMouseMove(glm::vec2, Bitwise);
 
-	void SetUpSlices(std::vector<SliceInfo> & slices, int edge, float percentage);
+	static std::vector<SliceInfo> SetUpSlices(Metaroom *, uint32_t edge, uint32_t noSlices, float percentage);
 	void CreateSlice(std::vector<SliceInfo> & slices, int edge, glm::ivec2 position);
 
 	bool AutoReseat();
@@ -90,10 +92,12 @@ private:
 	glm::i16vec2 xy_filter{1, 1};
 
 	State  m_state{State::None};
+	bool _sliceDirty{};
 
 	uint32_t m_vao[2]{};
 	uint32_t m_vbo[3]{};
     uint32_t m_sliceLength{};
+	uint32_t _noSlices{1};
 };
 
 #endif // CONTROLLERFSM_H

@@ -19,7 +19,7 @@ void BlitShader::Bind(QOpenGLFunctions * gl, BackgroundLayer layer, glm::uvec2 r
 	gl->glUniform1i(u_layer, (int)layer);
 }
 
-const char BlitShader::Vertex[] = SHADER(150,
+const char BlitShader::Vertex[] = SHADER(400,
 		layout(std140) uniform Matrices
 		{
 			mat4  u_projection;
@@ -29,6 +29,7 @@ const char BlitShader::Vertex[] = SHADER(150,
 
 		in vec3 a_vertex;
 		in vec2 a_texCoord0;
+		out vec2 v_position;
 
 		out vec2 v_texCoord0;
 		flat out int v_layer;
@@ -37,16 +38,18 @@ const char BlitShader::Vertex[] = SHADER(150,
 		{
 			gl_Position = u_projection * (u_modelview * vec4(a_vertex, 1.0));
 			v_texCoord0 = a_texCoord0;
+			v_position  = vec2(a_vertex);
 			v_layer = (gl_VertexID / 6) % 256;
 		});
 
-const char BlitShader::Fragment[] = SHADER(150,
+const char BlitShader::Fragment[] = SHADER(400,
 	uniform sampler2DArray u_texture;
 	uniform int u_layer;
 	uniform vec2 u_range;
 
 
 	in vec2 v_texCoord0;
+	in vec2 v_position;
 	flat in int v_layer;
 
 	out vec4 frag_color;
@@ -76,6 +79,10 @@ const char BlitShader::Fragment[] = SHADER(150,
 			frag_color = texture(u_texture, vec3(v_texCoord0, v_layer));
 			break;
 		}
+
+		if(int(abs(v_position.x)) % 256 == 0
+		|| int(abs(v_position.y)) % 256 == 0)
+			frag_color = vec4(1, 0, 0, 1);
 	});
 
 void BlitShader::Initialize(QOpenGLFunctions* gl, CompressedShaderSource & source)

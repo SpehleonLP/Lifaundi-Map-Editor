@@ -113,7 +113,7 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 	else
 	{
 		for(auto & item : _depth)
-			item = glm::u16vec2(0, 4 * USHRT_MAX / 64);
+			item = glm::u16vec2(0, 4096);
 	}
 
 	if(version <= VERSION_ADDED_MUSIC)
@@ -267,6 +267,8 @@ uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 
 			QCoreApplication::processEvents();
 		}
+
+		indicator->close();
 	}
 
 	coloring_thread.join();

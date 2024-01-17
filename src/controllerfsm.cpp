@@ -1,3 +1,4 @@
+#include "qevent.h"
 #include "src/Shaders/shaders.h"
 #include "controllerfsm.h"
 #include "commandlist.h"
@@ -312,6 +313,7 @@ bool ControllerFSM::SetTool(Tool tool)
 		m_state = State::SliceSet;
 		m_parent->SetMouseTracking(true);
 		xy_filter = glm::ivec2(1, 1);
+		_noSlices = 1;
 		break;
 	case Tool::Extrude:
 //		m_state = State::ExtrudeSet;
@@ -848,15 +850,31 @@ void ControllerFSM::CreateSlice(std::vector<SliceInfo> & slices, int edge, glm::
 	}
 }
 
-void ControllerFSM::SetUpSlices(std::vector<SliceInfo> & slices, int edge, float percentage)
+std::vector<SliceInfo> ControllerFSM::SetUpSlices(Metaroom * metaroom, uint32_t edge, uint32_t noSlices, float percentage)
 {
-	slices.resize(2);
-	slices[0].edge    = edge;
-	slices[0].vertex = m_parent->document->m_metaroom.GetPointOnEdge(m_slice[0].edge, percentage);
-	slices[0].setPercentage(percentage);
-	slices[1].edge    = Metaroom::GetOppositeEdge(edge);
-	slices[1].vertex = m_parent->document->m_metaroom.GetPointOnEdge(m_slice[1].edge, percentage);
-	slices[1].setPercentage(percentage);
+	std::vector<SliceInfo> slices(noSlices*2);
+
+	for(auto i = 0u; i < noSlices; ++i)
+	{
+		auto p = (i+1) / float(noSlices+1);
+
+		if(p < 0.5)
+			p = (p) * 2.0 * percentage;
+		else
+			p = percentage + (1.f - percentage) * (p - 0.5) * 2.0;
+
+		auto & s0 = slices[i*2+0];
+		auto & s1 = slices[i*2+1];
+
+		s0.edge    = edge;
+		s0.vertex = metaroom->GetPointOnEdge(s0.edge, p);
+		s0.setPercentage(p);
+		s1.edge    = Metaroom::GetOppositeEdge(edge);
+		s1.vertex = metaroom->GetPointOnEdge(s1.edge, p);
+		s1.setPercentage(p);
+	}
+
+	return slices;
 }
 
 void ControllerFSM::AddFace()
@@ -924,17 +942,20 @@ void ControllerFSM::Prepare(Shaders * shaders)
 	{
 		int edge =  m_parent->document->m_metaroom.GetSliceEdge(mouse_current_pos);
 
-		if(edge == slice_edge)
+		if(_sliceDirty == false
+		&& slice_edge == edge)
 			return;
 
 		if((slice_edge = edge) != -1)
-			SetUpSlices(m_slice, slice_edge, .5);
+			m_slice = SetUpSlices(&m_parent->document->m_metaroom, edge, _noSlices, .5);
 	}
 	else if(m_state == State::SliceBegin || m_state == State::SliceGravity)
 	{
 		assert(slice_edge >= 0);
-		SetUpSlices(m_slice, slice_edge, m_parent->document->m_metaroom.ProjectOntoEdge(slice_edge, mouse_current_pos));
-                m_parent->document->m_metaroom._selection.MarkFace(slice_edge/4);
+		auto percentage = m_parent->document->m_metaroom.ProjectOntoEdge(slice_edge, mouse_current_pos);
+
+		m_slice = SetUpSlices(&m_parent->document->m_metaroom, slice_edge, _noSlices, percentage);
+		m_parent->document->m_metaroom._selection.MarkFace(slice_edge/4);
 
 		CreateSlice(m_slice, m_slice[0].edge, m_slice[0].vertex);
 		CreateSlice(m_slice, m_slice[1].edge, m_slice[1].vertex);
@@ -1054,4 +1075,21 @@ void ControllerFSM::Render(Shaders * shaders)
 		}
         gl->glDrawArrays(GL_LINES, 0, m_slice.size());
 	}
+}
+
+bool ControllerFSM::wheelEvent(QWheelEvent*event)
+{
+	if(m_state == State::SliceSet)
+	{
+		if(event->angleDelta().y() > 0)
+				_noSlices += 1;
+		else if(event->angleDelta().y() < 0)
+				_noSlices -= 1;
+
+		_sliceDirty = true;
+		_noSlices = std::clamp<int>(_noSlices, 1, 9);
+		return true;
+	}
+
+	return false;
 }
