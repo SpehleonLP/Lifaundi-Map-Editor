@@ -55,6 +55,8 @@ public:
 		 int8_t  min_perm;
 		 int8_t  max_perm;
 		 uint8_t  padding{};
+
+		 uint32_t end() const { return index+length; }
 	};
 
 	struct Door

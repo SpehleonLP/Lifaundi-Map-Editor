@@ -83,8 +83,8 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 	}
 
 
-	fp.read((char*)&_gravity[0],  _gravity.byteLength());
-	fp.read((char*)&_roomType[0], _roomType.byteLength());
+	fp.read((char*)&_gravity[0],  4*no_faces);
+	fp.read((char*)&_roomType[0], no_faces);
 
 	if(version < VERSION_ADDED_SHADE)
 	{
@@ -95,9 +95,9 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 
 	if(version >= VERSION_ADDED_SHADE)
 	{
-		fp.read((char*)&_directionalShade[0], _directionalShade.byteLength());
-		fp.read((char*)&_ambientShade[0], _ambientShade.byteLength());
-		fp.read((char*)&_audio[0], _audio.byteLength());
+		fp.read((char*)&_directionalShade[0], 4*no_faces);
+		fp.read((char*)&_ambientShade[0], no_faces);
+		fp.read((char*)&_audio[0],  4*no_faces);
 	}
 	else
 	{
@@ -143,7 +143,16 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 	std::vector<QuadTree::Door>     door_list;
 //read permeability info
 	door_indices.resize(no_faces*4);
-	fp.read((char*)&door_indices[0], sizeof(QuadTree::DoorList) * door_indices.size());
+	fp.read((char*)&door_indices[0], sizeof(door_indices[0]) * door_indices.size());
+
+	for(auto i = 1u; i < door_indices.size(); ++i)
+	{
+		if(door_indices[i].index != door_indices[i-1].end())
+		{
+			qWarning("Problem reading door indices");
+			goto end;
+		}
+	}
 
 	door_list.resize(door_indices.back().index + door_indices.back().length);
 	fp.read((char*)&door_list[0], sizeof(door_list[0]) * door_list.size());
@@ -165,7 +174,7 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 
 	if(version >= VERSION_ADDED_MVSF)
 		_tree.ReadTree(fp);
-
+end:
 	PruneDegenerate();
 }
 
@@ -318,31 +327,39 @@ void Metaroom::Insert(std::vector<Room> const& list, std::vector<uint32_t> const
 	CommitMove();
 }
 
-std::vector<uint32_t> Metaroom::Slice(std::vector<SliceInfo> & slice)
+std::vector<uint32_t> Metaroom::Slice(SliceArray & slice)
 {
 	std::vector<uint32_t> face_list;
 	face_list.reserve(slice.size()/2);
 
-	for(size_t i = 0; i < slice.size(); i += 2)
-		face_list.push_back(slice[i].edge / 4);
+	for(size_t i = 0; i < slice.size(); ++i)
+		face_list.push_back(slice[i][0].edge / 4);
 
 	auto result = Duplicate(face_list);
 
-	for(auto  i = 0u; i < slice.size(); i += 2)
+	for(size_t i = 0, j = 0; i < slice.size(); i = j)
 	{
-		int j = result[i/2];
-		int e = slice[i].edge % 4;
+		const int e = slice[i][0].edge % 4;
 
-		_verts[j][e]         = slice[i  ].vertex;
-		_verts[j][(e+3) % 4] = slice[i+1].vertex;
+		int itr = result[i];
+
+		_verts[itr][e]         = slice[i][0].vertex;
+		_verts[itr][(e+3) % 4] = slice[i][1].vertex;
+
+		for(j = i+1; j < slice.size() && slice[j][0].edge == slice[i][0].edge; ++j)
+		{
+			itr = result[j];
+
+			_verts[itr][(e+1)%4] = slice[j-1][0].vertex;
+			_verts[itr][(e+2)%4] = slice[j-1][1].vertex;
+
+			_verts[itr][e]         = slice[j][0].vertex;
+			_verts[itr][(e+3) % 4] = slice[j][1].vertex;
+		}
+
+		std::swap(raw()[NextInEdge(slice[j-1][0].edge)], slice[j-1][0].vertex);
+		std::swap(raw()[slice[j-1][1].edge], slice[j-1][1].vertex);
 	}
-
-	for(size_t i = 0; i < slice.size(); i += 2)
-	{
-		std::swap(raw()[NextInEdge(slice[i].edge)], slice[i  ].vertex);
-		std::swap(raw()[slice[i+1].edge], slice[i+1].vertex);
-	}
-
 
 	return result;
 }

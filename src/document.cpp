@@ -244,7 +244,7 @@ glm::vec2 Document::GetDimensions() const
 	if(m_background == nullptr)
 	{
 		glm::vec4 dimensions = m_metaroom.GetDimensions();
-		return glm::max(-glm::vec2(dimensions.x, dimensions.y), glm::vec2(dimensions.z, dimensions.w));
+		return glm::min(glm::max(-glm::vec2(dimensions.x, dimensions.y), glm::vec2(dimensions.z, dimensions.w)) + 1024.f, float(1 << 14));
 	}
 
 	return glm::vec2(m_background->dimensions());

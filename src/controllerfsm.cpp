@@ -482,7 +482,7 @@ bool ControllerFSM::OnLeftUp(glm::vec2 position, Bitwise flags, bool alt)
 		else
 		{
 			m_state = State::SliceBegin;
-			slice_edge = m_slice.front().edge;
+			slice_edge = m_slice.front()[0].edge;
 		}
 		return true;
 
@@ -546,7 +546,7 @@ bool ControllerFSM::OnLeftUp(glm::vec2 position, Bitwise flags, bool alt)
 		else
 		{
 			m_state = State::SliceGravity;
-			slice_edge = m_slice.front().edge;
+			slice_edge = m_slice.front()[0].edge;
 		}
 		return true;
 	case State::SliceGravity:
@@ -559,29 +559,31 @@ bool ControllerFSM::OnLeftUp(glm::vec2 position, Bitwise flags, bool alt)
 		std::vector<uint32_t> list;
 		std::vector<uint32_t> values;
 
-		list.resize(m_slice.size()/2);
-		values.resize(m_slice.size()/2, 0);
+		list.resize(m_slice.size());
+		values.resize(m_slice.size(), 0);
 
 		int id = -1;
 
-		for(uint32_t i = 0; i < m_slice.size(); i += 2)
+		for(uint32_t i = 0; i < m_slice.size(); ++i)
 		{
-			list[i/2] = (m_slice[i].edge/4);
-			if(list[i/2] == (uint32_t)slice_edge/4)	id = i;
+			list[i] = (m_slice[i][0].edge/4);
+
+			if(list[i] == (uint32_t)slice_edge/4)
+				id = i;
 		}
 
 		assert(id != -1);
 
 		auto const& mta = m_parent->document->m_metaroom;
-		int edge = ((m_slice[id].percent <= m_slice[id+1].percent? m_slice[id].edge : m_slice[id+1].edge) + 5);
-		id       = edge - m_slice[id].edge;
+		int edge = ((m_slice[id][0].percent <= m_slice[id][1].percent? m_slice[id][0].edge : m_slice[id][1].edge) + 5);
+		id       = edge - m_slice[id][0].edge;
 
 		glm::vec2 gravity		= mta.MetaroomMemory::GetGravity(list[0]);
 		glm::vec2 floor_normal  = math::OrthoNormal(mta.GetEdge(slice_edge/4, edge));
 
 		for(uint32_t i = 0; i < list.size(); ++i)
 		{
-			glm::vec2 normal = math::OrthoNormal(mta.GetEdge(list[i], m_slice[i*2].edge+id));
+			glm::vec2 normal = math::OrthoNormal(mta.GetEdge(list[i], m_slice[i][0].edge+id));
 
 			auto mat = math::GetRotation(floor_normal, normal);
 			glm::vec2 grav = mat * glm::vec3(gravity, 1);
@@ -623,7 +625,7 @@ bool ControllerFSM::OnFinish()
 		else
 		{
 			m_state = State::SliceBegin;
-			slice_edge = m_slice.front().edge;
+			slice_edge = m_slice.front()[0].edge;
 		}
 		return true;
 
@@ -667,7 +669,7 @@ bool ControllerFSM::OnFinish()
 		else
 		{
 			m_state = State::SliceGravity;
-			slice_edge = m_slice.front().edge;
+			slice_edge = m_slice.front()[0].edge;
 		}
 		return true;
 	default:
@@ -811,12 +813,23 @@ bool ControllerFSM::OnMouseMove(glm::vec2 p, Bitwise flags)
 	return false;
 }
 
-void ControllerFSM::CreateSlice(std::vector<SliceInfo> & slices, int edge, glm::ivec2 position)
+ControllerFSM::SliceArray ControllerFSM::CreateSlice(Metaroom & metaroom, SliceRoom const& room, bool)
 {
-    auto & selection = m_parent->document->m_metaroom._selection;
-	bool selected = selection.IsFaceSelected(edge / 4);
+	std::vector<SliceRoom> slice;
 
-	auto & metaroom = m_parent->document->m_metaroom;
+	metaroom._selection.MarkFace(room[0].edge/4);
+	slice.push_back(room);
+	CreateSlice(slice, metaroom, room[0].edge, room[0].vertex);
+	CreateSlice(slice, metaroom, room[1].edge, room[1].vertex);
+	metaroom._selection.ClearMarks();
+
+	return slice;
+}
+
+void ControllerFSM::CreateSlice(SliceArray & result, Metaroom & metaroom, int edge, glm::ivec2 position)
+{
+	auto & selection = metaroom._selection;
+	bool selected = selection.IsFaceSelected(edge / 4);
 
 	float mid;
 	int original_edge = edge;
@@ -834,25 +847,26 @@ void ControllerFSM::CreateSlice(std::vector<SliceInfo> & slices, int edge, glm::
 		if(selection.MarkFace(edge/4) == false)
 		{
 			if(original_edge == edge)
-				slices[0].vertex = slices.back().vertex;
+				result.front()[0].vertex = result.back()[1].vertex;
 			else if(original_edge == Metaroom::GetOppositeEdge(edge))
-				slices[1].vertex = slices.back().vertex;
+				result.front()[1].vertex = result.back()[1].vertex;
 
 			return;
 		}
 
-		slices.push_back({edge, position, mid});
-
+		SliceRoom room;
+		room[0] = {edge, position, mid};
 		edge     = Metaroom::GetOppositeEdge(edge);
 		position = metaroom.GetPointOnEdge(edge, mid);
+		room[1] = {edge, position, mid};
 
-		slices.push_back({edge, position, mid});
+		result.push_back(room);
 	}
 }
 
-std::vector<SliceInfo> ControllerFSM::SetUpSlices(Metaroom * metaroom, uint32_t edge, uint32_t noSlices, float percentage)
+ControllerFSM::SliceArray ControllerFSM::SetUpSlices(Metaroom * metaroom, uint32_t edge, uint32_t noSlices, float percentage)
 {
-	std::vector<SliceInfo> slices(noSlices*2);
+	std::vector<SliceRoom> slices(noSlices);
 
 	for(auto i = 0u; i < noSlices; ++i)
 	{
@@ -863,8 +877,8 @@ std::vector<SliceInfo> ControllerFSM::SetUpSlices(Metaroom * metaroom, uint32_t 
 		else
 			p = percentage + (1.f - percentage) * (p - 0.5) * 2.0;
 
-		auto & s0 = slices[i*2+0];
-		auto & s1 = slices[i*2+1];
+		auto & s0 = slices[i][0];
+		auto & s1 = slices[i][1];
 
 		s0.edge    = edge;
 		s0.vertex = metaroom->GetPointOnEdge(s0.edge, p);
@@ -954,19 +968,31 @@ void ControllerFSM::Prepare(Shaders * shaders)
 		assert(slice_edge >= 0);
 		auto percentage = m_parent->document->m_metaroom.ProjectOntoEdge(slice_edge, mouse_current_pos);
 
-		m_slice = SetUpSlices(&m_parent->document->m_metaroom, slice_edge, _noSlices, percentage);
-		m_parent->document->m_metaroom._selection.MarkFace(slice_edge/4);
+		auto slice_array = SetUpSlices(&m_parent->document->m_metaroom, slice_edge, _noSlices, percentage);
 
-		CreateSlice(m_slice, m_slice[0].edge, m_slice[0].vertex);
-		CreateSlice(m_slice, m_slice[1].edge, m_slice[1].vertex);
-                m_parent->document->m_metaroom._selection.ClearMarks();
 
-		if(m_state != State::SliceGravity)
+		bool needSort = (m_state != State::SliceGravity);
+
+		m_slice.clear();
+		if(m_slice.empty()) m_slice.reserve(16);
+
+		for(auto i = 0u; i < slice_array.size(); ++i)
+		{
+			auto result = CreateSlice(m_parent->document->m_metaroom, slice_array[i], needSort);
+			m_slice.insert(m_slice.end(), result.begin(), result.end());
+		}
+
+		if(needSort)
+		{
 			std::sort(m_slice.begin(), m_slice.end(),
-				[](SliceInfo const& a, SliceInfo const& b)
+					  [](auto const& a, auto const& b)
 				{
-					return a.edge < b.edge;
+					if(a[0].edge != b[0].edge)
+						return a[0].edge < b[0].edge;
+
+					return a[0].percent < b[0].percent;
 				});
+		}
 	}
 
 	if(m_vao[0] == 0)
@@ -987,7 +1013,7 @@ void ControllerFSM::Prepare(Shaders * shaders)
         gl->glBindVertexArray(m_vao[1]);
         gl->glBindBuffer(GL_ARRAY_BUFFER, m_vbo[2]);
 
-        gl->glVertexAttribIPointer(0, 2, GL_INT, sizeof(SliceInfo), (void*) offsetof(SliceInfo, vertex));
+		gl->glVertexAttribIPointer(0, 2, GL_INT, sizeof(SliceEdge), (void*) offsetof(SliceEdge, vertex));
         gl->glEnableVertexAttribArray(0);
 
 	}
@@ -1073,7 +1099,7 @@ void ControllerFSM::Render(Shaders * shaders)
 			gl->glLineWidth(2);
 			shaders->uniformColorShader.Bind(gl, 0.f, 1.f, 1.f, 1.f);
 		}
-        gl->glDrawArrays(GL_LINES, 0, m_slice.size());
+		gl->glDrawArrays(GL_LINES, 0, m_slice.size()*2);
 	}
 }
 
@@ -1087,7 +1113,7 @@ bool ControllerFSM::wheelEvent(QWheelEvent*event)
 				_noSlices -= 1;
 
 		_sliceDirty = true;
-		_noSlices = std::clamp<int>(_noSlices, 1, 9);
+		_noSlices = std::clamp<int>(_noSlices, 1, 99);
 		return true;
 	}
 

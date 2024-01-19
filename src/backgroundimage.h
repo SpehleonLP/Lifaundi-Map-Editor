@@ -41,6 +41,19 @@ public:
     BackgroundImage(Shaders * shaders, std::string const& filename);
 	~BackgroundImage();
 
+	uint32_t pxPerMeter() const
+	{
+		switch(m_type)
+		{
+		default: break;
+		case Type::Creatures1:
+		case Type::Creatures2:
+		case Type::Creatures3:
+			return 72;
+		}
+		return 256;
+	}
+
     void Release(Shaders * shaders);
 	void Render(Shaders * gl, glm::uvec2 range);
 

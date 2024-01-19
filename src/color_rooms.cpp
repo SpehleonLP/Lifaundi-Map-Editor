@@ -201,7 +201,7 @@ std::vector<std::vector<ColorRooms::StackFrame>>  ColorRooms::GetIslands() const
 	// iterate over each thing
 				for(range.setRoom(island[j]); !range.empty(); range.popFront())
 				{
-					if(std::find(sorted_island.rbegin(), sorted_island.rend(), island[j]) != sorted_island.rend())
+					if(std::find(sorted_island.rbegin(), sorted_island.rend(), range.front()) != sorted_island.rend())
 					{
 						sorted_island.push_back({island[j], 0});
 						island.erase(island.begin() + j);
@@ -209,6 +209,8 @@ std::vector<std::vector<ColorRooms::StackFrame>>  ColorRooms::GetIslands() const
 					}
 				}
 			}
+
+			assert(false);
 
 repeat:
 			(void)0;

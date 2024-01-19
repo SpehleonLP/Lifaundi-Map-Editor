@@ -8,7 +8,7 @@
 
 class Metaroom;
 class Document;
-struct SliceInfo;
+struct SliceEdge;
 
 class CommandInterface
 {
@@ -72,7 +72,8 @@ private:
 class SliceCommand : public CommandInterface
 {
 public:
-	SliceCommand(Document * document, std::vector<SliceInfo> && slice);
+typedef std::array<SliceEdge, 2> SliceRoom;
+	SliceCommand(Document * document, std::vector<SliceRoom> && slice);
 	virtual ~SliceCommand() = default;
 
 	void RollForward();
@@ -80,7 +81,7 @@ public:
 
 private:
 	Metaroom *                    metaroom;
-	std::vector<SliceInfo>        slice;
+	std::vector<SliceRoom>        slice;
 	std::vector<uint32_t>		  indices;
 };
 

@@ -53,17 +53,21 @@ void QuadTree::Rebuild()
 
 	std::unique_ptr<Leaf[]> leaves(new Leaf[m_metaroom->noFaces()]);
 
+	auto leaf = leaves.get();
+
 	for(auto i : m_metaroom->range())
 	{
 		m_metaroom->GetFaceAABB(i, min, max);
 
-		leaves[i].face_id = i;
-		leaves[i].z_order = math::GetZOrder(glm::ivec2(min.x + max.x + bounds.x, min.y + max.y + bounds.y)/2);
-		leaves[i].min     = min;
-		leaves[i].max     = max;
+		leaf->face_id = i;
+		leaf->z_order = math::GetZOrder(glm::ivec2(min.x + max.x + bounds.x, min.y + max.y + bounds.y)/2);
+		leaf->min     = min;
+		leaf->max     = max;
+
+		++leaf;
 	}
 
-	std::sort(&leaves[0], &leaves[0] + size,
+	std::sort(&leaves[0], leaf,
 		[](const Leaf & a, const Leaf & b)
 			{ return a.z_order < b.z_order; });
 

@@ -84,7 +84,7 @@ void InsertCommand::RollBack()
 
 
 
-SliceCommand::SliceCommand(Document * document, std::vector<SliceInfo> && _slice) :
+SliceCommand::SliceCommand(Document * document, std::vector<SliceRoom> && _slice) :
 	metaroom(&document->m_metaroom),
 	slice(std::move(_slice))
 {
@@ -98,14 +98,14 @@ void SliceCommand::RollForward()
 
 	metaroom->_selection.clear();
 
-	for(size_t i = 0; i < slice.size(); i += 2)
+	for(size_t i = 0; i < slice.size(); ++i)
 	{
-		int j = indices[i/2];
+		int j = indices[i];
 
-		int e = slice[i].edge % 4;
+		int e = slice[i][0].edge % 4;
 
-		metaroom->_selection.select_vertex(Metaroom::NextInEdge(slice[i].edge), Bitwise::OR);
-		metaroom->_selection.select_vertex(slice[i+1].edge, Bitwise::OR);
+		metaroom->_selection.select_vertex(Metaroom::NextInEdge(slice[i][0].edge), Bitwise::OR);
+		metaroom->_selection.select_vertex(slice[i][1].edge, Bitwise::OR);
 
 		metaroom->_selection.select_vertex(j*4 + e, Bitwise::OR);
 		metaroom->_selection.select_vertex(j*4 + (e+3)%4, Bitwise::OR);
@@ -114,19 +114,19 @@ void SliceCommand::RollForward()
 
 void SliceCommand::RollBack()
 {
-	for(size_t i = 0; i < slice.size(); i += 2)
+	for(size_t i = 0; i < slice.size(); ++i)
 	{
-		std::swap(metaroom->verts(Metaroom::NextInEdge(slice[i].edge)), slice[i  ].vertex);
-		std::swap(metaroom->verts(slice[i+1].edge), slice[i+1].vertex);
+		std::swap(metaroom->verts(Metaroom::NextInEdge(slice[i][0].edge)), slice[i][0].vertex);
+		std::swap(metaroom->verts(slice[i][1].edge), slice[i][1].vertex);
 	}
 
 	metaroom->RemoveFaces(indices);
 	metaroom->CommitMove();
 	metaroom->_selection.clear();
 
-	for(uint i = 0; i < slice.size(); i += 2)
+	for(uint i = 0; i < slice.size(); ++i)
 	{
-		metaroom->_selection.select_face(slice[i].edge / 4, Bitwise::OR);
+		metaroom->_selection.select_face(slice[i][0].edge / 4, Bitwise::OR);
 	}
 }
 

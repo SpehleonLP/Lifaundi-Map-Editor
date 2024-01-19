@@ -1,6 +1,7 @@
 #include "document.h"
 #include "glviewwidget.h"
 #include "mainwindow.h"
+#include "src/backgroundimage.h"
 #include "ui_mainwindow.h"
 #include "Shaders/shaders.h"
 #include "lib/qt-gl/initialize_gl.h"
@@ -366,6 +367,9 @@ void GLViewWidget::paintGL()
 
 	mat.u_ctime = time / 1000;
 	mat.u_zoom  = w->GetZoom();
+	mat.u_pad[0]  = w->document->m_background?
+				w->document->m_background->pxPerMeter() :
+				256;
 
 	glBindBuffer(GL_UNIFORM_BUFFER, m_ubo);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrices), &mat);

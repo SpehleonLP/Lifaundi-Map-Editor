@@ -24,7 +24,8 @@ const char BlitShader::Vertex[] = SHADER(400,
 		{
 			mat4  u_projection;
 			mat4  u_modelview;
-			ivec2 u_screenSize;
+			ivec4 u_screenSize;
+			vec4  u_misc;
 		};
 
 		in vec3 a_vertex;
@@ -42,9 +43,22 @@ const char BlitShader::Vertex[] = SHADER(400,
 			v_layer = (gl_VertexID / 6) % 256;
 		});
 
-const char BlitShader::Fragment[] = SHADER(400,
+const char BlitShader::Fragment[] = SHADER(400, )
+	"#define u_time u_misc.x\n"
+	"#define u_zoom u_misc.y\n"
+	"#define u_pxPerMeter int(u_misc.z)\n"
+TEXT(
+   layout(std140) uniform Matrices
+   {
+	   mat4  u_projection;
+	   mat4  u_modelview;
+	   ivec4 u_screenSize;
+	   vec4  u_misc;
+   };
+
 	uniform sampler2DArray u_texture;
 	uniform int u_layer;
+	uniform float u_invZoom;
 	uniform vec2 u_range;
 
 
@@ -80,8 +94,8 @@ const char BlitShader::Fragment[] = SHADER(400,
 			break;
 		}
 
-		if(int(abs(v_position.x)) % 256 == 0
-		|| int(abs(v_position.y)) % 256 == 0)
+		if(int(abs(v_position.x)) % u_pxPerMeter <= int(1.f / u_zoom)
+		|| int(abs(v_position.y)) % u_pxPerMeter <= int(1.f / u_zoom))
 			frag_color = vec4(1, 0, 0, 1);
 	});
 

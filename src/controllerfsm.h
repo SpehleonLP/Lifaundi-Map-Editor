@@ -9,10 +9,10 @@
 class MainWindow;
 class QWheelEvent;
 
-struct SliceInfo
+struct SliceEdge
 {
-	SliceInfo() = default;
-	SliceInfo(int edge, glm::ivec2 vertex, float percentage, int uuid = -1) :
+	SliceEdge() = default;
+	SliceEdge(int edge, glm::ivec2 vertex, float percentage, int uuid = -1) :
 		edge(edge),
 		vertex(vertex),
 		type(0),
@@ -38,6 +38,8 @@ class Shaders;
 class ControllerFSM
 {
 public:
+	typedef std::array<SliceEdge, 2> SliceRoom;
+	typedef std::vector<std::array<SliceEdge, 2>> SliceArray;
 	ControllerFSM(MainWindow * window);
 	~ControllerFSM();
 
@@ -63,12 +65,13 @@ public:
 
 	bool OnMouseMove(glm::vec2, Bitwise);
 
-	static std::vector<SliceInfo> SetUpSlices(Metaroom *, uint32_t edge, uint32_t noSlices, float percentage);
-	void CreateSlice(std::vector<SliceInfo> & slices, int edge, glm::ivec2 position);
+	static SliceArray SetUpSlices(Metaroom *, uint32_t edge, uint32_t noSlices, float percentage);
+	static SliceArray CreateSlice(Metaroom & metaroom, SliceRoom const& slice, bool need_sort);
+	static void CreateSlice(SliceArray & result, Metaroom & metaroom, int edge, glm::ivec2 position);
 
 	bool AutoReseat();
 
-	std::vector<SliceInfo> m_slice;
+	SliceArray m_slice;
 	std::vector<uint32_t>  m_ordering;
 
 	int slice_edge{-1};

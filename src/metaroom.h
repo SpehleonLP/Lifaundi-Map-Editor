@@ -37,6 +37,9 @@ class Document;
 class Metaroom : public MetaroomMemory
 {
 public:
+typedef std::array<SliceEdge, 2> SliceRoom;
+typedef std::vector<SliceRoom> SliceArray;
+
 	enum
 	{
 		VERSION_STILL_HAVE_SIZE=2,
@@ -83,7 +86,7 @@ public:
 	void Read(MainWindow * window, std::ifstream &, size_t offset);
 	uint32_t Write(MainWindow * window, std::ofstream &);
 
-	std::vector<uint32_t> Slice(std::vector<SliceInfo> & slice);
+	std::vector<uint32_t> Slice(SliceArray &slice);
 
 	inline int GetFace(glm::ivec2 position) const { return _tree.GetFace(position); }
 	int        GetSliceEdge(glm::ivec2 p) const;
