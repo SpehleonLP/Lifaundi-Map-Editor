@@ -108,7 +108,7 @@ void Histogram::Update(Shaders * shaders, Document * document, glm::ivec4 AABB)
 
 void Histogram::Update(Shaders * shaders, Document * document)
 {
-	RenderDocCaptureRAII raii("Compute Room Histogram", true);
+//	RenderDocCaptureRAII raii("Compute Room Histogram", true);
 
 	auto gl = shaders->gl;
 

@@ -132,6 +132,9 @@ typedef std::vector<SliceRoom> SliceArray;
 	std::string TestTreeSymmetry();
 	std::string TestDoorSymmetry();
 
+	std::vector<std::pair<glm::vec4, float>> GetPermTable() const;
+	void SetPermTable(std::vector<std::pair<glm::vec4, float>> const&);
+
 
 };
 

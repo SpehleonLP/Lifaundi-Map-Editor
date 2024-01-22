@@ -47,6 +47,7 @@ const char BlitShader::Fragment[] = SHADER(400, )
 	"#define u_time u_misc.x\n"
 	"#define u_zoom u_misc.y\n"
 	"#define u_pxPerMeter int(u_misc.z)\n"
+	"#define u_grid (int(u_misc.w) & 0x01)\n"
 TEXT(
    layout(std140) uniform Matrices
    {
@@ -94,8 +95,9 @@ TEXT(
 			break;
 		}
 
-		if(int(abs(v_position.x)) % u_pxPerMeter <= int(1.f / u_zoom)
-		|| int(abs(v_position.y)) % u_pxPerMeter <= int(1.f / u_zoom))
+		if(u_grid != 0
+		&&(int(abs(v_position.x)) % u_pxPerMeter <= int(1.f / u_zoom)
+		|| int(abs(v_position.y)) % u_pxPerMeter <= int(1.f / u_zoom)))
 			frag_color = vec4(1, 0, 0, 1);
 	});
 

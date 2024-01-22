@@ -978,3 +978,32 @@ void Metaroom::PruneDegenerate()
 	RemoveFaces(degenerate_faces);
 	LOG_F(INFO, "pruned %i degenerate faces\n", (int)degenerate_faces.size());
 }
+
+std::vector<std::pair<glm::vec4, float>> Metaroom::GetPermTable() const
+{
+	std::vector<std::pair<glm::vec4, float>> map;
+
+	for(auto & itr : _permeabilities )
+	{
+		glm::vec4 x;
+		(glm::vec2&)x.x = GetCenter(((uint32_t*)(&itr.first))[0]);
+		(glm::vec2&)x.z = GetCenter(((uint32_t*)(&itr.first))[1]);
+		map.emplace_back(x, itr.second);
+	}
+
+	return map;
+}
+
+void Metaroom::SetPermTable(std::vector<std::pair<glm::vec4, float>> const& map)
+{
+	_permeabilities.clear();
+
+	for(auto item : map)
+	{
+		_permeabilities.emplace(
+					GetDoorKey(_tree.GetFace(item.first), _tree.GetFace((glm::vec2&)item.first.z)),
+					item.second);
+	}
+
+
+}

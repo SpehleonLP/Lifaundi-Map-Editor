@@ -46,7 +46,8 @@ void HistogramWidget::initializeGL()
 	if(_initialized) return;
 	_initialized = true;
 
-	w->ui->viewWidget->initializeGL();
+	assert(w->ui->viewWidget->initialized());
+
 
 	makeCurrent();
 	_shaders = w->ui->viewWidget->_shaders;

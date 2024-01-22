@@ -332,6 +332,7 @@ void GLViewWidget::paintGL()
 
 	w->SetStatusBarMessage(GetWorldPosition());
 
+	makeCurrent();
 
 	glActiveTexture(GL_TEXTURE10);
 	glBindTexture(GL_TEXTURE_1D, permeabilities);

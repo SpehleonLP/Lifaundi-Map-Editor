@@ -83,10 +83,45 @@ void MVSF_sampler::AssignInternalRoomIds()
 
 std::vector<glm::i16vec4> MVSF_sampler::GetBoundingBoxes() const
 {
-	std::vector<glm::i16vec4> r(m_metaroom->noFaces());
+	glm::i16vec4 _default{SHRT_MAX, SHRT_MAX, SHRT_MIN, SHRT_MIN};
+	std::vector<glm::i16vec4> r(m_metaroom->noFaces(), _default);
+
+	glm::i16vec2 i;
+	for(i.y = 0; i.y < m_size.y; ++i.y)
+	{
+		for(i.x = 0; i.x < m_size.x; ++i.x)
+		{
+			uint32_t j = m_pixels[i.y*m_size.x + i.x].room_id;
+
+			if(j < r.size())
+			{
+				(glm::i16vec2&)(r[j].x) = glm::min((glm::i16vec2&)r[j].x, i);
+				(glm::i16vec2&)(r[j].z) = glm::max((glm::i16vec2&)r[j].z, i);
+			}
+		}
+	}
 
 	for(uint32_t i = 0; i < r.size(); ++i)
-		r[i] = GetBoundingBox(i);
+	{
+		auto & min = (glm::i16vec2&)(r[i].x);
+		auto & max = (glm::i16vec2&)(r[i].z);
+
+		glm::i16vec2 min2, max2;
+		m_metaroom->GetFaceAABB(i, min2, max2);
+
+		if(min.x > max.x)
+		{
+			min = min2;
+			max = max2;
+			continue;
+		}
+
+		min = glm::ivec2(min - (short)1) * (int)m_stride + glm::ivec2(m_bounds.x, m_bounds.y);
+		max = glm::ivec2(max + (short)1) * (int)m_stride + glm::ivec2(m_bounds.x, m_bounds.y);
+
+		min = glm::min(min, min2);
+		max = glm::max(max, max2);
+	}
 
 	return r;
 }

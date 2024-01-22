@@ -29,9 +29,11 @@ private:
 	uniform_t u_vertices;
 	uniform_t u_color;
 
-	uint32_t  _vao;
+	uint32_t  _vao{};
 	uint32_t  _vbo[3];
 	uint32_t  _count;
+
+	void * createdWith{};
 };
 
 #endif // ARROWSHADER_H

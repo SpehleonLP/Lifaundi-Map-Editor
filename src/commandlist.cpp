@@ -139,19 +139,28 @@ ReorderCommand::ReorderCommand(Document * document, std::vector<uint32_t> && ord
 
 void ReorderCommand::RollForward()
 {
+	auto table = metaroom->GetPermTable();
+
 	std::vector<uint32_t> tmp = indices;
 	std::sort(tmp.begin(), tmp.end());
 
 	original_rooms = Clipboard::Extract(metaroom, indices);
 
+
 	metaroom->RemoveFaces(tmp);
 	metaroom->Insert(original_rooms, tmp);
+
+	metaroom->SetPermTable(table);
 }
 
 void ReorderCommand::RollBack()
 {
+	auto table = metaroom->GetPermTable();
+
 	metaroom->RemoveFaces(indices);
 	metaroom->Insert(original_rooms, indices);
+
+	metaroom->SetPermTable(table);
 
 	original_rooms.clear();
 }

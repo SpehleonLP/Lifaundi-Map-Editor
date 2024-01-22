@@ -32,6 +32,8 @@ public:
 	void upload_permeabilitys(uint8_t * table, int size);
 	Shaders * shaders() const { return _shaders.get(); }
 
+	bool initialized() const { return _initialized; }
+
 private:
 friend class HistogramWidget;
 	void mouseMoveEvent 		(QMouseEvent * event)	Q_DECL_OVERRIDE;
