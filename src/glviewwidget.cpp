@@ -371,6 +371,7 @@ void GLViewWidget::paintGL()
 	mat.u_pad[0]  = w->document->m_background?
 				w->document->m_background->pxPerMeter() :
 				256;
+	mat.u_pad[1] = w->viewGrid();
 
 	glBindBuffer(GL_UNIFORM_BUFFER, m_ubo);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrices), &mat);

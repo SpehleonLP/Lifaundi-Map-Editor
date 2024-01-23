@@ -66,6 +66,7 @@ public:
     bool viewRooms() const;
     bool viewHalls() const;
     bool viewLinks() const;
+	bool viewGrid() const;
 	bool viewGravity() const;
 
 	bool SetAsterisk(bool);

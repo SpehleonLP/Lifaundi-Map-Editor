@@ -28,6 +28,9 @@ public:
 	__always_inline glm::ivec2 GetNextVertex(int i) const { return raw()[(i & 0xFFFFFFFC) + ((i+1)&0x03)]; }
 	__always_inline glm::ivec2 GetVertex(int i) const { return raw()[i]; }
 	__always_inline glm::ivec2 GetEdge(int i) const { return _verts[i >> 2][(i+1)&3] - _verts[i >> 2][i&3]; }
+	__always_inline glm::vec2 GetRay(int i) const { return glm::normalize(glm::vec2(GetEdge(i))); }
+	__always_inline glm::vec2 GetNormal(int i, int j) const { auto p = glm::normalize(glm::vec2(GetEdge(i, j))); return {-p.y, p.x}; }
+
 
 	__always_inline glm::ivec2 GetVertex(int i, int j) const { return _verts[i][j&0x03]; }
 	__always_inline glm::ivec2 GetEdge(int i, int j) const { return GetVertex(i, j+1) - GetVertex(i, j); }

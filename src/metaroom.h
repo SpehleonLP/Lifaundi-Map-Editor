@@ -51,6 +51,7 @@ typedef std::vector<SliceRoom> SliceArray;
 	};
 
 	static int NextInEdge(int id) { return (id & 0xFFFFFFFC) + ((id+1) & 0x03); }
+	static int PrevInEdge(int id) { return (id & 0xFFFFFFFC) + ((id+3) & 0x03); }
 	static int GetOppositeEdge(int id) { return id ^ 0x02; }
 
 	MetaroomGL gl{*this};

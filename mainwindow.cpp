@@ -90,6 +90,7 @@ enter(Qt::Key_Z, this)
 	connect(ui->editCopy,        &QAction::triggered,  this, [this]() { document->Copy(); } );
 	connect(ui->editCut,         &QAction::triggered,  this, [this]() { document->Copy(); document->Delete(); });
     connect(ui->editDelete,      &QAction::triggered,  this, [this]() { document->Delete(); } );
+	connect(ui->editDissolve,      &QAction::triggered,  this, [this]() { document->Dissolve(); } );
     connect(ui->editPaste,       &QAction::triggered,  this, [this]() {
 
 		document->Paste(ui->viewWidget->GetWorldPosition());
@@ -177,6 +178,7 @@ enter(Qt::Key_Z, this)
     connect(ui->viewHalls,       &QAction::triggered, ui->viewWidget, &GLViewWidget::need_repaint);
     connect(ui->viewLinks,       &QAction::triggered, ui->viewWidget, &GLViewWidget::need_repaint);
     connect(ui->viewRooms,       &QAction::triggered, ui->viewWidget, &GLViewWidget::need_repaint);
+	connect(ui->viewGrid,       &QAction::triggered, ui->viewWidget, &GLViewWidget::need_repaint);
     connect(ui->zoomActual,      &QAction::triggered,  this, [this]()
 	{
 		SetZoom(.5f);
@@ -918,6 +920,7 @@ bool MainWindow::viewChecker() const { return ui->viewChecker->isChecked(); }
 bool MainWindow::viewRooms() const { return ui->viewRooms->isChecked(); }
 bool MainWindow::viewHalls() const { return ui->viewHalls->isChecked(); }
 bool MainWindow::viewLinks() const { return ui->viewLinks->isChecked(); }
+bool MainWindow::viewGrid() const { return ui->viewGrid->isChecked(); }
 bool MainWindow::viewGravity() const { return ui->viewGravity->isChecked(); }
 
 

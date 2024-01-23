@@ -116,6 +116,13 @@ namespace math
 			&& v0.y < u.y && u.y < v1.y;
 	}
 
+	template<typename U, typename V, glm::qualifier Q=glm::highp>
+	inline bool boxContainsInclusive(glm::vec<2, U, Q> u, glm::vec<2, V, Q> v0, glm::vec<2, V, Q> v1)
+	{
+		return v0.x <= u.x && u.x <= v1.x
+			&& v0.y <= u.y && u.y <= v1.y;
+	}
+
 	template<typename T, glm::qualifier Q=glm::highp>
 	inline float LineDistanceSquared(glm::vec<2, T, Q> v0, glm::vec<2, T, Q> v1, glm::vec<2, T, Q> pos)
 	{
@@ -129,16 +136,22 @@ namespace math
 	}
 
 	template<typename T, glm::qualifier Q=glm::highp>
-	inline float SemgentDistanceSquared(glm::vec<2, T, Q> v0, glm::vec<2, T, Q> v1, glm::vec<2, T, Q> pos)
+	inline glm::vec2 SemgentDistanceVector(glm::vec<2, T, Q> v0, glm::vec<2, T, Q> v1, glm::vec<2, T, Q> pos)
 	{
 		glm::vec<2, T, Q> distance = v1 -  v0;
 		const float l2 = math::length2(distance);
-		if(l2 == 0) return math::length2(pos - v0);
+		if(l2 == 0) return (pos - v0);
 		float t  = math::dot(pos - v0, distance) / l2;
 		t = std::max(0.f, std::min(t, 1.f));
 		const glm::vec2 projection = glm::vec2(v0) + t * glm::vec2(distance);
 
-		return math::length2(glm::vec2(pos) - projection);
+		return glm::vec2(pos) - projection;
+	}
+
+	template<typename T, glm::qualifier Q=glm::highp>
+	inline float SemgentDistanceSquared(glm::vec<2, T, Q> v0, glm::vec<2, T, Q> v1, glm::vec<2, T, Q> pos)
+	{
+		return math::length2(SemgentDistanceVector(v0, v1, pos));
 	}
 
 	inline uint32_t GetZOrder(uint32_t x, uint32_t y)

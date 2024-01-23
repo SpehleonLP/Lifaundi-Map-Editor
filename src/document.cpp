@@ -43,6 +43,29 @@ void Document::Delete()
 	m_window->ui->viewWidget->need_repaint();
 }
 
+void Document::Dissolve()
+{
+	std::vector<uint32_t> selection = m_metaroom._selection.GetFaceSelection();
+	std::vector<uint32_t> edge_selection = m_metaroom._selection.GetEdgeSelection();
+
+	auto read = 0u, write = 0u;
+	for(; read < edge_selection.size(); ++read)
+	{
+		if(m_metaroom._selection.IsFaceSelected(edge_selection[read]/4))
+			continue;
+
+		edge_selection[write] = edge_selection[read];
+	}
+
+	edge_selection.resize(write);
+
+	if(selection.size() || edge_selection.size())
+		PushCommand(new DissolveCommand(this, std::move(selection), std::move(edge_selection)));
+
+	m_window->ui->viewWidget->need_repaint();
+}
+
+
 void Document::Copy()
 {
 	auto vec = Clipboard::Extract(&m_metaroom);

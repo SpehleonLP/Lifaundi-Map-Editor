@@ -152,9 +152,14 @@ bool MetaroomSelection::ToggleSelectAll(Range range, Bitwise flags)
 
 	for(auto i : range)
 	{
-		bool is_selected = IsVertSelected(i);
-		select_vertex(i, flags);
-		changed |= (IsVertSelected(i) != is_selected);
+		for(int corner = 0; corner < 4; ++corner)
+		{
+			auto j = i*4+corner;
+
+			bool is_selected = IsVertSelected(j);
+			select_vertex(j, flags);
+			changed |= (IsVertSelected(j) != is_selected);
+		}
 	}
 
 	if(changed == false)
@@ -172,7 +177,7 @@ void MetaroomSelection::select_vertex(int id, Bitwise flags)
 	{
 	case Bitwise::SET:  vertex(id)  =  1;	break;
 	case Bitwise::AND:	vertex(id) |=  1;	break;
-	case Bitwise::OR:   vertex(id)  =  1;	break;
+	case Bitwise::OR:   vertex(id) |=  1;	break;
 	case Bitwise::XOR:  vertex(id) ^=  1;	break;
 	case Bitwise::NOT:	vertex(id) &=  0xFE;	break;
 	}

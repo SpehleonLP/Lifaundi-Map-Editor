@@ -46,6 +46,7 @@ public:
 	bool Redo();
 	void Copy();
 	void Delete();
+	void Dissolve();
 	void Reseat();
 	void Paste(glm::vec2 center);
 	void Duplicate(glm::vec2 center);

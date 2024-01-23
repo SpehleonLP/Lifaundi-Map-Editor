@@ -96,12 +96,20 @@ public:
 
 	bool DoesOverlap(glm::ivec2 min, glm::ivec2 max);
 
+	struct VertexQuery
+	{
+		uint32_t face : 30;
+		uint32_t edge : 2;
+	};
+
 	void GetOverlappingRooms(glm::ivec2 min, glm::ivec2 max, std::vector<int> & vec);
+	void GetRoomsWithVertex(int face, int edge, std::vector<VertexQuery> & vec);
+
 	std::vector<uint32_t> GetOverlappingEdges(glm::ivec2 v0, glm::ivec2 v1);
 	bool                  HasOverlappingEdges(int v);
 	bool                  HasFullOverlap(int v);
 
-	bool GetSliceFace(const glm::ivec2 v0, const glm::ivec2 v1, const glm::ivec2 v2, int & edge_id, float & mid);
+	bool GetSliceFace(const glm::ivec2 v0, const glm::ivec2 v1, glm::ivec2 v2, int & edge_id, float & mid);
 
 	void PrintTree(int node, int tabs) const;
 

@@ -290,8 +290,13 @@ std::vector<uint32_t> QuadTree::GetOverlappingEdges(glm::ivec2 v0, glm::ivec2 v1
 }
 
 
-bool QuadTree::GetSliceFace(const glm::ivec2 v0, const glm::ivec2 v1, const glm::ivec2 v2, int & edge_id, float & mid)
+bool QuadTree::GetSliceFace(const glm::ivec2 v0, const glm::ivec2 v1, glm::ivec2 v2, int & edge_id, float & mid)
 {
+	if(v2.x == INT_MIN && v2.y == INT_MIN)
+	{
+		v2 = v0 + glm::ivec2(glm::ceil(glm::vec2((v0 - v1))*0.01f));
+	}
+
 	EdgeRange range(this, v0, v1, v2);
 
 	while(range.popFront())
@@ -641,6 +646,47 @@ void QuadTree::GetOverlappingRooms(glm::ivec2 min, glm::ivec2 max, std::vector<i
 			else
 			{
 				vec.push_back(node.child);
+			}
+		}
+	}
+}
+
+void QuadTree::GetRoomsWithVertex(int face, int edge, std::vector<VertexQuery> & vec)
+{
+	if(IsDirty()) Rebuild();
+
+	if(m_nodes == nullptr)
+		return;
+
+	std::stack<int> stack;
+	stack.push(0);
+
+	auto	   verts = m_metaroom->_verts;
+	glm::ivec2 begin = verts[face][edge];
+	glm::ivec2 end = verts[face][(edge+1)&0x03];
+
+	while(stack.size())
+	{
+		auto & node = m_nodes[stack.top()];
+		stack.pop();
+
+		if(math::boxContainsInclusive(begin, node.min, node.max))
+		{
+			if(node.leaf == false)
+			{
+				stack.push(node.child+0);
+				stack.push(node.child+1);
+			}
+			else if(node.child != face)
+			{
+				for(int i = 0; i < 4; ++i)
+				{
+					if(math::SemgentDistanceSquared(begin, end, verts[node.child][i]) < 1.f)
+					{
+						vec.push_back({(uint32_t)node.child, (uint32_t)i});
+						break;
+					}
+				}
 			}
 		}
 	}

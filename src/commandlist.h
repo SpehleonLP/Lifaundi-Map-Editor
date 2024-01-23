@@ -54,6 +54,23 @@ private:
 	std::vector<std::pair<uint64_t, float>> _permDelta;
 };
 
+class DissolveCommand : public CommandInterface
+{
+public:
+	DissolveCommand(Document * document, std::vector<uint32_t> && selection, std::vector<uint32_t> && edge_selection) {}
+	virtual ~DissolveCommand() = default;
+
+	void RollForward() {}
+	void RollBack() {}
+
+private:
+	Metaroom          * metaroom;
+	std::vector<Room>   rooms;
+	std::vector<uint32_t>    indices;
+
+	std::vector<std::pair<uint64_t, float>> _permDelta;
+};
+
 class InsertCommand : public CommandInterface
 {
 public:

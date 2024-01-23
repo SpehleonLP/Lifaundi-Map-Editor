@@ -703,6 +703,11 @@ void Metaroom::ClickSelect(glm::ivec2 pos, Bitwise flags, bool alt, float zoom)
 				}
 			}
 		}
+
+		if(alt)
+		{
+			_selection.ClearMarks();
+		}
 	}
 
 	if(selected == false)
@@ -752,17 +757,17 @@ int        Metaroom::GetSliceEdge(glm::ivec2 p) const
 void Metaroom::RingSelectFace(int face, glm::ivec2 mouse, Bitwise flags)
 {
 	int best_edge		= -1;
-	float best_distance = FLT_MAX;
+	float best_distance = -1.f;
 
-	for(int i = face*4; i < (face+1)*4; ++i)
+	auto dirn = GetCenter(face)- glm::vec2(mouse);
+
+	for(int i = 0; i < 4; ++i)
 	{
-		int j = NextInEdge(i);
+		auto distance2 = glm::dot(GetNormal(face, i), dirn);
 
-		float distance2 = math::SemgentDistanceSquared(raw()[i], raw()[j], mouse);
-
-		if(0 <= distance2 && distance2 < best_distance)
+		if(distance2 > best_distance)
 		{
-			best_edge = i;
+			best_edge = face*4 + i;
 			best_distance = distance2;
 		}
 	}
@@ -802,10 +807,81 @@ void Metaroom::RingSelectFaceInternal(int edge, glm::ivec2 position, Bitwise fla
 
 void Metaroom::RingSelectEdge(int edge, Bitwise flags)
 {
+	if(flags == Bitwise::SET)
+		flags = Bitwise::OR;
+
+	if(_selection.MarkFace(edge) == false)
+		return;
+
+	std::vector<QuadTree::VertexQuery> stack;
+	std::vector<QuadTree::VertexQuery> query;
+	stack.push_back({uint32_t(edge/4), uint32_t(edge&0x03)});
+
+	while(stack.size())
+	{
+		auto top = stack.back();
+		stack.pop_back();
+
+		query.clear();
+		_tree.GetRoomsWithVertex(top.face, top.edge, query);
+
+		if(query.empty())
+			continue;
+
+		auto abs_normal = glm::abs(GetNormal(top.face, top.edge));
+
+		for(auto i : query)
+		{
+			auto next_normal = glm::abs(GetNormal(i.face, i.edge));
+			auto prev_normal = glm::abs(GetNormal(i.face, (i.edge+3) & 3));
+
+			if(glm::dot(next_normal, abs_normal) > glm::dot(prev_normal, abs_normal))
+			{
+			//	i.edge = (i.edge+1u)&0x03u;
+			}
+			else
+			{
+				i.edge = (i.edge+3u)&0x03u;
+			//	continue;
+			}
+
+			if(_selection.MarkFace(i.face*4 + i.edge))
+			{
+				assert(_selection.MarkFace(i.face*4 + i.edge) == false);
+				_selection.select_edge(i.face*4 + i.edge, flags);
+				assert(_selection.MarkFace(i.face*4 + i.edge) == false);
+				stack.push_back(i);
+			}
+			else
+			{
+				int break_point{0};
+				++break_point;
+			}
+		}
 
 
+	}
 }
 
+void Metaroom::RingSelectEdgeInternal(int edge, Bitwise flags)
+{
+	float mid;
+
+	while(_tree.GetSliceFace(
+		GetVertex(edge),
+		GetVertex(Metaroom::NextInEdge(edge)),
+	{INT_MIN, INT_MIN},
+		edge,
+		mid))
+	{
+		if(_selection.MarkFace(edge/4) == false)
+			return;
+
+		_selection.select_edge(edge, flags);
+
+		edge     = Metaroom::GetOppositeEdge(edge);
+	}
+}
 
 std::string Metaroom::TestTreeSymmetry()
 {

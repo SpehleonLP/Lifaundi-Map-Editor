@@ -451,14 +451,7 @@ bool ControllerFSM::OnLeftUp(glm::vec2 position, Bitwise flags, bool alt)
 	case State::None: break;
 	case State::MouseDownOnSelected:
 	{
-		int face = m_parent->document->m_metaroom._tree.GetFace(mouse_down_pos);
-
-		if(face >= 0)
-		{
-                    m_parent->document->m_metaroom._selection.select_face(face, flags);
-			m_parent->document->m_metaroom.update_selections();
-		}
-
+		m_parent->document->m_metaroom.ClickSelect(position, flags, alt, m_parent->GetZoom());
 		m_state = State::None;
 	}   return true;
 	case State::MouseDownOnUnselected:
