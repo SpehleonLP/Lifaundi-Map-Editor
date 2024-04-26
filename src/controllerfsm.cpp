@@ -1096,13 +1096,13 @@ void ControllerFSM::Render(Shaders * shaders)
 	}
 }
 
-bool ControllerFSM::wheelEvent(QWheelEvent*event)
+bool ControllerFSM::wheelEvent(glm::vec2 angleDelta)
 {
 	if(m_state == State::SliceSet)
 	{
-		if(event->angleDelta().y() > 0)
+		if(angleDelta.y > 0)
 				_noSlices += 1;
-		else if(event->angleDelta().y() < 0)
+		else if(angleDelta.y < 0)
 				_noSlices -= 1;
 
 		_sliceDirty = true;

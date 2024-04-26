@@ -75,7 +75,7 @@ enter(Qt::Key_Z, this)
 	lockY.setContext(Qt::ApplicationShortcut);
 	enter.setContext(Qt::ApplicationShortcut);
 
-	ui->viewWidget->w = this;
+	ui->viewWidget->SetMainWindow(this);
 	ui->backgroundHistogram->w = this;
 	ui->roomDepthHistogram->w = this;
 
@@ -924,7 +924,7 @@ bool MainWindow::viewGrid() const { return ui->viewGrid->isChecked(); }
 bool MainWindow::viewGravity() const { return ui->viewGravity->isChecked(); }
 
 
-glm::vec2  MainWindow::GetScroll()
+glm::vec2  MainWindow::GetScroll() const
 {
 	return glm::vec2(
 		(ui->horizontalScrollBar->value() - ui->horizontalScrollBar->minimum())
@@ -933,7 +933,7 @@ glm::vec2  MainWindow::GetScroll()
 			/ (double) (ui->verticalScrollBar->maximum() - ui->verticalScrollBar->minimum()));
 }
 
-void  MainWindow::SetScroll(glm::vec2 scroll)
+glm::vec2  MainWindow::SetScroll(glm::vec2 scroll)
 {
 	scroll = glm::max(glm::vec2(0), glm::min(scroll, glm::vec2(1)));
 	int scroll_x = glm::mix(ui->horizontalScrollBar->minimum(), ui->horizontalScrollBar->maximum(), scroll.x);
@@ -941,4 +941,6 @@ void  MainWindow::SetScroll(glm::vec2 scroll)
 
 	ui->horizontalScrollBar->setValue(scroll_x);
 	ui->verticalScrollBar->setValue(scroll_y);
+
+	return GetScroll();
 }

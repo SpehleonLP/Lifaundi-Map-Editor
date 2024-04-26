@@ -4,10 +4,12 @@
 #
 #-------------------------------------------------
 
-QT       += core gui openglwidgets
+QT       += core gui
 CONFIG += c++2a
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+lessThan(QT_MAJOR_VERSION, 5):	  QT += opengl
+greaterThan(QT_MAJOR_VERSION, 5): QT += opengl openglwidgets
 
 TARGET = MapEditor
 TEMPLATE = app
@@ -39,6 +41,7 @@ SOURCES += \
 	../../Libraries/Spehleon/lib/gl/renderdoc.cpp \
 	../../Libraries/Spehleon/lib/qt-gl/initialize_gl.cpp \
 	../../Libraries/Spehleon/lib/qt-gl/simpleshaderbase.cpp \
+	../../Libraries/Spehleon/lib/qt-gl/gl_viewwidget.cpp \
 ../../Libraries/loguru/loguru.cpp \
 	colorprogressindicator.cpp \
 	exportoptions.cpp \
@@ -85,6 +88,7 @@ SOURCES += \
 	src/widget_rangeslider.cpp
 
 HEADERS += \
+	../../Libraries/Spehleon/lib/qt-gl/gl_viewwidget.h \
 	../../Libraries/Spehleon/lib/Support/counted_ptr.hpp \
 	../../Libraries/Spehleon/lib/Support/shared_array.hpp \
 	../../Libraries/Spehleon/lib/Support/lockfreequeue.hpp \
@@ -94,6 +98,7 @@ HEADERS += \
 	../../Libraries/Spehleon/lib/gl/renderdoc.h \
 	../../Libraries/Spehleon/lib/qt-gl/initialize_gl.h \
 	../../Libraries/Spehleon/lib/qt-gl/simpleshaderbase.h \
+	../../Libraries/Spehleon/lib/qt-gl/viewparentinterface.h \
 	colorprogressindicator.h \
 	exportoptions.h \
         mainwindow.h \
@@ -144,8 +149,8 @@ HEADERS += \
 
 FORMS += \
         colorprogressindicator.ui \
-        exportoptions.ui \
- #       mainwindow.ui
+        exportoptions.ui
+  #       mainwindow.ui
 
 # Default rules for deployment.
 #qnx: target.path = /tmp/$${TARGET}/bin

@@ -1,5 +1,6 @@
 #include "color_rooms.h"
-
+#include <algorithm>
+#include <stdexcept>
 
 int ColorRooms::GetMaxDegree(int * room) const
 {

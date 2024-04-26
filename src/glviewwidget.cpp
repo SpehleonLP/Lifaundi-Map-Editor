@@ -19,6 +19,85 @@
 #include <chrono>
 #include <iostream>
 
+struct MapParent : public gl::iParent
+{
+	static Bitwise GetFlags(gl::Modifiers mod)
+	{
+		switch(mod)
+		{
+		default: return Bitwise::SET;
+		case gl::And: return Bitwise::AND;
+		case gl::Or: return Bitwise::OR;
+		case gl::Xor: return Bitwise::XOR;
+		}
+	}
+
+	static bool alt(gl::Modifiers mod)
+	{
+		return mod & gl::AltModifier? 0 : 1;
+	}
+
+
+	MapParent(MainWindow * w) : w(w) {}
+	~MapParent() = default;
+
+	MainWindow * w{};
+
+	QScrollBar * horizontalScrollBar() override { return w->ui->horizontalScrollBar; }
+	QScrollBar * verticalScrollBar() override { return w->ui->verticalScrollBar;  }
+	QString      getToolTip(glm::vec2) const override { return {}; }
+
+	float GetZoom() const override { return w->GetZoom(); }
+	float SetZoom(float v) override { return w->SetZoom(v); }
+
+	glm::vec2 GetScroll() const override { return w->GetScroll(); }
+	glm::vec2 SetScroll(glm::vec2 x) override { return w->SetScroll(x); }
+
+	glm::vec2 GetScreenCenter() const override { return w->document? w->document->GetScreenCenter() : glm::vec2{64}; }
+	glm::vec2 GetDocumentSize() const override { return w->document? w->document->GetDimensions() : glm::vec2{64}; }
+	bool NeedTrackMouse() const override { return w->toolbox.HaveTool(); }
+	void UpdateStatusBarMessage(glm::vec2 worldPosition) override { return w->SetStatusBarMessage(worldPosition); }
+
+	bool OnMouseWheel(glm::vec2 angleDelta) override
+	{
+		return w->toolbox.wheelEvent(angleDelta);
+	}
+	bool OnMouseMove(glm::vec2 worldPosition, gl::Modifiers mod) override
+	{
+		return w->toolbox.OnMouseMove(worldPosition, GetFlags(mod));
+	}
+
+	bool OnMouseDown(glm::vec2 worldPosition, gl::Modifiers mod) override
+	{
+		if(mod & gl::LeftDown)
+		{
+			return w->toolbox.OnLeftDown(worldPosition, GetFlags(mod), alt(mod));
+		}
+
+		return false;
+	}
+
+	bool OnMouseUp(glm::vec2 worldPosition, gl::Modifiers mod) override
+	{
+		if(mod & gl::LeftDown)
+		{
+			return w->toolbox.OnLeftUp(worldPosition, GetFlags(mod), alt(mod));
+		}
+
+		return false;
+	}
+	bool OnDoubleClick(glm::vec2 worldPosition, gl::Modifiers mod) override
+	{
+		if(mod & gl::LeftDown)
+		{
+			return w->toolbox.OnDoubleClick(worldPosition, GetFlags(mod));
+		}
+
+		return false;
+	}
+	std::unique_ptr<QMenu> GetContextMenu(glm::vec2) override { return nullptr; }
+};
+
 
 struct Matrices
 {
@@ -31,12 +110,8 @@ struct Matrices
 };
 
 GLViewWidget::GLViewWidget(QWidget * p) :
-	QOpenGLWidget(p),
-	timer(this)
+	gl::ViewWidget(p)
 {
-	timer.setSingleShot(true);
-	timer.setInterval(20);
-	connect(&timer, &QTimer::timeout, this, [this]() { repaint(); } );
 }
 
 GLViewWidget::~GLViewWidget()
@@ -44,65 +119,15 @@ GLViewWidget::~GLViewWidget()
 	glDeleteTextures(1, &permeabilities);
 }
 
-glm::vec2 GLViewWidget::GetScreenPosition(QMouseEvent * event)
+void GLViewWidget::SetMainWindow(MainWindow * w)
 {
-	return glm::vec2(event->pos().x() - width()*.5f,
-			   -1 * (event->pos().y() - height()*.5f));
-}
-
-glm::vec2 GLViewWidget::GetWorldPosition(QMouseEvent * event)
-{
-    return w->document->GetScreenCenter() + GetScreenPosition(event) / w->GetZoom();
-}
-
-glm::vec2 GLViewWidget::GetScreenPosition()
-{
-	if(!QWidget::underMouse())
-		return glm::vec2(0, 0);
-
-	QPoint pos = mapFromGlobal(QCursor::pos());
-
-	return glm::vec2(pos.x() - width()*.5f,
-			   -1 * (pos.y() - height()*.5f));
-}
-
-glm::vec2 GLViewWidget::GetWorldPosition()
-{
-    return w->document->GetScreenCenter() + GetScreenPosition() / w->GetZoom();
-}
-
-
-Bitwise   GLViewWidget::GetFlags(QMouseEvent * event)
-{
-	auto modifier = event->modifiers();
-
-	modifier &= ~Qt::AltModifier;
-
-	if(modifier == Qt::ControlModifier)
-		return Bitwise::XOR;
-	else if(modifier == Qt::ShiftModifier)
-		return Bitwise::OR;
-	else if(modifier == (Qt::ShiftModifier|Qt::ControlModifier))
-		return Bitwise::AND;
-
-	return Bitwise::SET;
-}
-
-void GLViewWidget::need_repaint()
-{
-	if(!timer.isActive())
-		timer.start();
+	this->w = w;
+	_parent.reset(new MapParent(w));
 }
 
 void GLViewWidget::initializeGL()
 {
-	if(_initialized) return;
-	_initialized = true;
-
-	makeCurrent();
-	QOpenGLFunctions_4_5_Core::initializeOpenGLFunctions();
-	OpenGL.Initialize(this);
-	super::initializeGL();
+	gl::ViewWidget::initializeGL();
 
 	_shaders = std::make_shared<Shaders>(this);
 
@@ -126,191 +151,6 @@ void GLViewWidget::initializeGL()
 	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAX_LEVEL, 0);
 
 	w->loadDefaultWalls();
-
-}
-
-void GLViewWidget::mouseMoveEvent(QMouseEvent * event)
-{
-	m_mouseWorldPosition = GetWorldPosition(event);
-	
-	w->SetStatusBarMessage(m_mouseWorldPosition);
-
-	if(m_canvasDrag && w && w->document)
-	{
-		auto screenPos = GetScreenPosition();
-		auto delta    = m_screenPos - screenPos;
-
-		glm::vec2 dimensions         = w->document->GetDimensions();
-		glm::vec2 world_position     = m_scrollPos * dimensions +  delta;// / w->GetZoom();
-		glm::vec2 scroll_destination = world_position / dimensions;
-
-		w->SetScroll(scroll_destination);
-	}
-
-	super::mouseMoveEvent(event);
-
-    if(w->toolbox.OnMouseMove(m_mouseWorldPosition, GetFlags(event)))
-		need_repaint();
-}
-
-
-void GLViewWidget::mousePressEvent(QMouseEvent * event)
-{
-	m_mouseWorldPosition = GetWorldPosition(event);
-	
-	if((event->button() & Qt::MiddleButton)
-	&& w->document != nullptr)
-	{
-		m_canvasDrag  = true;
-		m_screenPos   = GetScreenPosition();
-		m_scrollPos   = w->GetScroll();
-	}
-
-	if((event->button() & Qt::LeftButton) == false)
-		super::mousePressEvent(event);
-	else
-	{
-        if(w->toolbox.OnLeftDown(m_mouseWorldPosition, GetFlags(event), (event->modifiers() & Qt::AltModifier)))
-			need_repaint();
-
-		if(w->toolbox.HaveTool() == false)
-		{
-			setMouseTracking(false);
-			w->SetStatusBarMessage();
-		}
-	}
-}
-
-void GLViewWidget::mouseReleaseEvent(QMouseEvent * event)
-{
-	m_mouseWorldPosition = GetWorldPosition(event);
-	
-	if((event->button() & Qt::MiddleButton))
-	{
-		m_canvasDrag  = false;
-	}
-
-	if((event->button() & Qt::LeftButton) == false)
-		super::mouseReleaseEvent(event);
-	else
-	{
-        if(w->toolbox.OnLeftUp(m_mouseWorldPosition, GetFlags(event), (event->modifiers() & Qt::AltModifier)))
-			need_repaint();
-
-        if(w->toolbox.HaveTool() == false)
-		{
-			setMouseTracking(false);
-			w->SetStatusBarMessage();
-		}
-	}
-}
-
-void GLViewWidget::mouseDoubleClickEvent(QMouseEvent * event)
-{
-	m_mouseWorldPosition = GetWorldPosition(event);
-	
-	if((event->button() & Qt::LeftButton) == false)
-		super::mouseDoubleClickEvent(event);
-	else
-	{
-        if(w->toolbox.OnDoubleClick(m_mouseWorldPosition, GetFlags(event)))
-			need_repaint();
-
-		if(w->toolbox.HaveTool() == false)
-		{
-			setMouseTracking(false);
-			w->SetStatusBarMessage();
-		}
-	}
-}
-
-template<typename T>
-inline int get_sign(T it)
-{
-	return it < (T)0? -1 : 1;
-}
-
-void GLViewWidget::wheelEvent(QWheelEvent * wheel)
-{
-    if(!w)
-	{
-		super::wheelEvent(wheel);
-		return;
-	}
-
-	if(w->toolbox.wheelEvent(wheel))
-	{
-		need_repaint();
-		return;
-	}
-
-
-	if(wheel->modifiers() & Qt::ControlModifier)
-	{
-		if(std::fabs(wheel->angleDelta().y()) > 0)
-		{
-            if(w->document == nullptr) return;
-
-			auto pos = wheel->position();
-			float angle = wheel->angleDelta().y();
-			float factor = std::pow(1.0015, angle);
-
-            factor = w->SetZoom(w->GetZoom() * factor);
-
-		//	glm::vec2 scroll = glm::mix(scroll_destination, scroll_start, glm::vec2(factor));
-
-			if(factor != 1)
-			{
-                glm::vec2 scroll_start       = w->GetScroll();
-                glm::vec2 dimensions         = w->document->GetDimensions();
-				glm::vec2 mouse_position     = glm::vec2(pos.x() - width()*.5f, -1 * (pos.y() - height()*.5f));
-				glm::vec2 world_position     = scroll_start * dimensions + mouse_position * (1 - factor);
-				glm::vec2 scroll_destination = world_position / dimensions;
-
-                w->SetScroll(scroll_destination);
-			}
-
-			return;
-		}
-	}
-	else if(wheel->buttons() != Qt::ControlModifier)
-	{
-		if(std::fabs(wheel->angleDelta().x()) > 0)
-		{
-            w->ui->horizontalScrollBar->event(wheel);
-		}
-		else
-		{
-            w->ui->verticalScrollBar->event(wheel);
-		}
-
-		return;
-	}
-
-	super::wheelEvent(wheel);
-}
-
-
-bool GLViewWidget::event(QEvent *event)
-{
-	if(event->type() != QEvent::ToolTip)
-		return super::event(event);
-
-   QHelpEvent *helpEvent = static_cast<QHelpEvent *>(event);
-
-   QString string; // = window->getToolTip(helpEvent->pos());
-
-   if(!string.isEmpty())
-   {
-	   QToolTip::showText(helpEvent->globalPos(), string);
-   }
-   else
-   {
-	   QToolTip::hideText();
-	   event->ignore();
-   }
-
-   return true;
 }
 
 void GLViewWidget::upload_permeabilitys(uint8_t * table, int size)
@@ -398,9 +238,4 @@ void GLViewWidget::paintGL()
 	
 	_shaders->mouseShader(this, GetWorldPosition());
 	_shaders->mouseShader(this, w->document->GetScreenCenter(), 5, glm::vec4(0, 1, 0, 1));
-}
-
-void 	GLViewWidget::resizeGL(int w, int h)
-{
-	QOpenGLWidget::resizeGL(w, h);
 }

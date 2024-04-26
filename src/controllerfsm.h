@@ -43,7 +43,7 @@ public:
 	ControllerFSM(MainWindow * window);
 	~ControllerFSM();
 
-	bool wheelEvent(QWheelEvent*event);
+	bool wheelEvent(glm::vec2 angleDelta);
     void Release(Shaders * shaders);
 
     void Prepare(Shaders * shaders);

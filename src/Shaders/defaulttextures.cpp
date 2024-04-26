@@ -1,6 +1,7 @@
 #include "defaulttextures.h"
 #include <cstring>
 #include <QOpenGLFunctions_4_5_Core>
+#include <memory>
 
 DefaultTextures::~DefaultTextures()
 {

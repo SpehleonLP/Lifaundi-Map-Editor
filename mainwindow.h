@@ -1,6 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 #include "qtimer.h"
+#include "qt-gl/viewparentinterface.h"
 #include "src/enums.hpp"
 #include "src/controllerfsm.h"
 #include <memory>
@@ -77,8 +78,8 @@ public:
 	void SetMouseTracking(bool);
 	void need_repaint();
 
-	glm::vec2 GetScroll();
-	void      SetScroll(glm::vec2 scroll);
+	glm::vec2 GetScroll() const;
+	glm::vec2 SetScroll(glm::vec2 scroll);
 	glm::ivec2 WidgetSize();
 
 	float SetZoom(float zoom);
