@@ -1524,8 +1524,7 @@ compressedshadersource.o: ../../../../Libraries/Spehleon/lib/gl/compressedshader
 		../../../../Libraries/lz4/lib/lz4hc.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o compressedshadersource.o ../../../../Libraries/Spehleon/lib/gl/compressedshadersource.cpp
 
-renderdoc.o: ../../../../Libraries/Spehleon/lib/gl/renderdoc.cpp ../../../../Libraries/Spehleon/lib/gl/renderdoc.h \
-		/home/anyuser/Applications/renderdoc_1.23/include/renderdoc_app.h
+renderdoc.o: ../../../../Libraries/Spehleon/lib/gl/renderdoc.cpp ../../../../Libraries/Spehleon/lib/gl/renderdoc.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o renderdoc.o ../../../../Libraries/Spehleon/lib/gl/renderdoc.cpp
 
 initialize_gl.o: ../../../../Libraries/Spehleon/lib/qt-gl/initialize_gl.cpp ../../../../Libraries/Spehleon/lib/qt-gl/initialize_gl.h \
