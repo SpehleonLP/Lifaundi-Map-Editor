@@ -390,7 +390,7 @@ bool PermeabilityCommand::IsSelection(std::vector<std::pair<int, int>> const& li
 
 std::unique_ptr<CommandInterface> DifferentialSetCommmand::GravityCommand(Document * document, std::vector<uint32_t> && list, float value, Type type)
 {
-	assert(type == Type::GravityAngle || type == Type::GravityStrength || type == Type::ShadeAngle || type == Type::ShadeStrength);
+	assert(type == Type::GravityAngle || type == Type::GravityStrength);
 	std::vector<uint32_t> values(list.size());
 
 	bool unique = true;
@@ -439,7 +439,7 @@ std::unique_ptr<CommandInterface> DifferentialSetCommmand::ShadeCommand(Document
 	bool unique = true;
 	glm::vec2 first;
 
-	if(type == Type::GravityAngle)
+	if(type == Type::ShadeAngle)
 	{
 		glm::vec2 direction(std::cos(value), std::sin(value));
 
@@ -453,7 +453,7 @@ std::unique_ptr<CommandInterface> DifferentialSetCommmand::ShadeCommand(Document
 			else		unique &= (glm::dot(grav, -first) < .004);
 		}
 	}
-	else if(type == Type::GravityStrength)
+	else if(type == Type::ShadeStrength)
 	{
 		for(size_t i = 0; i < list.size(); ++i)
 		{
@@ -503,7 +503,7 @@ DifferentialSetCommmand::DifferentialSetCommmand(Document * document, std::vecto
 		break;
 	case Type::AmbientShade:
 		for(size_t i = 0; i < indices.size(); ++i)
-			memcpy(&prev_values[i], &metaroom->_ambientShade[indices[i]], 4);
+			prev_values[i] = metaroom->_ambientShade[indices[i]];
 		break;
 	case Type::Audio:
 		for(size_t i = 0; i < indices.size(); ++i)
@@ -545,7 +545,7 @@ void DifferentialSetCommmand::RollForward()
 		break;
 	case Type::AmbientShade:
 		for(size_t i = 0; i < indices.size(); ++i)
-			memcpy(&metaroom->_ambientShade[indices[i]], &new_values[i], 4);
+			metaroom->_ambientShade[indices[i]] = new_values[i];
 		break;
 	case Type::Audio:
 		for(size_t i = 0; i < indices.size(); ++i)
@@ -585,7 +585,7 @@ void DifferentialSetCommmand::RollBack()
 		break;
 	case Type::AmbientShade:
 		for(size_t i = 0; i < indices.size(); ++i)
-			memcpy(&metaroom->_ambientShade[indices[i]], &prev_values[i], 4);
+			metaroom->_ambientShade[indices[i]] = prev_values[i];
 		break;
 	case Type::Audio:
 		for(size_t i = 0; i < indices.size(); ++i)

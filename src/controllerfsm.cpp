@@ -739,7 +739,7 @@ bool ControllerFSM::OnMouseMove(glm::vec2 p, Bitwise flags)
 		{
 			float angle   = std::atan2(distance.y, distance.x);
 			int degrees = (180 * angle / M_PI) + .5;
-			degrees = degrees % 5;
+			degrees -= degrees % 5;
 			angle   = degrees * M_PI / 180;
 			distance = glm::vec2(cos(angle), sin(angle));
 		}
@@ -756,6 +756,10 @@ bool ControllerFSM::OnMouseMove(glm::vec2 p, Bitwise flags)
 	{
 		auto  dirn    = mouse_down_pos - selection_center;
 		float length2 = glm::length(dirn);
+
+		if(length2 == 0.f)
+			return true;
+
 		float dot1    = glm::dot(mouse_current_pos - selection_center, dirn) / (length2 * length2);
 
 		float scale   = dot1;
@@ -953,6 +957,8 @@ void ControllerFSM::Prepare(Shaders * shaders)
 		&& slice_edge == edge)
 			return;
 
+		_sliceDirty = false;
+
 		if((slice_edge = edge) != -1)
 			m_slice = SetUpSlices(&m_parent->document->m_metaroom, edge, _noSlices, .5);
 	}
@@ -1016,7 +1022,7 @@ void ControllerFSM::Prepare(Shaders * shaders)
 	{
         gl->glBindVertexArray(0);
         gl->glBindBuffer(GL_ARRAY_BUFFER, m_vbo[2]);
-        gl->glBufferData(GL_ARRAY_BUFFER, sizeof(m_slice[0])*m_slice.capacity(), &m_slice[0], GL_DYNAMIC_DRAW);
+        gl->glBufferData(GL_ARRAY_BUFFER, sizeof(m_slice[0])*m_slice.size(), &m_slice[0], GL_DYNAMIC_DRAW);
 	}
 
 

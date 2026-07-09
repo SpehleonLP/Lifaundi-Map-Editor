@@ -42,6 +42,9 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 	uint16_t width{};
 	uint16_t height{};
     uint32_t  no_faces;
+
+	fp.seekg(0, std::ios::end);
+	const uint64_t fileEnd = (uint64_t)fp.tellg();
 	fp.seekg(offset, std::ios::beg);
 
 	fp.read(&buffer[0], 4);
@@ -62,6 +65,10 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 
 	if(memcmp(buffer, "lfmp", 4) != 0)
 		throw std::runtime_error("Bad File");
+
+	// Guard against a corrupt/hostile face count driving a huge allocation.
+	if((uint64_t)no_faces * (4 * sizeof(glm::i16vec2)) > fileEnd)
+		throw std::runtime_error("Corrupt metaroom: face count exceeds file size.");
 
 	AddFaces(no_faces);
 
@@ -154,7 +161,13 @@ void Metaroom::Read(MainWindow * window, std::ifstream & fp, size_t offset)
 		}
 	}
 
-	door_list.resize(door_indices.back().index + door_indices.back().length);
+	{
+		uint64_t door_count = (uint64_t)door_indices.back().index + door_indices.back().length;
+		if(door_count * sizeof(door_list[0]) > fileEnd)
+			throw std::runtime_error("Corrupt metaroom: door table exceeds file size.");
+
+		door_list.resize(door_count);
+	}
 	fp.read((char*)&door_list[0], sizeof(door_list[0]) * door_list.size());
 
 	for(auto & list : door_indices)
@@ -241,7 +254,7 @@ uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 	fp.write((char*)&mta._directionalShade[0], 4 * no_faces);
 	fp.write((char*)&mta._ambientShade[0], no_faces);
 	fp.write((char*)&mta._audio[0], 4 * no_faces);
-	fp.write((char*)&_depth[0], sizeof(_depth[0]) * no_faces);
+	fp.write((char*)&mta._depth[0], sizeof(mta._depth[0]) * no_faces);
 
 
 	for(uint32_t i = 0; i < tracks.size();++i)
@@ -464,9 +477,9 @@ bool Metaroom::CanAddFace(glm::ivec2 * verts)
 
 void Metaroom::AddFace(glm::ivec2 min, glm::ivec2 max)
 {
-	glm::ivec2 verts[4]{ max, {max.x, min.y}, min, {min.y, max.y} };
+	glm::ivec2 verts[4]{ max, {max.x, min.y}, min, {min.x, max.y} };
 
-    if(CanAddFace(verts))
+    if(!CanAddFace(verts))
 		return;
 
 	int face = AddFaces(1)[0];
@@ -502,8 +515,6 @@ std::vector<uint32_t> Metaroom::AddFaces(uint32_t no_faces)
 	}
 
 	return x;
-
-	AddFaces();
 }
 
 void Metaroom::RemoveFace(int id)
@@ -917,7 +928,7 @@ std::string Metaroom::TestTreeSymmetry()
 		}
 	}
 
-	return {};
+	return r;
 }
 
 std::string Metaroom::TestDoorSymmetry()
@@ -954,7 +965,7 @@ std::string Metaroom::TestDoorSymmetry()
 		}
 	}
 
-	return {};
+	return r;
 }
 
 /*

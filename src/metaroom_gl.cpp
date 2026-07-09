@@ -114,10 +114,13 @@ void MetaroomGL::Prepare(Shaders * shaders)
 	{
 		_arrows.resize(me.noFaces());
 
+		// range() yields sparse entity ids; write densely so we stay within noFaces().
+		size_t k = 0;
 		for(auto i : me.range())
 		{
-			_arrows[i].position = (me.GetVertex(i, 0) + me.GetVertex(i, 1) + me.GetVertex(i, 2) + me.GetVertex(i, 3))/4;
-			_arrows[i].rotation = (float)SHRT_MAX * glm::normalize(glm::unpackHalf2x16(me._gravity[i]));
+			_arrows[k].position = (me.GetVertex(i, 0) + me.GetVertex(i, 1) + me.GetVertex(i, 2) + me.GetVertex(i, 3))/4;
+			_arrows[k].rotation = (float)SHRT_MAX * glm::normalize(glm::unpackHalf2x16(me._gravity[i]));
+			++k;
 		}
 	}
 	else

@@ -206,7 +206,7 @@ void GLViewWidget::paintGL()
 			std::chrono::high_resolution_clock::now() - current_time
 				).count();
 
-	mat.u_ctime = time / 1000;
+	mat.u_ctime = time / 1000.0f;
 	mat.u_zoom  = w->GetZoom();
 	mat.u_pad[0]  = w->document->m_background?
 				w->document->m_background->pxPerMeter() :

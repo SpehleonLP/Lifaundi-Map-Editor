@@ -60,7 +60,7 @@ void  MetaroomMemory::CopyRoom(int dst, int src)
 	_depth[dst]		= _depth[src];
 
 	for(int j = 0; j < 4; ++j)
-		_verts[dst*4 + j] = _verts[src*4 + j];
+		_verts[dst][j] = _verts[src][j];
 }
 
 
@@ -419,7 +419,7 @@ int MetaroomMemory::GetMusicTrack() const
 		if(_selection.IsFaceSelected(i))
 		{
 			if(match == true && track != _music[i])
-				return false;
+				return -1;
 
 			track = _music[i];
 			match = true;

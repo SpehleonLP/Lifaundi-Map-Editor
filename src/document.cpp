@@ -160,8 +160,9 @@ void Document::SelectByMusic()
 {
 	auto selection = m_metaroom._selection.GetFaceSelection();
 
-	std::unique_ptr<uint8_t[]> music_flags(new uint8_t[128]);
-	memset(&music_flags[0], 0, 128);
+	// _music is int8_t (-1..127); index is _music[i]+1, so the table needs 129 slots.
+	std::unique_ptr<uint8_t[]> music_flags(new uint8_t[129]);
+	memset(&music_flags[0], 0, 129);
 
 	int set_flags = 0;
 

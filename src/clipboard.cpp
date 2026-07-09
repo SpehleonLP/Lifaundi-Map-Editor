@@ -24,6 +24,7 @@ std::vector<Room>   Clipboard::Extract(Metaroom* metaroom, std::vector<uint32_t>
 		room.directionalShade	= metaroom->_directionalShade[i];
 		room.ambientShade		= metaroom->_ambientShade[i];
 		room.audio				= metaroom->_audio[i];
+		room.depth				= metaroom->_depth[i];
 		room.verts				= metaroom->_verts[i];
 
 		r.push_back(room);

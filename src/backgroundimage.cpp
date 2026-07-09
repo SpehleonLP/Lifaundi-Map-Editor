@@ -581,8 +581,6 @@ shared_array<uint32_t> BackgroundImage::LoadLifaundiLayer(Shaders * shaders, std
 
 		uint32_t * mip = (uint32_t*)&offsets[i];
 
-		int x_offset = 0;
-		int y_offset = 0;
 		int width    = 256; //(dscr.x1 - dscr.x0) * 16;
 		int height   = 256; //(dscr.y1 - dscr.y0) * 16;
 		auto area    = width * height;
@@ -596,25 +594,29 @@ shared_array<uint32_t> BackgroundImage::LoadLifaundiLayer(Shaders * shaders, std
 			blocks_x >>= 1;
 			blocks_y >>= 1;
 			auto bytes  = mip[mipLevel+1] - mip[mipLevel];
-			auto decompressed_bytes = bytes;
 
 			if(bytes == 0)
 				continue;
 
-			assert(bytes <= TILE_BYTES);
+			// bytes is an unsigned delta of two file-supplied offsets; a non-monotonic
+			// or oversized offset would overflow the fixed TILE_BYTES buffer below.
+			if(bytes > TILE_BYTES)
+				throw std::runtime_error("Corrupt background: mip block exceeds tile size.");
 
 			file.seekg(mip[mipLevel], std::ios_base::beg);
 			file.read((char*) &buffer[0], bytes);
 
 			if(isLz4Compressed())
 			{
-				decompressed_bytes = LZ4_decompress_safe(
+				// LZ4_decompress_safe returns a signed int (<0 on error); assigning it
+				// straight into the unsigned decompressed_bytes would swallow that error.
+				int result = LZ4_decompress_safe(
 					(const char *)&buffer[0], /* src */
 					(char*)&buffer2[0], /* dst */
 					bytes,			/* compressed size */
 					TILE_BYTES) ;   /* decompressed capacity */
 
-				if(decompressed_bytes < 0)
+				if(result < 0)
 					throw std::runtime_error("failed to decompress all data");
 
 				std::swap(buffer, buffer2);
@@ -835,6 +837,9 @@ void BackgroundImage::LoadBlk(Shaders * shaders, std::ifstream file)
 	file.read((char*)&length, 2);
 
 	version       = -1;
+	// _tiles is u8vec2; a larger grid would silently wrap, so reject it instead.
+	if(width > 255 || height > 255)
+		throw std::runtime_error("Corrupt background: BLK tile grid exceeds 255.");
 	_tiles         = glm::u8vec2(width, height);
 	tile_size     = glm::u16vec2(128, 128);
 	pixels        = glm::u16vec2(_tiles) * tile_size;

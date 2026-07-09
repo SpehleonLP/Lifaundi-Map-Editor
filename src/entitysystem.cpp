@@ -73,6 +73,8 @@ void EntitySystem::GetEntity(uint32_t request)
 {
 	auto item = std::find(_freeList.begin(), _freeList.end(), request);
 	LOG_IF_F(ERROR, item == _freeList.end(), "bookkeeping error in Entity System, %d should be unused but is not in free list", request);
+	if(item == _freeList.end())
+		return;
 	_freeList.erase(item);
 
 	_vboDirty = true;
@@ -94,6 +96,8 @@ void     EntitySystem::ReleaseEntity(uint32_t request)
 
 	auto item = std::find(_usedList.begin(), _usedList.end(), request);
 	LOG_IF_F(ERROR, item == _usedList.end(), "bookkeeping error in Entity System, %d should be used but is not in used list", request);
+	if(item == _usedList.end())
+		return;
 
 	_usedList.erase(item);
 	_freeList.push_back(request);

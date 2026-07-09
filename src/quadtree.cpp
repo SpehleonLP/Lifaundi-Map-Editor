@@ -86,7 +86,7 @@ void QuadTree::Rebuild()
 		m_nodes = std::unique_ptr<Node[]>(new Node[alloc]);
 	}
 
-	uint32_t length = BuildTree(&m_nodes[0], &leaves[0], 0, size, 0, 0, 1, alloc);
+	[[maybe_unused]] uint32_t length = BuildTree(&m_nodes[0], &leaves[0], 0, size, 0, 0, 1, alloc);
 //	fprintf(stderr, "final length: %ui\nallocated: %ui", length, alloced);
 }
 
@@ -280,7 +280,7 @@ std::vector<uint32_t> QuadTree::GetOverlappingEdges(glm::ivec2 v0, glm::ivec2 v1
 		if(math::DoesOverlap(v0, v1-v0, range.a0, range.a1))
 		{
 			if(r.size())
-				assert(r.back() != range.edge());
+				assert(r.back() != (uint32_t)range.edge());
 
 			r.push_back(range.edge());
 		}
@@ -387,7 +387,7 @@ void QuadTree::GetWriteDoors(std::vector<Door> & doors, std::vector<DoorList> & 
 
 		int8_t min_perm = 100;
 		int8_t max_perm = -1;
-		bool solid = true;
+		[[maybe_unused]] bool solid = true;
 		float begin = 0.f;
 
 		if(make_halls == false)
@@ -502,8 +502,8 @@ std::vector<uint8_t> QuadTree::GetEdgeFlags()
 	return r;
 }
 
-void QuadTree::GetWriteDoors(int edge, std::stack<int> & stack, std::vector<DoorInfo> & edges, int typeId)
-{	
+void QuadTree::GetWriteDoors(int edge, std::stack<int> & stack, std::vector<DoorInfo> & edges, int /*typeId*/)
+{
 	if(IsDirty()) Rebuild();
 
 	//if(typeId >= 0 && m_metaroom->m_doorType[edge] != typeId) return;
