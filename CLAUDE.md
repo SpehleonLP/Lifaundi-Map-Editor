@@ -17,19 +17,21 @@ This is a **qmake** project (`MapEditor.pro`), not CMake. The build lives **outs
 the source tree because the source drive (`/mnt/Passport`) has permission issues:
 
 ```
-# Active out-of-source build dir:
-cd ~/Developer/Build/MapEditor/Debug
+# Active out-of-source build dir (Qt 6.7.0 is the current default):
+cd ~/Developer/Build/MapEditor/Qt6-Debug
 
-# Configure (Qt 5.12.0 is what the existing build uses):
-~/Qt/5.12.0/gcc_64/bin/qmake /mnt/Passport/Projects/MapEditor/MapEditor.pro \
+~/Qt/6.7.0/gcc_64/bin/qmake /mnt/Passport/Projects/MapEditor/MapEditor.pro \
     -spec linux-g++ CONFIG+=debug
 
-make -j$(nproc)          # build
+make -j$(nproc)          # build (clean: 0 errors, 0 warnings)
 ./MapEditor              # run (writes logs to ./Log/status.log and ./Log/error.log)
 ```
 
-Qt 6.7.0 is also installed (`~/Qt/6.7.0/gcc_64/bin/qmake`); the `.pro` supports both
-(`QT += opengl openglwidgets` on Qt6). Uses **C++20** (`CONFIG += c++2a`).
+The `.pro` also still builds under **Qt 5.12.0** (`~/Qt/5.12.0/gcc_64/bin/qmake`; older
+build dir `~/Developer/Build/MapEditor/Debug`); it supports both via
+`QT += opengl openglwidgets` on Qt6. Uses **C++20** (`CONFIG += c++2a`). When adding Qt
+signal/slot `connect`s, use direct member-function pointers (or `qOverload<>`) — the
+old pointer-to-member disambiguation casts are Qt5-only and break under Qt6.
 
 There are **no automated tests**. The `Metaroom::TestTreeSymmetry` /
 `TestDoorSymmetry` methods are in-app runtime invariant checks, not a test suite.
