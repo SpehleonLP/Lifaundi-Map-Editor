@@ -279,6 +279,7 @@ void SettingCommand::RollBack()
 	case Type::Audio:
 		for(size_t i = 0; i < indices.size(); ++i)
 			memcpy(&metaroom->_audio[indices[i]], &prev_values[i], 4);
+		break;
 	case Type::Depth:
 		for(size_t i = 0; i < indices.size(); ++i)
 			metaroom->_depth[indices[i]] = std::bit_cast<glm::u16vec2>(prev_values[i]);
@@ -507,6 +508,7 @@ DifferentialSetCommmand::DifferentialSetCommmand(Document * document, std::vecto
 	case Type::Audio:
 		for(size_t i = 0; i < indices.size(); ++i)
 			memcpy(&prev_values[i], &metaroom->_audio[indices[i]], 4);
+		break;
 	case Type::Depth:
 		for(size_t i = 0; i < indices.size(); ++i)
 			prev_values[i] =  std::bit_cast<uint32_t>(metaroom->_depth[indices[i]]);

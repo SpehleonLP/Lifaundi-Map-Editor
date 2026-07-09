@@ -374,8 +374,6 @@ int Metaroom::GetPermeability() const
 	bool   match = false;
 	int   w_perm = 100;
 
-	uint64_t door = GetDoorKey(doors[0].first, doors[0].second);
-
 	for(auto pair : doors)
 	{
 		auto key = GetDoorKey(pair.first, pair.second);

@@ -23,7 +23,7 @@ public:
 
 	void SetMainWindow(MainWindow * w);
 
-	void need_repaint();
+	// need_repaint() is provided by the gl::ViewWidget base class.
 
 	void upload_permeabilitys(uint8_t * table, int size);
 	Shaders * shaders() const { return _shaders.get(); }

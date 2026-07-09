@@ -149,8 +149,8 @@ HEADERS += \
 
 FORMS += \
         colorprogressindicator.ui \
-        exportoptions.ui
-  #       mainwindow.ui
+        exportoptions.ui \
+        mainwindow.ui
 
 # Default rules for deployment.
 #qnx: target.path = /tmp/$${TARGET}/bin

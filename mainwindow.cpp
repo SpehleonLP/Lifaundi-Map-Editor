@@ -192,10 +192,12 @@ enter(Qt::Key_Z, this)
 		SetZoom(m_zoom * 7.f/8);
 	});
 
-#define QDoubleSpinBoxChanged()  (void (QDoubleSpinBox::*)(double)) &QDoubleSpinBox::editingFinished
-#define QSpinBoxChanged()  (void (QSpinBox::*)(int)) &QSpinBox::editingFinished
-#define QComboBoxChanged()  (void (QComboBox::*)(int)) &QComboBox::currentIndexChanged
-#define QSpinDialChanged()  (void (QDial::*)(double)) &QDial::valueChanged
+// These signals are no longer overloaded in Qt6, so the member-function
+// pointers can be taken directly without the old disambiguating casts.
+#define QDoubleSpinBoxChanged()  &QDoubleSpinBox::editingFinished
+#define QSpinBoxChanged()  &QSpinBox::editingFinished
+#define QComboBoxChanged()  &QComboBox::currentIndexChanged
+#define QSpinDialChanged()  &QDial::valueChanged
 
 	connect(ui->room_music,         QComboBoxChanged(),       this, [this](int   value) { if(!updating_fields && value >= 0) document->SetRoomMusic(value); });
 //	connect(ui->room_music->lineEdit(), &QLineEdit::editingFinished, this, &MainWindow::musicSet);

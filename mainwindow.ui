@@ -805,6 +805,7 @@
     <addaction name="editCopy"/>
     <addaction name="editPaste"/>
     <addaction name="editDelete"/>
+    <addaction name="editDissolve"/>
     <addaction name="separator"/>
     <addaction name="menuZoom"/>
     <addaction name="menuSelect_2"/>
@@ -817,6 +818,7 @@
     <addaction name="viewRooms"/>
     <addaction name="viewHalls"/>
     <addaction name="viewLinks"/>
+    <addaction name="viewGrid"/>
     <addaction name="separator"/>
     <addaction name="viewGravity"/>
    </widget>
@@ -1091,6 +1093,22 @@
    </property>
    <property name="shortcut">
     <string>Del</string>
+   </property>
+  </action>
+  <action name="editDissolve">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Dissolve</string>
+   </property>
+  </action>
+  <action name="viewGrid">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Grid</string>
    </property>
   </action>
   <action name="viewChecker">

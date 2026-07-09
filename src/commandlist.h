@@ -57,7 +57,7 @@ private:
 class DissolveCommand : public CommandInterface
 {
 public:
-	DissolveCommand(Document * document, std::vector<uint32_t> && selection, std::vector<uint32_t> && edge_selection) {}
+	DissolveCommand(Document * /*document*/, std::vector<uint32_t> && /*selection*/, std::vector<uint32_t> && /*edge_selection*/) {}
 	virtual ~DissolveCommand() = default;
 
 	void RollForward() {}
