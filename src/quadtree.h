@@ -1,6 +1,5 @@
 #ifndef QUADTREE_H
 #define QUADTREE_H
-#include "metaroomdoors.h"
 #include <glm/vec2.hpp>
 #include <glm/gtc/type_precision.hpp>
 #include <stack>

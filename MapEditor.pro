@@ -56,7 +56,6 @@ SOURCES += \
     src/commandlist.cpp \
 	src/edgerange.cpp \
 	src/entitysystem.cpp \
-	src/fluidlinks.cpp \
 	src/glm_iostream.cpp \
     src/glviewwidget.cpp \
     src/backgroundimage.cpp \
@@ -73,7 +72,6 @@ SOURCES += \
     src/metaroomselection.cpp \
 	src/mvsf_sampler.cpp \
     src/quadtree.cpp \
-    src/metaroomdoors.cpp \
     src/controllerfsm.cpp \
     src/Shaders/uniformcolorshader.cpp \
     src/indexbuffers.cpp \
@@ -113,7 +111,6 @@ HEADERS += \
 	src/edgerange.h \
 	src/entitysystem.h \
 	src/enums.hpp \
-	src/fluidlinks.h \
 	src/glm_iostream.h \
     src/glviewwidget.h \
     src/fmoderror.h \
@@ -133,7 +130,6 @@ HEADERS += \
     src/metaroomselection.h \
 	src/mvsf_sampler.h \
     src/quadtree.h \
-    src/metaroomdoors.h \
     src/controllerfsm.h \
     src/Shaders/uniformcolorshader.h \
     src/indexbuffers.h \

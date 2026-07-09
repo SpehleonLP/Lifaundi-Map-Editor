@@ -1,7 +1,6 @@
 #ifndef METAROOM_H
 #define METAROOM_H
 #include "metaroomselection.h"
-#include "metaroomdoors.h"
 #include "metaroom_gl.h"
 #include "metaroom_memory.h"
 #include "quadtree.h"
@@ -109,10 +108,6 @@ typedef std::vector<SliceRoom> SliceArray;
 	std::vector<glm::i16vec2> SaveVerts();
 	void RestoreVerts(std::vector<glm::i16vec2> const& vec);
 
-	void PruneLinks();
-	void ConvertLinks(int a, int b);
-
-
 	static bool IsColinear(glm::ivec2 p, glm::ivec2 q, glm::ivec2 r);
 
 	Document *const   document;
@@ -121,7 +116,6 @@ typedef std::vector<SliceRoom> SliceArray;
 	void update_selections() {};
 
 
-	void remove_face_links(int id);
 	void RingSelectFace(int face, glm::ivec2 mouse, Bitwise flags);
 	void RingSelectFaceInternal(int edge, glm::ivec2 position, Bitwise flags);
 

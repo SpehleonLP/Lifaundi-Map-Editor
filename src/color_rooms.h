@@ -1,6 +1,7 @@
 #ifndef COLOR_ROOMS_H
 #define COLOR_ROOMS_H
 #include "quadtree.h"
+#include <atomic>
 
 struct ColorProgress
 {
