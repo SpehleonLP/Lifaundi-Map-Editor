@@ -46,13 +46,12 @@ void HistogramWidget::initializeGL()
 	if(_initialized) return;
 	_initialized = true;
 
-	assert(w->ui->viewWidget->initialized());
-
-
+	// NOTE: QOpenGLWidget init order is undefined — this may run before
+	// viewWidget::initializeGL(), so we must NOT touch viewWidget->_shaders
+	// here. Cross-context GL object sharing is set up globally via
+	// Qt::AA_ShareOpenGLContexts in main(). Only this widget's own GL
+	// resources are created here; _shaders is fetched lazily in paintGL().
 	makeCurrent();
-	_shaders = w->ui->viewWidget->_shaders;
-	context()->setShareContext(w->ui->viewWidget->context());
-
 
 	QOpenGLFunctions_4_5_Core::initializeOpenGLFunctions();
 	super::initializeGL();
@@ -71,6 +70,18 @@ void HistogramWidget::paintGL()
 
 	glClearColor(color.redF(), color.greenF(), color.blueF(), color.alphaF());
 	glClear(GL_COLOR_BUFFER_BIT);
+
+	// viewWidget owns the shared shader programs. Its initializeGL() may not
+	// have run yet (QOpenGLWidget init order is undefined), so wait for it
+	// rather than dereferencing a null _shaders.
+	if(!w->ui->viewWidget->initialized())
+	{
+		need_repaint();
+		return;
+	}
+
+	if(!_shaders)
+		_shaders = w->ui->viewWidget->_shaders;
 
 	auto range = glm::uvec2(
 		_displayRange->GetLowerValue() * 65535 / 256,

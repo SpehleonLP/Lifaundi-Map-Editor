@@ -9,6 +9,12 @@ static void LogHandler(void* , const loguru::Message& message);
 
 int main(int argc, char *argv[])
 {
+	// The histogram widgets render using the shader programs owned by
+	// viewWidget's GL context, so every QOpenGLWidget must share GL objects.
+	// This attribute is the only supported way to do that in Qt6 (a per-widget
+	// setShareContext() after context creation is a no-op); it must be set
+	// before the QApplication (and thus any GL context) is created.
+	QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 
 	QApplication a(argc, argv);
 	MainWindow w;
