@@ -1,0 +1,4 @@
+File verbosity level: 9
+date       time         ( uptime  ) [ thread name/id         ]                   file:line     v| 
+2026-07-09 10:01:48.001 (   0.291s) [                79C128C0]             loguru.cpp:867   INFO| Logging to 'Log/status.log', mode: 'w', verbosity: 9
+2026-07-09 10:01:48.001 (   0.291s) [                79C128C0]             loguru.cpp:867   INFO| Logging to 'Log/error.log', mode: 'w', verbosity: 0
