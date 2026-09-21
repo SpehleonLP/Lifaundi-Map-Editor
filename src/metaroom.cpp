@@ -277,7 +277,8 @@ uint32_t Metaroom::Write(MainWindow * window, std::ofstream & fp)
 	});
 
 	std::this_thread::sleep_for(50ms);
-	if(progress->_complete == false)
+	// No visible editor (a headless test save): don't pop up a lone indicator.
+	if(progress->_complete == false && window->isVisible())
 	{
 		std::unique_ptr<ColorProgressIndicator> indicator(new ColorProgressIndicator(window, progress));
 		indicator->show();

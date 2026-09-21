@@ -43,10 +43,19 @@ app binary, which exits without creating a window or GL context:
 
 An empty `GTEST_FILTER=` is rejected (it would run zero tests and exit 0). Tests live
 in `tests/*_gtest.cpp` and are listed in the `CONFIG(debug, ...)` block of
-`MapEditor.pro`. They drive `Metaroom` with a null `Document` (no window, no GL);
-build rooms through `Insert()`, since `Metaroom::AddFace` is unused and crashes on
-a metaroom that has never moved (`_prev` is unallocated). `TestTreeSymmetry` /
-`TestDoorSymmetry` double as in-app checks on the Debug menu.
+`MapEditor.pro`. `metaroom_gtest.cpp` drives `Metaroom` with a null `Document` (no
+window, no GL); build rooms through `Insert()`, since `Metaroom::AddFace` is unused
+and crashes on a metaroom that has never moved (`_prev` is unallocated).
+`TestTreeSymmetry` / `TestDoorSymmetry` double as in-app checks on the Debug menu.
+
+`metaroom_file_gtest.cpp` round-trips the maps in `tests/data/` through
+`Document::LoadFile`/`SaveFile`, with and without `desert.lf_bck` loaded. It needs a
+real `MainWindow` (the track list lives in its music combo), never shown and never
+destroyed — its GL child widgets' destructors assume they were initialized. The
+background upload uses a hidden `QOffscreenSurface` context instead. `*.lf_bck` is
+git-ignored (158 MB; copy it from `Lifaundi/Development/DesertOasis/Metaroom`), and
+those tests `SKIP` when it is missing or there is no display (Qt's offscreen platform
+has no GL here).
 
 ### External dependencies (superproject siblings, not vendored)
 

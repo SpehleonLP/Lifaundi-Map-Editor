@@ -28,6 +28,18 @@ static int RunTests(int argc, char *argv[])
 		return -1;
 	}
 
+	// File tests need a (never shown) MainWindow, because the track list
+	// lives in its widgets, and a hidden GL context for background uploads.
+	// Without a display fall back to the offscreen platform, which has no GL
+	// here, so the background tests skip.
+	if(qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")
+	&& qEnvironmentVariableIsEmpty("DISPLAY")
+	&& qEnvironmentVariableIsEmpty("WAYLAND_DISPLAY"))
+		qputenv("QT_QPA_PLATFORM", "offscreen");
+
+	QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+	QApplication a(argc, argv);
+
 	loguru::g_stderr_verbosity = loguru::Verbosity_WARNING;
 	::testing::InitGoogleTest(&argc, argv);
 	return RUN_ALL_TESTS();

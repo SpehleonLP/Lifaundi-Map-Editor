@@ -53,6 +53,10 @@ enter(Qt::Key_Z, this)
 	_updateRoomHistogram.setSingleShot(true);
 	_updateRoomHistogram.setInterval(20);
 	connect(&_updateRoomHistogram, &QTimer::timeout, this, [this]() {
+		// Edits can land before the view's first expose creates the shaders.
+		if(!ui->viewWidget->shaders())
+			return;
+
 		ui->roomDepthHistogram->makeCurrent();
 		ui->roomDepthHistogram->_histogram.Update(
 			ui->viewWidget->shaders(),

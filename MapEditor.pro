@@ -165,6 +165,9 @@ RESOURCES += \
 # exits without creating a window. Debug-only, like the Engine's ENGINE_TESTS.
 CONFIG(debug, debug|release) {
 	DEFINES += MAPEDITOR_TESTS
-	SOURCES += tests/metaroom_gtest.cpp
+	DEFINES += MAPEDITOR_TEST_DATA=\\\"$$PWD/tests/data\\\"
+	SOURCES += \
+		tests/metaroom_gtest.cpp \
+		tests/metaroom_file_gtest.cpp
 	LIBS += -lgtest
 }

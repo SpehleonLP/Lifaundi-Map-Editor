@@ -1,2 +1,5 @@
 build-check/
 build-check.log
+
+# Backgrounds are too large to commit; tests skip when absent.
+tests/data/*.lf_bck
