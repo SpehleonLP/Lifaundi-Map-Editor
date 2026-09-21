@@ -3,3 +3,8 @@ build-check.log
 
 # Backgrounds are too large to commit; tests skip when absent.
 tests/data/*.lf_bck
+
+# Local build output and per-user Qt Creator state.
+build/
+*.pro.user
+*.pro.user.*
