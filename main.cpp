@@ -5,10 +5,47 @@
 #include <loguru.hpp>
 #include <QMessageBox>
 
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+
+#ifdef MAPEDITOR_TESTS
+#include <gtest/gtest.h>
+#endif
+
 static void LogHandler(void* , const loguru::Message& message);
+
+// Runs before any QApplication exists, so no window or GL context is created.
+static int RunTests(int argc, char *argv[])
+{
+#ifdef MAPEDITOR_TESTS
+	// An empty GTEST_FILTER selects nothing, and gtest reports "PASSED" over
+	// zero tests with exit 0 -- a green that means nothing ran. Refuse it.
+	if(const char* f = std::getenv("GTEST_FILTER"); f && *f == '\0')
+	{
+		fprintf(stderr, "GTEST_FILTER is set but empty: this runs zero tests "
+		                "and exits 0. Unset it, or give it a pattern.\n");
+		return -1;
+	}
+
+	loguru::g_stderr_verbosity = loguru::Verbosity_WARNING;
+	::testing::InitGoogleTest(&argc, argv);
+	return RUN_ALL_TESTS();
+#else
+	(void)argc; (void)argv;
+	fprintf(stderr, "--gtest: tests are not compiled into this build (debug only).\n");
+	return -1;
+#endif
+}
 
 int main(int argc, char *argv[])
 {
+	for(int i = 1; i < argc; ++i)
+	{
+		if(strcmp(argv[i], "--gtest") == 0)
+			return RunTests(argc, argv);
+	}
+
 	// The histogram widgets render using the shader programs owned by
 	// viewWidget's GL context, so every QOpenGLWidget must share GL objects.
 	// This attribute is the only supported way to do that in Qt6 (a per-widget

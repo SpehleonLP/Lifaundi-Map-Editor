@@ -33,8 +33,20 @@ build dir `~/Developer/Build/MapEditor/Debug`); it supports both via
 signal/slot `connect`s, use direct member-function pointers (or `qOverload<>`) — the
 old pointer-to-member disambiguation casts are Qt5-only and break under Qt6.
 
-There are **no automated tests**. The `Metaroom::TestTreeSymmetry` /
-`TestDoorSymmetry` methods are in-app runtime invariant checks, not a test suite.
+Unit tests (gtest, system `libgtest`) compile into **debug** builds and run through the
+app binary, which exits without creating a window or GL context:
+
+```
+./MapEditor --gtest                                   # full suite, exit code = result
+./MapEditor --gtest --gtest_filter='MetaroomTest.*'   # filtered
+```
+
+An empty `GTEST_FILTER=` is rejected (it would run zero tests and exit 0). Tests live
+in `tests/*_gtest.cpp` and are listed in the `CONFIG(debug, ...)` block of
+`MapEditor.pro`. They drive `Metaroom` with a null `Document` (no window, no GL);
+build rooms through `Insert()`, since `Metaroom::AddFace` is unused and crashes on
+a metaroom that has never moved (`_prev` is unallocated). `TestTreeSymmetry` /
+`TestDoorSymmetry` double as in-app checks on the Debug menu.
 
 ### External dependencies (superproject siblings, not vendored)
 

@@ -10,10 +10,21 @@ RoomRange::RoomRange(const QuadTree * tree, int edge, bool minimum) :
 {
 }
 
+// Every QuadTree query rebuilds a dirty tree first; a range must too, or it
+// walks nodes from before the last edit. The tree is a mutable cache
+// (Metaroom::_tree), so rebuilding through a const pointer is sound.
+const QuadTree::Node * RoomRange::BuiltNodes(const QuadTree * tree)
+{
+	if(tree->IsDirty())
+		const_cast<QuadTree*>(tree)->Rebuild();
+
+	return tree->m_nodes.get();
+}
+
 RoomRange::RoomRange(const QuadTree * tree, glm::ivec2 v0, glm::ivec2 v1, int minimum) :
 	min(glm::min(v0, v1)),
 	max(glm::max(v0, v1)),
-	m_nodes(&tree->m_nodes[0]),
+	m_nodes(BuiltNodes(tree)),
 	m_metaroom(tree->m_metaroom),
 	minimum(minimum)
 {

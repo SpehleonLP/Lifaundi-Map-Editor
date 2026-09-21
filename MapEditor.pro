@@ -160,3 +160,11 @@ FORMS += \
 
 RESOURCES += \
 	resources.qrc
+
+# Unit tests compile into the app and run via `MapEditor --gtest`, which
+# exits without creating a window. Debug-only, like the Engine's ENGINE_TESTS.
+CONFIG(debug, debug|release) {
+	DEFINES += MAPEDITOR_TESTS
+	SOURCES += tests/metaroom_gtest.cpp
+	LIBS += -lgtest
+}

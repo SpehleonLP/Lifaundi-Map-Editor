@@ -14,6 +14,8 @@ public:
 	const glm::ivec2  min, max;
 
 protected:
+	static const QuadTree::Node * BuiltNodes(const QuadTree * tree);
+
 	std::stack<int> stack;
 
 	const QuadTree::Node * m_nodes;

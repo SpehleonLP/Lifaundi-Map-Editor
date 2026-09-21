@@ -557,7 +557,8 @@ void Metaroom::CommitMove(bool update_mvsf)
 	_prev = _verts.clone();
 	_tree.SetDirty(update_mvsf);
 	gl.SetDirty();
-	document->OnTransformed();
+	// Null only in the headless unit tests, which have no window to notify.
+	if(document) document->OnTransformed();
 }
 
 
@@ -909,7 +910,11 @@ std::string Metaroom::TestTreeSymmetry()
 
 			bool match_found = false;
 
-			RoomRange r2(&_tree, range.face());
+			// The int constructor takes an edge id, not a face id: query the
+			// other face's box, the same way this face's was queried.
+			glm::i16vec2 tl2, br2;
+			GetFaceAABB(range.face(), tl2, br2);
+			RoomRange r2(&_tree, tl2, br2);
 			while(r2.popFront())
 			{
 				if(r2.face() == (int)i)
