@@ -1,6 +1,6 @@
 #include "uniformcolorshader.h"
 #include "src/Shaders/shaders.h"
-#include "gl/compressedshadersource.h"
+#include "Support/compressedshadersource.h"
 #include <QOpenGLFunctions_4_5_Core>
 
 void UniformColorShader::Bind(QOpenGLFunctions* gl, float red, float green, float blue, float alpha)

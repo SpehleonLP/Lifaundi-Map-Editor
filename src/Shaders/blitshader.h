@@ -1,6 +1,6 @@
 #ifndef BLITSHADER_H
 #define BLITSHADER_H
-#include "qt-gl/simpleshaderbase.h"
+#include "simpleshaderbase.h"
 #include <glm/mat4x4.hpp>
 
 enum class BackgroundLayer : char;

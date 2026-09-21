@@ -1,6 +1,6 @@
 #include "blitshader.h"
 #include "defaultvaos.h"
-#include "gl/compressedshadersource.h"
+#include "Support/compressedshadersource.h"
 #include <QOpenGLFunctions_4_5_Core>
 
 void BlitShader::Bind(QOpenGLFunctions * gl, BackgroundLayer layer, glm::uvec2 range)

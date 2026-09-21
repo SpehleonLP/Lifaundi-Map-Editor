@@ -1,6 +1,6 @@
 #ifndef TRANSPARENCYSHADER_H
 #define TRANSPARENCYSHADER_H
-#include "qt-gl/simpleshaderbase.h"
+#include "simpleshaderbase.h"
 #include <atomic>
 
 class Shaders;

@@ -1,6 +1,6 @@
 #ifndef ROOMOUTLINESHADER_H
 #define ROOMOUTLINESHADER_H
-#include "qt-gl/simpleshaderbase.h"
+#include "simpleshaderbase.h"
 
 class RoomOutlineShader : public ShaderBase
 {

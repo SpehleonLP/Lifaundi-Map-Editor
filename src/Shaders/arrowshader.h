@@ -1,6 +1,6 @@
 #ifndef ARROWSHADER_H
 #define ARROWSHADER_H
-#include "qt-gl/simpleshaderbase.h"
+#include "simpleshaderbase.h"
 #include <glm/vec2.hpp>
 #include <glm/gtc/type_precision.hpp>
 #include <vector>

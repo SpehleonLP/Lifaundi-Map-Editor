@@ -25,24 +25,29 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
+# Dependencies are siblings in the Kreatures-Engine superproject.
+KREATURES_ROOT = $$clean_path($$PWD/../..)
+SPEHLEON_ROOT = $$KREATURES_ROOT/Spehleon
+THIRDPARTY_ROOT = $$KREATURES_ROOT/ThirdParty
+
 INCLUDEPATH += \
-	/mnt/Passport/Libraries/Spehleon/ \
-	/mnt/Passport/Libraries/ \
-	/mnt/Passport/Libraries/loguru \
-	/mnt/Passport/Libraries/Spehleon/lib
+	$$KREATURES_ROOT \
+	$$SPEHLEON_ROOT \
+	$$SPEHLEON_ROOT/lib \
+	$$THIRDPARTY_ROOT \
+	$$THIRDPARTY_ROOT/loguru
 
 LIBS += -lGLEW -lGL -lGLU -ldrm -lz \
-	-L\"/mnt/Passport/Libraries/lz4/build/cmake\" -llz4
+	-L$$THIRDPARTY_ROOT/lz4/build/cmake -llz4
 
 DEFINES += GLM_EXT_INCLUDED GLM_FORCE_INLINE GLM_ENABLE_EXPERIMENTAL
 
 SOURCES += \
-	/mnt/Passport/Libraries/Spehleon/lib/gl/compressedshadersource.cpp \
-	/mnt/Passport/Libraries/Spehleon/lib/gl/renderdoc.cpp \
-	/mnt/Passport/Libraries/Spehleon/lib/qt-gl/initialize_gl.cpp \
-	/mnt/Passport/Libraries/Spehleon/lib/qt-gl/simpleshaderbase.cpp \
-	/mnt/Passport/Libraries/Spehleon/lib/qt-gl/gl_viewwidget.cpp \
-/mnt/Passport/Libraries/loguru/loguru.cpp \
+	$$SPEHLEON_ROOT/lib/Support/compressedshadersource.cpp \
+	$$SPEHLEON_ROOT/lib/qt-gl/initialize_gl.cpp \
+	$$SPEHLEON_ROOT/lib/qt-gl/gl_viewwidget.cpp \
+	$$SPEHLEON_ROOT/lib/qt-gl/viewparentinterface.cpp \
+	$$THIRDPARTY_ROOT/loguru/loguru.cpp \
 	colorprogressindicator.cpp \
 	exportoptions.cpp \
         main.cpp \
@@ -51,6 +56,7 @@ SOURCES += \
 	src/Shaders/computehistogram.cpp \
     src/Shaders/mouseshader.cpp \
 	src/Shaders/shaders.cpp \
+	src/Shaders/simpleshaderbase.cpp \
 	src/color_rooms.cpp \
     src/document.cpp \
     src/commandlist.cpp \
@@ -86,17 +92,15 @@ SOURCES += \
 	src/widget_rangeslider.cpp
 
 HEADERS += \
-	/mnt/Passport/Libraries/Spehleon/lib/qt-gl/gl_viewwidget.h \
-	/mnt/Passport/Libraries/Spehleon/lib/Support/counted_ptr.hpp \
-	/mnt/Passport/Libraries/Spehleon/lib/Support/shared_array.hpp \
-	/mnt/Passport/Libraries/Spehleon/lib/Support/lockfreequeue.hpp \
-	/mnt/Passport/Libraries/Spehleon/lib/Support/numeric_range.hpp \
-	/mnt/Passport/Libraries/Spehleon/lib/Support/unsafe_view.hpp \
-	/mnt/Passport/Libraries/Spehleon/lib/gl/compressedshadersource.h \
-	/mnt/Passport/Libraries/Spehleon/lib/gl/renderdoc.h \
-	/mnt/Passport/Libraries/Spehleon/lib/qt-gl/initialize_gl.h \
-	/mnt/Passport/Libraries/Spehleon/lib/qt-gl/simpleshaderbase.h \
-	/mnt/Passport/Libraries/Spehleon/lib/qt-gl/viewparentinterface.h \
+	$$SPEHLEON_ROOT/lib/qt-gl/gl_viewwidget.h \
+	$$SPEHLEON_ROOT/lib/Support/counted_ptr.hpp \
+	$$SPEHLEON_ROOT/lib/Support/shared_array.hpp \
+	$$SPEHLEON_ROOT/lib/Support/lockfreequeue.hpp \
+	$$SPEHLEON_ROOT/lib/Support/numeric_range.hpp \
+	$$SPEHLEON_ROOT/lib/Support/unsafe_view.hpp \
+	$$SPEHLEON_ROOT/lib/Support/compressedshadersource.h \
+	$$SPEHLEON_ROOT/lib/qt-gl/initialize_gl.h \
+	$$SPEHLEON_ROOT/lib/qt-gl/viewparentinterface.h \
 	colorprogressindicator.h \
 	exportoptions.h \
         mainwindow.h \
@@ -105,6 +109,7 @@ HEADERS += \
 	src/Shaders/computehistogram.h \
     src/Shaders/mouseshader.h \
 	src/Shaders/shaders.h \
+	src/Shaders/simpleshaderbase.h \
 	src/color_rooms.h \
     src/document.h \
     src/commandlist.h \

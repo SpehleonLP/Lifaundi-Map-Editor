@@ -1,5 +1,5 @@
 #include "shaders.h"
-#include "gl/compressedshadersource.h"
+#include "Support/compressedshadersource.h"
 #include <QOpenGLFunctions_4_5_Core>
 
 Shaders::Shaders(QOpenGLFunctions_4_5_Core * gl) :

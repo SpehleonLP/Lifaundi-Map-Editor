@@ -1,6 +1,6 @@
 #include "mouseshader.h"
 #include "defaultvaos.h"
-#include "gl/compressedshadersource.h"
+#include "Support/compressedshadersource.h"
 #include <QOpenGLFunctions_4_5_Core>
 
 

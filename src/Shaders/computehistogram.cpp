@@ -1,5 +1,5 @@
 #include "computehistogram.h"
-#include "gl/compressedshadersource.h"
+#include "Support/compressedshadersource.h"
 #include "qt-gl/initialize_gl.h"
 #include <QOpenGLFunctions_4_5_Core>
 #include <glm/vec2.hpp>

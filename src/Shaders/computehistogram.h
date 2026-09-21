@@ -1,6 +1,6 @@
 #ifndef COMPUTEHISTOGRAM_H
 #define COMPUTEHISTOGRAM_H
-#include "qt-gl/simpleshaderbase.h"
+#include "simpleshaderbase.h"
 #include <glm/vec2.hpp>
 #include <glm/vec4.hpp>
 

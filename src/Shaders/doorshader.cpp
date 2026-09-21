@@ -1,5 +1,5 @@
 #include "doorshader.h"
-#include "gl/compressedshadersource.h"
+#include "Support/compressedshadersource.h"
 #include <QOpenGLFunctions_4_5_Core>
 
 void DoorShader::Bind(QOpenGLFunctions * gl, int selected_door_type)

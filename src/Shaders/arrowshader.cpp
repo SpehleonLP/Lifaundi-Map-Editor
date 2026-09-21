@@ -1,6 +1,5 @@
 #include "arrowshader.h"
-#include "gl/compressedshadersource.h"
-#include "gl/renderdoc.h"
+#include "Support/compressedshadersource.h"
 #include <QOpenGLFunctions_4_5_Core>
 #include <glm/gtc/type_precision.hpp>
 #include <QtLogging>
@@ -40,8 +39,6 @@ void ArrowShader::Destroy(QOpenGLFunctions * gl)
 
 void ArrowShader::operator()(QOpenGLFunctions* gl, std::vector<Arrow> const& arrows, glm::vec4 color)
 {
-	RenderDocCaptureRAII raii("Arrow Shader", true);
-
 	assert(createdWith == gl);
 
 	gl->glUseProgram(program());

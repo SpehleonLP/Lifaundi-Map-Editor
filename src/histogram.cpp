@@ -3,7 +3,6 @@
 #include "src/document.h"
 #include <QOpenGLFunctions_4_5_Core>
 #include "src/Shaders/shaders.h"
-#include "gl/renderdoc.h"
 
 void Histogram::Initialize(QOpenGLFunctions* gl)
 {
@@ -44,7 +43,6 @@ void Histogram::clear(QOpenGLFunctions* gl)
 
 void Histogram::Update(Shaders * shaders, Document * document, glm::ivec4 AABB)
 {
-//	RenderDocCaptureRAII raii("Compute Histogram", true);
 
 	auto gl = shaders->gl;
 
@@ -108,7 +106,6 @@ void Histogram::Update(Shaders * shaders, Document * document, glm::ivec4 AABB)
 
 void Histogram::Update(Shaders * shaders, Document * document)
 {
-//	RenderDocCaptureRAII raii("Compute Room Histogram", true);
 
 	auto gl = shaders->gl;
 
@@ -202,7 +199,6 @@ void Histogram::Update(Shaders * shaders, Document * document)
 
 void Histogram::operator()(Shaders * shaders, glm::uvec2 input_range, uint32_t output_width)
 {
-	//RenderDocCaptureRAII raii("Histogram", true);
 
 	if(_histogramDirty)
 	{

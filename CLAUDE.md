@@ -13,14 +13,14 @@ GLSL shaders and edits it through a modal tool system with full undo/redo.
 
 ## Build & run
 
-This is a **qmake** project (`MapEditor.pro`), not CMake. The build lives **outside**
-the source tree because the source drive (`/mnt/Passport`) has permission issues:
+This is a **qmake** project (`MapEditor.pro`), not CMake. Qt Creator builds in-tree at
+`build/Desktop_Qt_6_7_0-Debug`; a command-line build can live anywhere:
 
 ```
 # Active out-of-source build dir (Qt 6.7.0 is the current default):
 cd ~/Developer/Build/MapEditor/Qt6-Debug
 
-~/Qt/6.7.0/gcc_64/bin/qmake /mnt/Passport/Projects/MapEditor/MapEditor.pro \
+~/Qt/6.7.0/gcc_64/bin/qmake /mnt/Passport/Kreatures-Engine/Tooling/MapEditor/MapEditor.pro \
     -spec linux-g++ CONFIG+=debug
 
 make -j$(nproc)          # build (clean: 0 errors, 0 warnings)
@@ -36,15 +36,19 @@ old pointer-to-member disambiguation casts are Qt5-only and break under Qt6.
 There are **no automated tests**. The `Metaroom::TestTreeSymmetry` /
 `TestDoorSymmetry` methods are in-app runtime invariant checks, not a test suite.
 
-### External dependencies (sibling paths, not vendored)
+### External dependencies (superproject siblings, not vendored)
 
-The `.pro` hard-codes include/link paths outside this repo. If a header is missing,
-check these exist:
-- `/mnt/Passport/Libraries/Spehleon/` — GL/Qt-GL helpers (`gl_viewwidget`, shader base,
-  `Support/shared_array.hpp`, `counted_ptr.hpp`), compiled directly into this target.
-- `/mnt/Passport/Libraries/loguru/` — logging (`loguru.cpp` compiled in).
-- `/mnt/Passport/Libraries/lz4/build/cmake` — `-llz4` for `.blk` background compression.
+This repo is the `Tooling/MapEditor` submodule of the Kreatures-Engine superproject;
+`MapEditor.pro` resolves everything relative to `$$PWD/../..`:
+- `Spehleon/lib/` — `qt-gl/` (`gl_viewwidget`, `initialize_gl`, `viewparentinterface`)
+  and `Support/` (`shared_array`, `counted_ptr`, `compressedshadersource`), compiled
+  directly into this target.
+- `ThirdParty/loguru` — logging (`loguru.cpp` compiled in).
+- `ThirdParty/lz4/build/cmake` — `liblz4.a` for `.blk` background compression.
 - System libs: GLEW, GL, GLU, drm, z. GLM is the math library (`glm::ivec2` everywhere).
+
+`SimpleShaderBase` is MapEditor's own (`src/Shaders/simpleshaderbase.*`); Spehleon
+deleted its copy as unused, so don't look for it there.
 
 ## Architecture
 

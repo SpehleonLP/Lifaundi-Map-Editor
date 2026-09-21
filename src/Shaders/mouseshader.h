@@ -1,6 +1,6 @@
 #ifndef MOUSESHADER_H
 #define MOUSESHADER_H
-#include "qt-gl/simpleshaderbase.h"
+#include "simpleshaderbase.h"
 #include <glm/vec4.hpp>
 #include <glm/vec2.hpp>
 

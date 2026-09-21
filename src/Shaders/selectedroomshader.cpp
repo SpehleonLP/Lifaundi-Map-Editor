@@ -1,5 +1,5 @@
 #include "selectedroomshader.h"
-#include "gl/compressedshadersource.h"
+#include "Support/compressedshadersource.h"
 #include <QOpenGLFunctions_4_5_Core>
 
 void SelectedRoomShader::operator()(QOpenGLFunctions * gl, uint32_t faces)

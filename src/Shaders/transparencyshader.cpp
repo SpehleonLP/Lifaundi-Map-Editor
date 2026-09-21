@@ -1,6 +1,6 @@
 #include "transparencyshader.h"
 #include "defaultvaos.h"
-#include "gl/compressedshadersource.h"
+#include "Support/compressedshadersource.h"
 #include "src/Shaders/shaders.h"
 #include <QOpenGLFunctions_4_5_Core>
 

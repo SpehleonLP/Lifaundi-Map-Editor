@@ -1,6 +1,6 @@
 #ifndef UNIFORMCOLORSHADER_H
 #define UNIFORMCOLORSHADER_H
-#include "qt-gl/simpleshaderbase.h"
+#include "simpleshaderbase.h"
 
 class UniformColorShader : public ShaderBase
 {

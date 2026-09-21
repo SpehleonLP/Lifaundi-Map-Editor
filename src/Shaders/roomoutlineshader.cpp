@@ -1,5 +1,5 @@
 #include "roomoutlineshader.h"
-#include "gl/compressedshadersource.h"
+#include "Support/compressedshadersource.h"
 #include <QOpenGLFunctions_4_5_Core>
 
 void RoomOutlineShader::operator()(QOpenGLFunctions*gl, uint32_t faces, bool selected)

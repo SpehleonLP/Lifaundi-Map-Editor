@@ -1,6 +1,6 @@
 #ifndef SELECTEDROOMSHADER_H
 #define SELECTEDROOMSHADER_H
-#include "qt-gl/simpleshaderbase.h"
+#include "simpleshaderbase.h"
 
 class SelectedRoomShader  : public ShaderBase
 {

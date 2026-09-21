@@ -1,6 +1,6 @@
 #ifndef DOORSHADER_H
 #define DOORSHADER_H
-#include "qt-gl/simpleshaderbase.h"
+#include "simpleshaderbase.h"
 
 
 class DoorShader : public ShaderBase
